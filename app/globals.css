@@ -1,0 +1,57 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 210 25% 10%; /* Dark background */
+    --foreground: 210 20% 96%; /* Light foreground for contrast */
+    --primary: 308 56% 47%; /* Darker primary color */
+    --primary-foreground: 210 20% 96%;
+    --secondary: 196 75% 44%; /* Darker secondary color */
+    --secondary-foreground: 210 20% 96%;
+    --accent: 211 86% 50%; /* Slightly brighter accent for emphasis */
+    --accent-foreground: 210 20% 96%;
+    --destructive: 0 93% 37%; /* Darker destructive color */
+    --destructive-foreground: 210 20% 96%;
+    --muted: 210 25% 15%; /* Muted dark color */
+    --muted-foreground: 210 20% 96%;
+    --card: 210 25% 12%; /* Dark card background */
+    --card-foreground: 210 20% 96%;
+    --popover: 210 25% 10%;
+    --popover-foreground: 210 20% 96%;
+    --border: 210 20% 30%; /* Darker border color */
+    --input: 210 25% 20%; /* Dark input background */
+    --ring: 210 20% 40%; /* Darker ring color */
+    --radius: 1rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-body;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-heading;
+  }
+}
+
+@layer components {
+  .font-body {
+    @apply font-sans; /* or any other font you are using for body text */
+  }
+
+  .font-heading {
+    @apply font-serif; /* or any other font you are using for headings */
+  }
+}
