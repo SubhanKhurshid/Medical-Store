@@ -5,7 +5,6 @@ import * as z from "zod";
 
 type PatientRequest = z.infer<typeof patientSchema>;
 
-
 export async function addPatient(
   input: PatientRequest,
   addVisit: boolean
@@ -17,25 +16,50 @@ export async function addPatient(
     }
 
     const { data } = body;
-    
-    const existingUser = await prisma.patient.findFirst({
-      where: {
-        cnic: data.cnic,
-      },
-    });
-    if (existingUser) {
-      return {
-        success: false,
-        error: { _errors: ["A patient with the same CNIC already exists."] },
-      };
+
+    // Check for existing user only if CNIC is provided and required
+    if (data.relations.length === 0 && data.cnic) {
+      const existingUser = await prisma.patient.findFirst({
+        where: {
+          cnic: data.cnic,
+        },
+      });
+
+      if (existingUser) {
+        return {
+          success: false,
+          error: { _errors: ["A patient with the same CNIC already exists."] },
+        };
+      }
     }
+
+    // Manage the token logic
+    const today = new Date().setHours(0, 0, 0, 0);
+    let setting = await prisma.globalSetting.findFirst();
+
+    if (!setting || setting.lastTokenDate.setHours(0, 0, 0, 0) < today) {
+      // Create or reset the global settings
+      setting = await prisma.globalSetting.create({
+        data: {
+          lastToken: 1,
+          lastTokenDate: new Date(),
+        },
+      });
+    } else {
+      setting = await prisma.globalSetting.update({
+        where: { id: setting.id },
+        data: { lastToken: { increment: 1 } },
+      });
+    }
+
+    // Create the patient with the new token number and relations
     const patient = await prisma.patient.create({
       data: {
         name: data.name,
         fatherName: data.fatherName,
         email: data.email,
         identity: data.identity,
-        cnic: data.cnic,
+        cnic: data.cnic || "", // Use an empty string if CNIC is not required
         crc: data.crc,
         crcNumber: data.crcNumber,
         contactNumber: data.contactNumber,
@@ -45,13 +69,23 @@ export async function addPatient(
         occupation: data.occupation,
         address: data.address,
         catchmentArea: data.catchmentArea,
+        tokenNumber: setting.lastToken,
+        relation: {
+          create: data.relations.map((rel: any) => ({
+            relation: rel.relation,
+            relationName: rel.relationName,
+            relationCNIC: rel.relationCNIC,
+          })),
+        },
       },
     });
 
+    // Optionally add a visit
     if (addVisit) {
       await prisma.visit.create({
         data: {
           patientId: patient.id,
+          tokenNumber: patient.tokenNumber,
         },
       });
     }
@@ -66,9 +100,6 @@ export async function addPatient(
     return { success: false, error: { _errors: ["Something went wrong"] } };
   }
 }
-
-
-
 type SearchRequest = z.infer<typeof searchSchema>;
 
 export async function searchPatients(
@@ -110,9 +141,23 @@ export async function addVisit(
   try {
     const { patientId } = input;
 
+    // Retrieve the current token number from the patient
+    const patient = await prisma.patient.findUnique({
+      where: { id: patientId },
+      select: { tokenNumber: true },
+    });
+
+    if (!patient) {
+      return {
+        success: false,
+        error: "Patient not found.",
+      };
+    }
+
     await prisma.visit.create({
       data: {
         patientId: patientId,
+        tokenNumber: patient.tokenNumber,
       },
     });
 
@@ -127,7 +172,6 @@ export async function addVisit(
     };
   }
 }
-
 export async function getPatientById(id: string) {
   try {
     const data = await prisma.patient.findUnique({
@@ -153,7 +197,11 @@ export async function getVisits() {
   try {
     const data = await prisma.visit.findMany({
       include: {
-        patient: true,
+        patient: {
+          include: {
+            relation: true,
+          },
+        },
       },
     });
     return {

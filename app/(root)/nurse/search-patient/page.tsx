@@ -70,21 +70,21 @@ const SearchPage = () => {
               {results.map((patient) => (
                 <li
                   key={patient.id}
-                  className="py-4 px-6 bg-[#223442] rounded-lg shadow-md flex items-center justify-between"
+                  className="py-4 px-6 bg-[#223442] rounded-lg shadow-md flex flex-wrap items-center justify-between"
                 >
                   <div>
                     <p className="font-bold text-black">{patient.name}</p>
                     <p>{patient.cnic}</p>
                   </div>
-                  <div className="flex space-x-2">
+                  <div className="flex space-x-2 flex-wrap mt-3">
                     <Button
-                      className="bg-blue-500 text-white hover:bg-blue-600"
+                      className="bg-blue-500 text-white hover:bg-blue-600 flex-grow md:flex-none"
                       onClick={() => handleViewPatient(patient.id)}
                     >
                       View Patient
                     </Button>
                     <Button
-                      className="bg-green-500 text-white hover:bg-green-600"
+                      className="bg-green-500 text-white hover:bg-green-600 flex-grow md:flex-none"
                       onClick={() => handleAddVisit(patient.id)}
                     >
                       Add Visit

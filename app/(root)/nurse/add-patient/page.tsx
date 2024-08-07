@@ -1,7 +1,7 @@
 "use client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import React from "react";
+import React, { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
@@ -24,9 +24,9 @@ const AddPatientPage = () => {
     name: "",
     fatherName: "",
     email: "",
-    identity: "PAKISTANI" as "PAKISTANI" | "OTHER",
+    identity: "PAKISTANI",
     cnic: "",
-    crc: "OLD" as "OLD" | "NEW",
+    crc: "OLD",
     crcNumber: "",
     contactNumber: "",
     education: "",
@@ -34,33 +34,68 @@ const AddPatientPage = () => {
     marriageYears: "",
     occupation: "",
     address: "",
-    catchmentArea: "URBAN" as "URBAN" | "RURAL" | "SLUM",
+    catchmentArea: "URBAN",
+    relation: "NONE",
+    relationName: "",
+    relationCNIC: "",
   };
 
-  const form = useForm<z.infer<typeof patientSchema>>({
+  const form = useForm({
     resolver: zodResolver(patientSchema),
     defaultValues: initialValues,
   });
 
-  async function onSubmit(
-    values: z.infer<typeof patientSchema>,
-    addVisit: boolean
-  ) {
-    console.log(values);
-    const data = await addPatient(values, addVisit);
-    console.log(data);
-    if (data.success) {
-      toast.success("Patient Added Successfully!");
-      form.reset();
-    } else {
-      if (data.error?._errors) {
-        toast.error(data.error._errors[0]);
-      } else {
-        toast.error("Failed to add patient.");
-      }
+  const [relationType, setRelationType] = useState("NONE");
+
+  const handleRelationChange = (event: any) => {
+    const selectedRelation = event.target.value;
+    setRelationType(selectedRelation);
+    form.setValue("relation", selectedRelation, { shouldValidate: true });
+    if (selectedRelation === "NONE") {
+      form.setValue("relationName", "");
+      form.setValue("relationCNIC", "");
     }
-    console.log(data);
-  }
+  };
+
+  const onSubmit = async (values: any, addVisit: any) => {
+    try {
+      // Ensure CNIC is correctly managed based on relation presence
+      const dataToSubmit = {
+        ...values,
+        cnic: values.relation === "NONE" ? values.cnic : undefined, // Send CNIC only if no relation
+        relations:
+          values.relation !== "NONE"
+            ? [
+                {
+                  relation: values.relation,
+                  relationName: values.relationName || "",
+                  relationCNIC: values.relationCNIC || "",
+                },
+              ]
+            : [], // Send an empty array if no relations
+      };
+
+      console.log("Submitting values:", JSON.stringify(dataToSubmit, null, 2));
+
+      const data = await addPatient(dataToSubmit, addVisit);
+
+      console.log("API Response:", JSON.stringify(data, null, 2));
+
+      if (data.success) {
+        toast.success("Patient Added Successfully!");
+        form.reset();
+      } else {
+        const errorMessage =
+          data.error?._errors?.[0] || "Failed to add patient.";
+        toast.error(errorMessage);
+        console.error("Error adding patient:", data.error);
+      }
+    } catch (error) {
+      console.error("Unexpected error during submission:", error);
+      toast.error("An unexpected error occurred.");
+    }
+  };
+
   const handleReset = () => {
     form.reset();
   };
@@ -174,21 +209,119 @@ const AddPatientPage = () => {
 
             <FormField
               control={form.control}
-              name="cnic"
+              name="relation"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Patient CNIC</FormLabel>
+                  <FormLabel>Relationship with Patient</FormLabel>
                   <FormControl>
-                    <Input
-                      placeholder="CNIC"
-                      {...field}
-                      className="rounded-2xl placeholder:text-slate-400"
-                    />
+                    <div className="space-y-2">
+                      <label className="flex items-center space-x-2">
+                        <input
+                          type="radio"
+                          value="PARENT"
+                          checked={field.value === "PARENT"}
+                          onChange={(e) => {
+                            field.onChange(e);
+                            handleRelationChange(e);
+                          }}
+                          className="form-radio"
+                        />
+                        <span className="text-white">PARENT</span>
+                      </label>
+                      <label className="flex items-center space-x-2">
+                        <input
+                          type="radio"
+                          value="SIBLING"
+                          checked={field.value === "SIBLING"}
+                          onChange={(e) => {
+                            field.onChange(e);
+                            handleRelationChange(e);
+                          }}
+                          className="form-radio"
+                        />
+                        <span className="text-white">SIBLING</span>
+                      </label>
+                      <label className="flex items-center space-x-2">
+                        <input
+                          type="radio"
+                          value="CHILD"
+                          checked={field.value === "CHILD"}
+                          onChange={(e) => {
+                            field.onChange(e);
+                            handleRelationChange(e);
+                          }}
+                          className="form-radio"
+                        />
+                        <span className="text-white">CHILD</span>
+                      </label>
+                      <label className="flex items-center space-x-2">
+                        <input
+                          type="radio"
+                          value="NONE"
+                          checked={field.value === "NONE"}
+                          onChange={(e) => {
+                            field.onChange(e);
+                            handleRelationChange(e);
+                          }}
+                          className="form-radio"
+                        />
+                        <span className="text-white">NONE</span>
+                      </label>
+                    </div>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
+
+            {relationType !== "NONE" && (
+              <>
+                <FormField
+                  control={form.control}
+                  name="relationName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Relation Name</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="Enter relation's name" />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="relationCNIC"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Relation CNIC</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="Enter relation's CNIC" />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              </>
+            )}
+
+            {relationType === "NONE" && (
+              <FormField
+                control={form.control}
+                name="cnic"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Patient CNIC</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="CNIC"
+                        {...field}
+                        className="rounded-2xl placeholder:text-slate-400"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
 
             <FormField
               control={form.control}
@@ -395,16 +528,16 @@ const AddPatientPage = () => {
                 </FormItem>
               )}
             />
-            <Button
-              onClick={() => onSubmit(form.getValues(), true)}
-              className="bg-green-500 text-white hover:bg-green-500 hover:opacity-80 w-full"
-              type="button"
-            >
-              {form.formState.isSubmitting
-                ? "Submitting..."
-                : "Save Registration & Add Visit"}
-            </Button>
-            <div className="flex flex-col md:flex-row items-start justify-start gap-2">
+            <div className="flex flex-col md:flex-row items-start justify-start gap-3 w-full">
+              <Button
+                onClick={() => onSubmit(form.getValues(), true)}
+                className="bg-green-500 text-white hover:bg-green-500 hover:opacity-80 w-full"
+                type="button"
+              >
+                {form.formState.isSubmitting
+                  ? "Submitting..."
+                  : "Save Registration & Add Visit"}
+              </Button>
               <Button
                 onClick={() => onSubmit(form.getValues(), false)}
                 className="bg-yellow-500 text-white hover:bg-yellow-500 hover:opacity-80 w-full"

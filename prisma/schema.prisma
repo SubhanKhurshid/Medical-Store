@@ -23,7 +23,7 @@ model Patient {
   fatherName    String
   email         String
   identity      Identity
-  cnic          String
+  cnic          String?
   crc           CRC
   crcNumber     String
   contactNumber String
@@ -36,12 +36,39 @@ model Patient {
   address       String
   catchmentArea CatchmentArea
   Visit         Visit[]
+  tokenNumber   Int 
+  relation      Relation[]
+            
 }
+
+model GlobalSetting {
+  id            String        @id @default(auto()) @map("_id") @db.ObjectId
+  lastTokenDate DateTime      @default(now())
+  lastToken     Int           @default(0)
+}
+
+model Relation{
+  id            String        @id @default(auto()) @map("_id") @db.ObjectId
+  patientId String   @db.ObjectId
+  relation      Relationship
+  relationName  String
+  relationCNIC  String
+  patient Patient @relation(fields: [patientId], references: [id])
+}
+
+enum Relationship {
+  PARENT
+  SIBLING
+  CHILD
+}
+
+
 
 enum Identity {
   PAKISTANI
   OTHER
 }
+
 
 enum CRC {
   OLD
@@ -58,6 +85,6 @@ model Visit {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
   patientId String   @db.ObjectId
   date      DateTime @default(now())
-
+   tokenNumber Int 
   patient Patient @relation(fields: [patientId], references: [id])
 }

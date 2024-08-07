@@ -13,7 +13,8 @@ import {
 } from "@/components/ui/table";
 
 const ViewVisitPage = () => {
-  const [patient, setPatients] = useState<any[]>([]);
+  const [patients, setPatients] = useState<any[]>([]);
+
   useEffect(() => {
     const getData = async () => {
       const result = await getVisits();
@@ -26,9 +27,10 @@ const ViewVisitPage = () => {
     };
     getData();
   }, []);
+
   return (
     <div className="max-w-7xl mx-auto px-10 p-5">
-      {patient ? (
+      {patients.length > 0 ? (
         <Table>
           <TableHeader>
             <TableRow>
@@ -39,24 +41,41 @@ const ViewVisitPage = () => {
               <TableHead>Identity</TableHead>
               <TableHead>Catchment Area</TableHead>
               <TableHead>Occupation</TableHead>
+              <TableHead>Token</TableHead>
+              <TableHead>Relation</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {patient.map((item) => (
-              <TableRow>
+            {patients.map((item, index) => (
+              <TableRow key={index}>
                 <TableCell>{item.patient.name}</TableCell>
                 <TableCell>{item.patient.fatherName}</TableCell>
-                <TableCell>{item.patient.cnic}</TableCell>
+                <TableCell>
+                  {item.patient.relation && item.patient.relation.length > 0
+                    ? "Not Available"
+                    : item.patient.cnic}
+                </TableCell>
                 <TableCell>{item.patient.education}</TableCell>
                 <TableCell>{item.patient.identity}</TableCell>
                 <TableCell>{item.patient.catchmentArea}</TableCell>
                 <TableCell>{item.patient.occupation}</TableCell>
+                <TableCell>{item.patient.tokenNumber}</TableCell>
+                <TableCell>
+                  {item.patient.relation && item.patient.relation.length > 0
+                    ? item.patient.relation
+                        .map(
+                          (rel: any) =>
+                            `${rel.relation}: ${rel.relationName} (CNIC: ${rel.relationCNIC})`
+                        )
+                        .join(", ")
+                    : "None"}
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
       ) : (
-        <h1>Loading..</h1>
+        <h1>Loading...</h1>
       )}
     </div>
   );
