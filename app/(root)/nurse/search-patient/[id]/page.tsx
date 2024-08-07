@@ -3,22 +3,31 @@ import { useParams } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import { getPatientById } from "../../../../../lib/actions/route";
 
+interface Relation {
+  id: string;
+  relation: string;
+  relationName: string;
+  relationCNIC: string;
+}
+
 interface Patient {
   id: string;
   name: string;
   fatherName: string;
   email: string;
   identity: string;
-  cnic: string;
+  cnic: string | null;
   crc: string;
   crcNumber: string;
   contactNumber: string;
   education: string;
   age: string;
-  marriageYears: number;
+  marriageYears: string;
   occupation: string;
   address: string;
   catchmentArea: string;
+  tokenNumber: number;
+  relation: Relation[];
 }
 
 const ViewPatientPage = () => {
@@ -30,13 +39,7 @@ const ViewPatientPage = () => {
       const result = await getPatientById(id);
 
       if (result.success && result.data) {
-        const data = result.data as unknown as Patient | Patient[];
-        const project = Array.isArray(data)
-          ? data.length > 0
-            ? data[0]
-            : null
-          : data;
-        setPatient(project);
+        setPatient(result.data);
       } else {
         console.error(result.error);
       }
@@ -45,12 +48,11 @@ const ViewPatientPage = () => {
   }, [id]);
 
   return (
-    <div className="flex items-center justify-center min-h-scree">
+    <div className="flex items-center justify-center min-h-screen">
       {patient ? (
-        <div className="px-20 py-10  max-w-md w-full bg-[#223442] rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300">
+        <div className="px-20 py-10 max-w-md w-full bg-[#223442] rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300">
           <h2 className="text-3xl font-bold mb-2">{patient.name}</h2>
           <p className="text-white mb-2">
-            {" "}
             <span className="font-bold">Father's Name: </span>{" "}
             {patient.fatherName}
           </p>
@@ -62,7 +64,7 @@ const ViewPatientPage = () => {
           </p>
           <p className="text-white mb-2">
             <span className="font-bold">CNIC: </span>
-            {patient.cnic}
+            {patient.cnic || "N/A"}
           </p>
           <p className="text-white mb-2">
             <span className="font-bold">CRC: </span> {patient.crc}
@@ -94,6 +96,18 @@ const ViewPatientPage = () => {
             <span className="font-bold">Catchment Area: </span>{" "}
             {patient.catchmentArea}
           </p>
+          <div className="text-white mb-2">
+            <span className="font-bold">Relations: </span>
+            {patient.relation && patient.relation.length > 0 ? (
+              patient.relation.map((rel) => (
+                <div key={rel.id}>
+                  {rel.relation}: {rel.relationName} (CNIC: {rel.relationCNIC})
+                </div>
+              ))
+            ) : (
+              <span>None</span>
+            )}
+          </div>
         </div>
       ) : (
         <p>Loading...</p>

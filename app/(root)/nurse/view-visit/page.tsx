@@ -4,16 +4,45 @@ import { getVisits } from "../../../../lib/actions/route";
 import {
   Table,
   TableBody,
-  TableCaption,
   TableCell,
-  TableFooter,
   TableHead,
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
 
+interface Relation {
+  relation: string;
+  relationName: string;
+  relationCNIC: string;
+}
+
+interface Patient {
+  id: string;
+  name: string;
+  fatherName: string;
+  email: string;
+  identity: string;
+  cnic: string | null;
+  crc: string;
+  crcNumber: string;
+  contactNumber: string;
+  education: string;
+  age: string;
+  marriageYears: string;
+  occupation: string;
+  address: string;
+  catchmentArea: string;
+  tokenNumber: number;
+  relation: Relation[];
+}
+
+interface Visit {
+  visitedAt: Date;
+  patient: Patient;
+}
+
 const ViewVisitPage = () => {
-  const [patients, setPatients] = useState<any[]>([]);
+  const [patients, setPatients] = useState<Visit[]>([]);
 
   useEffect(() => {
     const getData = async () => {
@@ -43,6 +72,7 @@ const ViewVisitPage = () => {
               <TableHead>Occupation</TableHead>
               <TableHead>Token</TableHead>
               <TableHead>Relation</TableHead>
+              <TableHead>Visited At</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -64,11 +94,14 @@ const ViewVisitPage = () => {
                   {item.patient.relation && item.patient.relation.length > 0
                     ? item.patient.relation
                         .map(
-                          (rel: any) =>
+                          (rel) =>
                             `${rel.relation}: ${rel.relationName} (CNIC: ${rel.relationCNIC})`
                         )
                         .join(", ")
                     : "None"}
+                </TableCell>
+                <TableCell>
+                  {new Date(item.visitedAt).toLocaleString()}
                 </TableCell>
               </TableRow>
             ))}

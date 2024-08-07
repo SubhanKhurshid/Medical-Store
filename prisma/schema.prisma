@@ -85,6 +85,6 @@ model Visit {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
   patientId String   @db.ObjectId
   date      DateTime @default(now())
-   tokenNumber Int 
+  tokenNumber Int 
   patient Patient @relation(fields: [patientId], references: [id])
 }

@@ -9,6 +9,7 @@ import { useRouter } from "next/navigation";
 const SearchPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [results, setResults] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
 
   const handleSearchChange = async (
@@ -18,17 +19,21 @@ const SearchPage = () => {
     setSearchTerm(term);
 
     if (term) {
+      setLoading(true);
       try {
         const data = await searchPatients({ cnic: term });
         if (data.success) {
-          setResults(data.data);
+          setResults(data.data || []);
         } else {
-          toast.error("Failed to fetch patients.");
+          toast.error(data.error || "Failed to fetch patients.");
           setResults([]);
         }
       } catch (error) {
         console.error("Error fetching patients:", error);
         toast.error("An error occurred while fetching patients.");
+        setResults([]);
+      } finally {
+        setLoading(false);
       }
     } else {
       setResults([]);
@@ -41,7 +46,7 @@ const SearchPage = () => {
       if (data.success) {
         toast.success("Visit added successfully!");
       } else {
-        toast.error("Failed to add visit.");
+        toast.error(data.error || "Failed to add visit.");
       }
     } catch (error) {
       console.error("Error adding visit:", error);
@@ -63,8 +68,10 @@ const SearchPage = () => {
           placeholder="Search Here"
           value={searchTerm}
           onChange={handleSearchChange}
+          className="w-full max-w-md"
         />
         <div className="mt-5 w-full max-w-md">
+          {loading && <p>Loading...</p>}
           {results.length > 0 && (
             <ul className="list-disc pl-5 space-y-4">
               {results.map((patient) => (
@@ -73,8 +80,13 @@ const SearchPage = () => {
                   className="py-4 px-6 bg-[#223442] rounded-lg shadow-md flex flex-wrap items-center justify-between"
                 >
                   <div>
-                    <p className="font-bold text-black">{patient.name}</p>
-                    <p>{patient.cnic}</p>
+                    <p className="font-bold text-white">{patient.name}</p>
+                    <p>
+                      {patient.cnic ||
+                        (patient.relation.length > 0
+                          ? patient.relation[0].relationCNIC
+                          : "No CNIC available")}
+                    </p>
                   </div>
                   <div className="flex space-x-2 flex-wrap mt-3">
                     <Button

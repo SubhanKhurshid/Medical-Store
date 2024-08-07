@@ -32,7 +32,7 @@ export const patientSchema = z
       .refine((value) => value !== undefined, {
         message: "Identity is required",
       }),
-    cnic: z.string().optional().or(z.literal("")), // Allow CNIC to be optional
+    cnic: z.string().optional().or(z.literal("")),
     crc: z
       .enum(["OLD", "NEW"])
       .refine((value) => value !== undefined, { message: "CRC is required" }),

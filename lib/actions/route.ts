@@ -104,33 +104,52 @@ type SearchRequest = z.infer<typeof searchSchema>;
 
 export async function searchPatients(
   input: SearchRequest
-): Promise<{ success: boolean; error?: z.ZodFormattedError<any>; data?: any }> {
+): Promise<{ success: boolean; error?: string; data: any[] }> {
   try {
     const body = searchSchema.safeParse(input);
     if (!body.success) {
-      return { success: false, error: body.error.format() };
+      return { success: false, error: "Invalid input format.", data: [] };
     }
 
     const { cnic } = body.data;
 
     const patients = await prisma.patient.findMany({
       where: {
-        cnic: {
-          contains: cnic,
-        },
+        OR: [
+          {
+            cnic: {
+              contains: cnic,
+            },
+          },
+          {
+            relation: {
+              some: {
+                relationCNIC: {
+                  contains: cnic,
+                },
+              },
+            },
+          },
+        ],
+      },
+      include: {
+        relation: true,
       },
     });
 
     return {
       success: true,
-      data: patients,
+      data: patients ?? [],
     };
   } catch (error) {
     console.error("Error searching for patients:", error);
-    return { success: false, error: { _errors: ["Something went wrong"] } };
+    return {
+      success: false,
+      error: "An error occurred while searching for patients.",
+      data: [],
+    };
   }
 }
-
 type AddVisitRequest = {
   patientId: string;
 };
@@ -141,7 +160,6 @@ export async function addVisit(
   try {
     const { patientId } = input;
 
-    // Retrieve the current token number from the patient
     const patient = await prisma.patient.findUnique({
       where: { id: patientId },
       select: { tokenNumber: true },
@@ -178,7 +196,17 @@ export async function getPatientById(id: string) {
       where: {
         id: id,
       },
+      include: {
+        relation: true,
+      },
     });
+
+    if (!data) {
+      return {
+        success: false,
+        error: "Patient not found.",
+      };
+    }
 
     return {
       success: true,
@@ -204,9 +232,13 @@ export async function getVisits() {
         },
       },
     });
+
     return {
       success: true,
-      data: data,
+      data: data.map((visit) => ({
+        visitedAt: visit.date,
+        patient: visit.patient,
+      })),
     };
   } catch (error) {
     console.error("Error getting visits:", error);
