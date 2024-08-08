@@ -17,7 +17,6 @@ export async function addPatient(
 
     const { data } = body;
 
-    // Check for existing user only if CNIC is provided and required
     if (data.relations.length === 0 && data.cnic) {
       const existingUser = await prisma.patient.findFirst({
         where: {
@@ -33,12 +32,11 @@ export async function addPatient(
       }
     }
 
-    // Manage the token logic
     const today = new Date().setHours(0, 0, 0, 0);
     let setting = await prisma.globalSetting.findFirst();
 
     if (!setting || setting.lastTokenDate.setHours(0, 0, 0, 0) < today) {
-      // Create or reset the global settings
+
       setting = await prisma.globalSetting.create({
         data: {
           lastToken: 1,
@@ -52,14 +50,14 @@ export async function addPatient(
       });
     }
 
-    // Create the patient with the new token number and relations
+    
     const patient = await prisma.patient.create({
       data: {
         name: data.name,
         fatherName: data.fatherName,
         email: data.email,
         identity: data.identity,
-        cnic: data.cnic || "", // Use an empty string if CNIC is not required
+        cnic: data.cnic || "",
         crc: data.crc,
         crcNumber: data.crcNumber,
         contactNumber: data.contactNumber,
@@ -80,7 +78,6 @@ export async function addPatient(
       },
     });
 
-    // Optionally add a visit
     if (addVisit) {
       await prisma.visit.create({
         data: {
@@ -100,6 +97,7 @@ export async function addPatient(
     return { success: false, error: { _errors: ["Something went wrong"] } };
   }
 }
+
 type SearchRequest = z.infer<typeof searchSchema>;
 
 export async function searchPatients(
@@ -150,6 +148,7 @@ export async function searchPatients(
     };
   }
 }
+
 type AddVisitRequest = {
   patientId: string;
 };
@@ -190,6 +189,7 @@ export async function addVisit(
     };
   }
 }
+
 export async function getPatientById(id: string) {
   try {
     const data = await prisma.patient.findUnique({
@@ -242,6 +242,54 @@ export async function getVisits() {
     };
   } catch (error) {
     console.error("Error getting visits:", error);
+    return { success: false, error: { _errors: ["Something went wrong"] } };
+  }
+}
+
+export async function updatePatient(id: string, data: any) {
+  try {
+    console.log("Data", data);
+    const validatedData = patientSchema.parse(data);
+    console.log("Validated Data", validatedData);
+
+    const updateData: any = {
+      name: validatedData.name,
+      fatherName: validatedData.fatherName,
+      email: validatedData.email,
+      identity: validatedData.identity,
+      cnic: validatedData.cnic || "",
+      crc: validatedData.crc,
+      crcNumber: validatedData.crcNumber,
+      contactNumber: validatedData.contactNumber,
+      education: validatedData.education,
+      age: validatedData.age,
+      marriageYears: validatedData.marriageYears,
+      occupation: validatedData.occupation,
+      address: validatedData.address,
+      catchmentArea: validatedData.catchmentArea,
+      relation: {
+        update: validatedData.relations.map((rel: any) => ({
+          where: { relationCNIC: rel.relationCNIC }, 
+          data: {
+            relation: rel.relation,
+            relationName: rel.relationName,
+          },
+        })),
+      },
+    };
+
+    console.log(updateData);
+
+    const updatedPatient = await prisma.patient.update({
+      where: { id },
+      data: updateData,
+    });
+
+    console.log(updatedPatient);
+
+    return { success: true, data: updatedPatient };
+  } catch (error) {
+    console.error("Error updating patient:", error);
     return { success: false, error: { _errors: ["Something went wrong"] } };
   }
 }

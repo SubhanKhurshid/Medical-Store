@@ -58,6 +58,10 @@ const SearchPage = () => {
     router.push(`/nurse/search-patient/${patientId}`);
   };
 
+  const handleEditPatient = (patientId: string) => {
+    router.push(`/nurse/edit-patient/${patientId}`);
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-10 p-5">
       <div className="flex flex-col gap-10 items-center justify-center">
@@ -100,6 +104,12 @@ const SearchPage = () => {
                       onClick={() => handleAddVisit(patient.id)}
                     >
                       Add Visit
+                    </Button>
+                    <Button
+                      className="bg-red-500 text-white hover:bg-red-500 flex-grow md:flex-none"
+                      onClick={() => handleEditPatient(patient.id)}
+                    >
+                      Edit Paitent
                     </Button>
                   </div>
                 </li>

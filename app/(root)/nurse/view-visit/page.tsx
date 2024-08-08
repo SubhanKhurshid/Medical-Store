@@ -78,19 +78,33 @@ const ViewVisitPage = () => {
           <TableBody>
             {patients.map((item, index) => (
               <TableRow key={index}>
-                <TableCell>{item.patient.name}</TableCell>
-                <TableCell>{item.patient.fatherName}</TableCell>
-                <TableCell>
+                <TableCell className="capitalize">
+                  {item.patient.name}
+                </TableCell>
+                <TableCell className="capitalize">
+                  {item.patient.fatherName}
+                </TableCell>
+                <TableCell className="capitalize">
                   {item.patient.relation && item.patient.relation.length > 0
                     ? "Not Available"
                     : item.patient.cnic}
                 </TableCell>
-                <TableCell>{item.patient.education}</TableCell>
-                <TableCell>{item.patient.identity}</TableCell>
-                <TableCell>{item.patient.catchmentArea}</TableCell>
-                <TableCell>{item.patient.occupation}</TableCell>
-                <TableCell>{item.patient.tokenNumber}</TableCell>
-                <TableCell>
+                <TableCell className="capitalize">
+                  {item.patient.education}
+                </TableCell>
+                <TableCell className="capitalize">
+                  {item.patient.identity}
+                </TableCell>
+                <TableCell className="capitalize">
+                  {item.patient.catchmentArea}
+                </TableCell>
+                <TableCell className="capitalize">
+                  {item.patient.occupation}
+                </TableCell>
+                <TableCell className="capitalize">
+                  {item.patient.tokenNumber}
+                </TableCell>
+                <TableCell className="capitalize">
                   {item.patient.relation && item.patient.relation.length > 0
                     ? item.patient.relation
                         .map(
