@@ -28,6 +28,7 @@ interface Patient {
   catchmentArea: string;
   tokenNumber: number;
   relation: Relation[];
+  lastVisit: Date | null; // Include lastVisit as a Date or null
 }
 
 const ViewPatientPage = () => {
@@ -108,6 +109,12 @@ const ViewPatientPage = () => {
               <span>None</span>
             )}
           </div>
+          <p className="text-white mb-2">
+            <span className="font-bold">Last Visit: </span>
+            {patient.lastVisit
+              ? new Date(patient.lastVisit).toLocaleString()
+              : "No visits yet"}
+          </p>
         </div>
       ) : (
         <p>Loading...</p>
