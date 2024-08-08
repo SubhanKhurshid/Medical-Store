@@ -91,6 +91,12 @@ const SearchPage = () => {
                           ? patient.relation[0].relationCNIC
                           : "No CNIC available")}
                     </p>
+                    <p className="text-gray-400">
+                      Last Visit:{" "}
+                      {patient.lastVisit
+                        ? new Date(patient.lastVisit).toLocaleString()
+                        : "No visits yet"}
+                    </p>
                   </div>
                   <div className="flex space-x-2 flex-wrap mt-3">
                     <Button

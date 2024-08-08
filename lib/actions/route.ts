@@ -36,7 +36,6 @@ export async function addPatient(
     let setting = await prisma.globalSetting.findFirst();
 
     if (!setting || setting.lastTokenDate.setHours(0, 0, 0, 0) < today) {
-
       setting = await prisma.globalSetting.create({
         data: {
           lastToken: 1,
@@ -50,7 +49,7 @@ export async function addPatient(
       });
     }
 
-    
+    // Create the patient with the new token number and relations
     const patient = await prisma.patient.create({
       data: {
         name: data.name,
@@ -132,12 +131,23 @@ export async function searchPatients(
       },
       include: {
         relation: true,
+        Visit: {
+          orderBy: {
+            date: "desc",
+          },
+          take: 1,
+        },
       },
     });
 
+    const result = patients.map((patient) => ({
+      ...patient,
+      lastVisit: patient.Visit.length > 0 ? patient.Visit[0].date : null,
+    }));
+
     return {
       success: true,
-      data: patients ?? [],
+      data: result,
     };
   } catch (error) {
     console.error("Error searching for patients:", error);
@@ -198,6 +208,12 @@ export async function getPatientById(id: string) {
       },
       include: {
         relation: true,
+        Visit: {
+          orderBy: {
+            date: "desc",
+          },
+          take: 1,
+        },
       },
     });
 
@@ -208,9 +224,14 @@ export async function getPatientById(id: string) {
       };
     }
 
+    const lastVisitDate = data.Visit.length > 0 ? data.Visit[0].date : null;
+
     return {
       success: true,
-      data,
+      data: {
+        ...data,
+        lastVisit: lastVisitDate,
+      },
     };
   } catch (error) {
     console.error("Error getting patient:", error);
