@@ -98,19 +98,21 @@ const SearchPage = () => {
                         : "No visits yet"}
                     </p>
                   </div>
-                  <div className="flex space-x-2 flex-wrap mt-3">
-                    <Button
-                      className="bg-blue-500 text-white hover:bg-blue-600 flex-grow md:flex-none"
-                      onClick={() => handleViewPatient(patient.id)}
-                    >
-                      View Patient
-                    </Button>
-                    <Button
-                      className="bg-green-500 text-white hover:bg-green-600 flex-grow md:flex-none"
-                      onClick={() => handleAddVisit(patient.id)}
-                    >
-                      Add Visit
-                    </Button>
+                  <div className="flex flex-col gap-3 mt-3">
+                    <div className="flex items-center justify-center gap-2">
+                      <Button
+                        className="bg-blue-500 text-white hover:bg-blue-600 flex-grow md:flex-none"
+                        onClick={() => handleViewPatient(patient.id)}
+                      >
+                        View Patient
+                      </Button>
+                      <Button
+                        className="bg-green-500 text-white hover:bg-green-600 flex-grow md:flex-none"
+                        onClick={() => handleAddVisit(patient.id)}
+                      >
+                        Add Visit
+                      </Button>
+                    </div>
                     <Button
                       className="bg-red-500 text-white hover:bg-red-500 flex-grow md:flex-none"
                       onClick={() => handleEditPatient(patient.id)}
