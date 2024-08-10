@@ -2,6 +2,8 @@
 import { useParams } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import { getPatientById } from "../../../../../lib/actions/route";
+import Image from "next/image";
+import plane from "@/public/paper_plane_1x-1.0s-200px-200px-removebg-preview.png";
 
 interface Relation {
   id: string;
@@ -28,12 +30,13 @@ interface Patient {
   catchmentArea: string;
   tokenNumber: number;
   relation: Relation[];
-  lastVisit: Date | null; // Include lastVisit as a Date or null
+  lastVisit: Date | null;
 }
 
 const ViewPatientPage = () => {
   const { id } = useParams() as { id: string };
   const [patient, setPatient] = useState<Patient | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const getData = async () => {
@@ -44,13 +47,27 @@ const ViewPatientPage = () => {
       } else {
         console.error(result.error);
       }
+
+      // Add a slight delay before hiding the loader
+      setTimeout(() => {
+        setLoading(false);
+      }, 500); // 500ms delay
     };
+
     getData();
   }, [id]);
 
   return (
     <div className="flex items-center justify-center min-h-screen">
-      {patient ? (
+      {loading ? (
+        <div className="flex justify-center items-center h-screen">
+          <Image
+            src={plane}
+            alt="Loading..."
+            className="w-20 h-20 animate-bounce"
+          />
+        </div>
+      ) : patient ? (
         <div className="px-20 py-10 max-w-md w-full bg-[#223442] rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300">
           <h2 className="text-3xl font-bold mb-2">{patient.name}</h2>
           <p className="text-white mb-2">
@@ -117,7 +134,7 @@ const ViewPatientPage = () => {
           </p>
         </div>
       ) : (
-        <p>Loading...</p>
+        <p>Patient not found.</p>
       )}
     </div>
   );
