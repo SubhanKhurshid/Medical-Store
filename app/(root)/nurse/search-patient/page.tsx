@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { searchPatients, addVisit } from "../../../../lib/actions/route";
 import { useRouter } from "next/navigation";
+import plane from "@/public/paper_plane_1x-1.0s-200px-200px-removebg-preview.png";
+import Image from "next/image";
 
 const SearchPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -33,7 +35,9 @@ const SearchPage = () => {
         toast.error("An error occurred while fetching patients.");
         setResults([]);
       } finally {
-        setLoading(false);
+        setTimeout(() => {
+          setLoading(false);
+        }, 500); // Add a slight delay of 500ms before hiding the loading animation
       }
     } else {
       setResults([]);
@@ -75,15 +79,23 @@ const SearchPage = () => {
           className="w-full max-w-md"
         />
         <div className="mt-5 w-full max-w-md">
-          {loading && <p>Loading...</p>}
+          {loading && (
+            <div className="flex justify-center">
+              <Image
+                src={plane}
+                alt="Loading..."
+                className="w-20 h-20 animate-bounce"
+              />
+            </div>
+          )}
           {results.length > 0 && (
             <ul className="list-disc pl-5 space-y-4">
               {results.map((patient) => (
                 <li
                   key={patient.id}
-                  className="py-4 px-6 bg-[#223442] rounded-lg shadow-md flex flex-wrap items-center justify-between"
+                  className="py-4 px-6 bg-[#223442] rounded-lg shadow-md flex items-center justify-center gap-2"
                 >
-                  <div>
+                  <div className="max-w-sm">
                     <p className="font-bold text-white">{patient.name}</p>
                     <p>
                       {patient.cnic ||
@@ -91,6 +103,7 @@ const SearchPage = () => {
                           ? patient.relation[0].relationCNIC
                           : "No CNIC available")}
                     </p>
+
                     <p className="text-gray-400">
                       Last Visit:{" "}
                       {patient.lastVisit
@@ -114,10 +127,10 @@ const SearchPage = () => {
                       </Button>
                     </div>
                     <Button
-                      className="bg-red-500 text-white hover:bg-red-500 flex-grow md:flex-none"
+                      className="bg-red-500 text-white hover:bg-red-500 flex-grow md:flex-none hover:bg-opacity-80"
                       onClick={() => handleEditPatient(patient.id)}
                     >
-                      Edit Paitent
+                      Edit Patient
                     </Button>
                   </div>
                 </li>

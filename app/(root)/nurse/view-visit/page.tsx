@@ -10,6 +10,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
+import Image from "next/image";
+import plane from "@/public/paper_plane_1x-1.0s-200px-200px-removebg-preview.png";
 
 interface Relation {
   relation: string;
@@ -45,6 +47,7 @@ interface Visit {
 const ViewVisitPage = () => {
   const [patients, setPatients] = useState<Visit[]>([]);
   const [searchTerm, setSearchTerm] = useState<string>("");
+  const [loading, setLoading] = useState<boolean>(true);
 
   const getData = async () => {
     const result = await getVisits();
@@ -53,6 +56,8 @@ const ViewVisitPage = () => {
     } else {
       console.error(result.error);
     }
+    // Add a slight delay before hiding the loader
+    setTimeout(() => setLoading(false), 500); // 500ms delay
   };
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -95,7 +100,15 @@ const ViewVisitPage = () => {
         />
       </div>
 
-      {patients.length > 0 ? (
+      {loading ? (
+        <div className="flex justify-center items-center h-screen">
+          <Image
+            src={plane}
+            alt="Loading..."
+            className="w-20 h-20 animate-bounce"
+          />
+        </div>
+      ) : patients.length > 0 ? (
         <Table>
           <TableHeader>
             <TableRow>
@@ -158,9 +171,10 @@ const ViewVisitPage = () => {
           </TableBody>
         </Table>
       ) : (
-        <h1>Loading...</h1>
+        <h1>No visits found.</h1>
       )}
     </div>
   );
 };
+
 export default ViewVisitPage;
