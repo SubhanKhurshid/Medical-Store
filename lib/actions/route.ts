@@ -49,26 +49,28 @@ export async function addPatient(
       });
     }
 
-    // Create the patient with the new token number and relations
+    const { attendedByDoctorId, ...patientData } = data;
     const patient = await prisma.patient.create({
       data: {
-        name: data.name,
-        fatherName: data.fatherName,
-        email: data.email,
-        identity: data.identity,
-        cnic: data.cnic || "",
-        crc: data.crc,
-        crcNumber: data.crcNumber,
-        contactNumber: data.contactNumber,
-        education: data.education,
-        age: data.age,
-        marriageYears: data.marriageYears,
-        occupation: data.occupation,
-        address: data.address,
-        catchmentArea: data.catchmentArea,
+        name: patientData.name,
+        fatherName: patientData.fatherName,
+        email: patientData.email,
+        identity: patientData.identity,
+        cnic: patientData.cnic || "",
+        crc: patientData.crc,
+        crcNumber: patientData.crcNumber,
+        contactNumber: patientData.contactNumber,
+        education: patientData.education,
+        age: patientData.age,
+        marriageYears: patientData.marriageYears,
+        occupation: patientData.occupation,
+        address: patientData.address,
+        catchmentArea: patientData.catchmentArea,
         tokenNumber: setting.lastToken,
+        amountPayed: patientData.amountPayed || 0,
+        attendedByDoctorId: attendedByDoctorId, // Ensure attendedByDoctorId is correctly assigned here
         relation: {
-          create: data.relations.map((rel: any) => ({
+          create: patientData.relations.map((rel: any) => ({
             relation: rel.relation,
             relationName: rel.relationName,
             relationCNIC: rel.relationCNIC,
@@ -94,6 +96,28 @@ export async function addPatient(
   } catch (error) {
     console.error("Error creating patient:", error);
     return { success: false, error: { _errors: ["Something went wrong"] } };
+  }
+}
+
+export async function getDoctorNames() {
+  try {
+    const doctors = await prisma.user.findMany({
+      where: {
+        role: "doctor",
+      },
+      select: {
+        id: true,
+        name: true,
+      },
+    });
+
+    return doctors.map((doctor) => ({
+      id: doctor.id,
+      name: doctor.name || "",
+    }));
+  } catch (error) {
+    console.error("Error retrieving doctors:", error);
+    throw new Error("Failed to retrieve doctors");
   }
 }
 

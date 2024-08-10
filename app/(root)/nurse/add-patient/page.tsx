@@ -1,7 +1,7 @@
 "use client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
@@ -13,11 +13,31 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { patientSchema } from "@/lib/validator";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+import { patientSchema } from "../../../../lib/validator";
 import { Checkbox } from "@/components/ui/checkbox";
-import { addPatient } from "../../../../lib/actions/route";
+import { addPatient, getDoctorNames } from "../../../../lib/actions/route";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
+interface Doctor {
+  id: string;
+  name: string;
+}
 
 const AddPatientPage = () => {
   const initialValues = {
@@ -38,6 +58,8 @@ const AddPatientPage = () => {
     relation: "NONE",
     relationName: "",
     relationCNIC: "",
+    attendedByDoctorId: "",
+    amountPayed: "",
   };
 
   const form = useForm({
@@ -46,6 +68,28 @@ const AddPatientPage = () => {
   });
 
   const [relationType, setRelationType] = useState("NONE");
+  const [doctors, setDoctors] = useState<Doctor[]>([]);
+
+  useEffect(() => {
+    const fetchDoctors = async () => {
+      try {
+        const response = await getDoctorNames();
+        if (response && response.length > 0) {
+          const doctorsData: Doctor[] = response.map((doctor) => ({
+            id: doctor.id,
+            name: doctor.name || "",
+          }));
+          setDoctors(doctorsData);
+        } else {
+          console.error("Failed to fetch doctors:", response);
+        }
+      } catch (error) {
+        console.error("Error fetching doctors:", error);
+      }
+    };
+
+    fetchDoctors();
+  }, []);
 
   const handleRelationChange = (event: any) => {
     const selectedRelation = event.target.value;
@@ -59,10 +103,9 @@ const AddPatientPage = () => {
 
   const onSubmit = async (values: any, addVisit: any) => {
     try {
-      // Ensure CNIC is correctly managed based on relation presence
       const dataToSubmit = {
         ...values,
-        cnic: values.relation === "NONE" ? values.cnic : undefined, // Send CNIC only if no relation
+        cnic: values.relation === "NONE" ? values.cnic : undefined,
         relations:
           values.relation !== "NONE"
             ? [
@@ -72,7 +115,7 @@ const AddPatientPage = () => {
                   relationCNIC: values.relationCNIC || "",
                 },
               ]
-            : [], // Send an empty array if no relations
+            : [],
       };
 
       console.log("Submitting values:", JSON.stringify(dataToSubmit, null, 2));
@@ -101,7 +144,7 @@ const AddPatientPage = () => {
   };
 
   return (
-    <div className="mt-10 flex items-center justify-center min-h-screen ">
+    <div className="mt-10 flex items-center justify-center min-h-screen">
       <div className="w-full max-w-4xl p-5 shadow-xl rounded-lg bg-[#223442] px-20 py-10">
         <div className="flex items-center justify-center">
           <h1 className="border-b-2 border-[#BB35A9] py-2 text-center text-2xl font-bold mb-6">
@@ -128,7 +171,7 @@ const AddPatientPage = () => {
                       <Input
                         placeholder="Name"
                         {...field}
-                        className="rounded-2xl placeholder:text-slate-400"
+                        className="rounded-2xl placeholder-text-slate-400"
                       />
                     </FormControl>
                     <FormMessage />
@@ -145,7 +188,7 @@ const AddPatientPage = () => {
                       <Input
                         placeholder="Father's Name"
                         {...field}
-                        className="rounded-2xl placeholder:text-slate-400"
+                        className="rounded-2xl placeholder-text-slate-400"
                       />
                     </FormControl>
                     <FormMessage />
@@ -153,7 +196,6 @@ const AddPatientPage = () => {
                 )}
               />
             </div>
-
             <FormField
               control={form.control}
               name="email"
@@ -164,14 +206,13 @@ const AddPatientPage = () => {
                     <Input
                       placeholder="Email"
                       {...field}
-                      className="rounded-2xl placeholder:text-slate-400"
+                      className="rounded-2xl placeholder-text-slate-400"
                     />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-
             <FormField
               control={form.control}
               name="identity"
@@ -201,6 +242,19 @@ const AddPatientPage = () => {
                         <span className="text-white">OTHER</span>
                       </label>
                     </div>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Name</FormLabel>
+                  <FormControl>
+                    <Input {...field} placeholder="Enter name" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -257,6 +311,19 @@ const AddPatientPage = () => {
                       <label className="flex items-center space-x-2">
                         <input
                           type="radio"
+                          value="SPOUSE"
+                          checked={field.value === "SPOUSE"}
+                          onChange={(e) => {
+                            field.onChange(e);
+                            handleRelationChange(e);
+                          }}
+                          className="form-radio"
+                        />
+                        <span className="text-white">SPOUSE</span>
+                      </label>
+                      <label className="flex items-center space-x-2">
+                        <input
+                          type="radio"
                           value="NONE"
                           checked={field.value === "NONE"}
                           onChange={(e) => {
@@ -273,18 +340,22 @@ const AddPatientPage = () => {
                 </FormItem>
               )}
             />
-
             {relationType !== "NONE" && (
-              <>
+              <div className="flex flex-col md:flex-row gap-4">
                 <FormField
                   control={form.control}
                   name="relationName"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Relation Name</FormLabel>
+                    <FormItem className="flex-1">
+                      <FormLabel>Relation's Name</FormLabel>
                       <FormControl>
-                        <Input {...field} placeholder="Enter relation's name" />
+                        <Input
+                          placeholder="Relation's Name"
+                          {...field}
+                          className="rounded-2xl placeholder-text-slate-400"
+                        />
                       </FormControl>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
@@ -292,37 +363,38 @@ const AddPatientPage = () => {
                   control={form.control}
                   name="relationCNIC"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Relation CNIC</FormLabel>
+                    <FormItem className="flex-1">
+                      <FormLabel>Relation's CNIC</FormLabel>
                       <FormControl>
-                        <Input {...field} placeholder="Enter relation's CNIC" />
+                        <Input
+                          placeholder="Relation's CNIC"
+                          {...field}
+                          className="rounded-2xl placeholder-text-slate-400"
+                        />
                       </FormControl>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
-              </>
+              </div>
             )}
-
-            {relationType === "NONE" && (
-              <FormField
-                control={form.control}
-                name="cnic"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Patient CNIC</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="CNIC"
-                        {...field}
-                        className="rounded-2xl placeholder:text-slate-400"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
-
+            <FormField
+              control={form.control}
+              name="cnic"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Enter Patient CNIC</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="CNIC"
+                      {...field}
+                      className="rounded-2xl placeholder-text-slate-400"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <FormField
               control={form.control}
               name="crc"
@@ -334,16 +406,6 @@ const AddPatientPage = () => {
                       <label className="flex items-center space-x-2">
                         <input
                           type="radio"
-                          value="NEW"
-                          checked={field.value === "NEW"}
-                          onChange={field.onChange}
-                          className="form-radio"
-                        />
-                        <span className="text-white">NEW</span>
-                      </label>
-                      <label className="flex items-center space-x-2">
-                        <input
-                          type="radio"
                           value="OLD"
                           checked={field.value === "OLD"}
                           onChange={field.onChange}
@@ -351,85 +413,91 @@ const AddPatientPage = () => {
                         />
                         <span className="text-white">OLD</span>
                       </label>
+                      <label className="flex items-center space-x-2">
+                        <input
+                          type="radio"
+                          value="NEW"
+                          checked={field.value === "NEW"}
+                          onChange={field.onChange}
+                          className="form-radio"
+                        />
+                        <span className="text-white">NEW</span>
+                      </label>
                     </div>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-
             <FormField
               control={form.control}
               name="crcNumber"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Enter CRC Number</FormLabel>
+                  <FormLabel>CRC Number</FormLabel>
                   <FormControl>
                     <Input
                       placeholder="CRC Number"
                       {...field}
-                      className="rounded-2xl placeholder:text-slate-400"
+                      className="rounded-2xl placeholder-text-slate-400"
                     />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-
             <FormField
               control={form.control}
               name="contactNumber"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Patient Contact Number</FormLabel>
+                  <FormLabel>Enter Contact Number</FormLabel>
                   <FormControl>
                     <Input
                       placeholder="Contact Number"
                       {...field}
-                      className="rounded-2xl placeholder:text-slate-400"
+                      className="rounded-2xl placeholder-text-slate-400"
                     />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-
             <FormField
               control={form.control}
               name="education"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Patient Education Level</FormLabel>
+                  <FormLabel>Enter Education</FormLabel>
                   <FormControl>
                     <Input
                       placeholder="Education"
                       {...field}
-                      className="rounded-2xl placeholder:text-slate-400"
+                      className="rounded-2xl placeholder-text-slate-400"
                     />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-
             <FormField
               control={form.control}
               name="age"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Patient Age</FormLabel>
+                  <FormLabel>Enter Age</FormLabel>
                   <FormControl>
                     <Input
                       placeholder="Age"
                       {...field}
-                      className="rounded-2xl placeholder:text-slate-400"
+                      type="number"
+                      className="rounded-2xl placeholder-text-slate-400"
                     />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-
             <FormField
               control={form.control}
               name="marriageYears"
@@ -440,56 +508,54 @@ const AddPatientPage = () => {
                     <Input
                       placeholder="Marriage Years"
                       {...field}
-                      className="rounded-2xl placeholder:text-slate-400"
+                      type="number"
+                      className="rounded-2xl placeholder-text-slate-400"
                     />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-
             <FormField
               control={form.control}
               name="occupation"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Occupation</FormLabel>
+                  <FormLabel>Enter Occupation</FormLabel>
                   <FormControl>
                     <Input
                       placeholder="Occupation"
                       {...field}
-                      className="rounded-2xl placeholder:text-slate-400"
+                      className="rounded-2xl placeholder-text-slate-400"
                     />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-
             <FormField
               control={form.control}
               name="address"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Patient Address (with Landmark)</FormLabel>
+                  <FormLabel>Enter Address</FormLabel>
                   <FormControl>
                     <Input
                       placeholder="Address"
                       {...field}
-                      className="rounded-2xl placeholder:text-slate-400"
+                      className="rounded-2xl placeholder-text-slate-400"
                     />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-
             <FormField
               control={form.control}
               name="catchmentArea"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Catchment Area</FormLabel>
+                  <FormLabel>Select Catchment Area</FormLabel>
                   <FormControl>
                     <div className="space-y-2">
                       <label className="flex items-center space-x-2">
@@ -512,22 +578,60 @@ const AddPatientPage = () => {
                         />
                         <span className="text-white">RURAL</span>
                       </label>
-                      <label className="flex items-center space-x-2">
-                        <input
-                          type="radio"
-                          value="SLUM"
-                          checked={field.value === "SLUM"}
-                          onChange={field.onChange}
-                          className="form-radio"
-                        />
-                        <span className="text-white">SLUM</span>
-                      </label>
                     </div>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
+            <FormField
+              control={form.control}
+              name="amountPayed"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Amount Paid</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="Amount Paid"
+                      {...field}
+                      type="number"
+                      className="rounded-2xl placeholder-text-slate-400"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="attendedByDoctorId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Select Doctor</FormLabel>
+                  <FormControl>
+                    <select
+                      {...field}
+                      className="rounded-2xl placeholder-text-slate-400f3"
+                      onChange={(e) => {
+                        field.onChange(e); // Ensure form state is updated
+                        form.setValue("attendedByDoctorId", e.target.value); // Manually set form value
+                      }}
+                    >
+                      <option value="" disabled hidden>
+                        Select Doctor
+                      </option>
+                      {doctors.map((doctor) => (
+                        <option key={doctor.id} value={doctor.id}>
+                          {doctor.name}
+                        </option>
+                      ))}
+                    </select>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             <div className="flex flex-col md:flex-row items-start justify-start gap-3 w-full">
               <Button
                 onClick={() => onSubmit(form.getValues(), true)}
