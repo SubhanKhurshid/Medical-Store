@@ -1,6 +1,6 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import { getVisits } from "../../../../lib/actions/route";
+import { getVisits, searchVisits } from "../../../../lib/actions/route";
 import {
   Table,
   TableBody,
@@ -9,6 +9,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
 
 interface Relation {
   relation: string;
@@ -43,22 +44,57 @@ interface Visit {
 
 const ViewVisitPage = () => {
   const [patients, setPatients] = useState<Visit[]>([]);
+  const [searchTerm, setSearchTerm] = useState<string>("");
+
+  const getData = async () => {
+    const result = await getVisits();
+    if (result.success) {
+      setPatients(result.data || []);
+    } else {
+      console.error(result.error);
+    }
+  };
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value);
+  };
+
+  const searchPatientsByCNIC = async () => {
+    if (searchTerm.trim()) {
+      try {
+        const result = await searchVisits({ cnic: searchTerm.trim() });
+        if (result.success) {
+          setPatients(result.data || []);
+        } else {
+          console.error(result.error);
+        }
+      } catch (error) {
+        console.error("An error occurred while searching:", error);
+      }
+    } else {
+      getData();
+    }
+  };
 
   useEffect(() => {
-    const getData = async () => {
-      const result = await getVisits();
-      console.log(result);
-      if (result.success) {
-        setPatients(result.data || []);
-      } else {
-        console.error(result.error);
-      }
-    };
-    getData();
-  }, []);
+    if (searchTerm) {
+      searchPatientsByCNIC();
+    } else {
+      getData();
+    }
+  }, [searchTerm]);
 
   return (
     <div className="max-w-7xl mx-auto px-10 p-5">
+      <div className="flex flex-col items-center justify-center mb-10">
+        <Input
+          placeholder="Search Here"
+          value={searchTerm}
+          onChange={handleSearchChange}
+          className="w-full max-w-md"
+        />
+      </div>
+
       {patients.length > 0 ? (
         <Table>
           <TableHeader>
@@ -127,5 +163,4 @@ const ViewVisitPage = () => {
     </div>
   );
 };
-
 export default ViewVisitPage;

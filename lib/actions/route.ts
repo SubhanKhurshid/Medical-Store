@@ -159,6 +159,90 @@ export async function searchPatients(
   }
 }
 
+type SearchVisit = z.infer<typeof searchSchema>;
+
+export async function searchVisits(
+  input: SearchVisit
+): Promise<{ success: boolean; error?: string; data: any[] }> {
+  try {
+    const body = searchSchema.safeParse(input);
+    if (!body.success) {
+      return { success: false, error: "Invalid input format.", data: [] };
+    }
+
+    const { cnic } = body.data;
+
+    const patients = await prisma.patient.findMany({
+      where: {
+        OR: [
+          {
+            cnic: {
+              contains: cnic,
+            },
+          },
+          {
+            relation: {
+              some: {
+                relationCNIC: {
+                  contains: cnic,
+                },
+              },
+            },
+          },
+        ],
+      },
+      include: {
+        relation: true,
+        Visit: {
+          orderBy: {
+            date: "desc",
+          },
+          take: 1,
+        },
+      },
+    });
+
+    const result = patients.map((patient) => ({
+      visitedAt: patient.Visit.length > 0 ? patient.Visit[0].date : null,
+      patient: {
+        id: patient.id,
+        name: patient.name,
+        fatherName: patient.fatherName,
+        email: patient.email,
+        identity: patient.identity,
+        cnic: patient.cnic,
+        crc: patient.crc,
+        crcNumber: patient.crcNumber,
+        contactNumber: patient.contactNumber,
+        education: patient.education,
+        age: patient.age,
+        marriageYears: patient.marriageYears,
+        occupation: patient.occupation,
+        address: patient.address,
+        catchmentArea: patient.catchmentArea,
+        tokenNumber: patient.tokenNumber,
+        relation: patient.relation.map((rel) => ({
+          relation: rel.relation,
+          relationName: rel.relationName,
+          relationCNIC: rel.relationCNIC,
+        })),
+      },
+    }));
+
+    return {
+      success: true,
+      data: result,
+    };
+  } catch (error) {
+    console.error("Error searching for visits:", error);
+    return {
+      success: false,
+      error: "An error occurred while searching for visits.",
+      data: [],
+    };
+  }
+}
+
 type AddVisitRequest = {
   patientId: string;
 };
@@ -290,7 +374,7 @@ export async function updatePatient(id: string, data: any) {
       catchmentArea: validatedData.catchmentArea,
       relation: {
         update: validatedData.relations.map((rel: any) => ({
-          where: { relationCNIC: rel.relationCNIC }, 
+          where: { relationCNIC: rel.relationCNIC },
           data: {
             relation: rel.relation,
             relationName: rel.relationName,
