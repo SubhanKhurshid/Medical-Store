@@ -31,6 +31,11 @@ interface Patient {
   tokenNumber: number;
   relation: Relation[];
   lastVisit: Date | null;
+  attendedByDoctor: {
+    id: string;
+    name: string | null;
+  };
+  amountPayed: string; // Assuming amountPayed is a string
 }
 
 const ViewPatientPage = () => {
@@ -131,6 +136,16 @@ const ViewPatientPage = () => {
             {patient.lastVisit
               ? new Date(patient.lastVisit).toLocaleString()
               : "No visits yet"}
+          </p>
+          {patient.attendedByDoctor && (
+            <div className="text-white mb-2">
+              <span className="font-bold">Attended By Doctor: </span>
+              {patient.attendedByDoctor.name || "Not available"}
+            </div>
+          )}
+          <p className="text-white mb-2">
+            <span className="font-bold">Amount Paid: </span>
+            {patient.amountPayed}
           </p>
         </div>
       ) : (

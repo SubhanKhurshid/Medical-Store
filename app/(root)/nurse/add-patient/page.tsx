@@ -21,14 +21,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
+import { Select } from "@/components/ui/select";
 import { patientSchema } from "../../../../lib/validator";
 import { Checkbox } from "@/components/ui/checkbox";
 import { addPatient, getDoctorNames } from "../../../../lib/actions/route";
@@ -40,6 +34,8 @@ interface Doctor {
 }
 
 const AddPatientPage = () => {
+  const [selectedDoctorName, setSelectedDoctorName] = useState("Select Doctor");
+
   const initialValues = {
     name: "",
     fatherName: "",
@@ -75,10 +71,13 @@ const AddPatientPage = () => {
       try {
         const response = await getDoctorNames();
         if (response && response.length > 0) {
-          const doctorsData: Doctor[] = response.map((doctor) => ({
-            id: doctor.id,
-            name: doctor.name || "",
-          }));
+          const doctorsData: Doctor[] = response
+            .filter((doctor) => doctor !== null)
+            .map((doctor) => ({
+              id: doctor.id,
+              name: doctor.name as string,
+            }));
+
           setDoctors(doctorsData);
         } else {
           console.error("Failed to fetch doctors:", response);
@@ -247,7 +246,7 @@ const AddPatientPage = () => {
                 </FormItem>
               )}
             />
-            <FormField
+            {/* <FormField
               control={form.control}
               name="name"
               render={({ field }) => (
@@ -259,8 +258,7 @@ const AddPatientPage = () => {
                   <FormMessage />
                 </FormItem>
               )}
-            />
-
+            /> */}
             <FormField
               control={form.control}
               name="relation"
@@ -378,23 +376,25 @@ const AddPatientPage = () => {
                 />
               </div>
             )}
-            <FormField
-              control={form.control}
-              name="cnic"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Enter Patient CNIC</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="CNIC"
-                      {...field}
-                      className="rounded-2xl placeholder-text-slate-400"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {relationType === "NONE" && (
+              <FormField
+                control={form.control}
+                name="cnic"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Enter Patient CNIC</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="CNIC"
+                        {...field}
+                        className="rounded-2xl placeholder-text-slate-400"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
             <FormField
               control={form.control}
               name="crc"
@@ -490,7 +490,6 @@ const AddPatientPage = () => {
                     <Input
                       placeholder="Age"
                       {...field}
-                      type="number"
                       className="rounded-2xl placeholder-text-slate-400"
                     />
                   </FormControl>
@@ -508,7 +507,6 @@ const AddPatientPage = () => {
                     <Input
                       placeholder="Marriage Years"
                       {...field}
-                      type="number"
                       className="rounded-2xl placeholder-text-slate-400"
                     />
                   </FormControl>
@@ -589,12 +587,11 @@ const AddPatientPage = () => {
               name="amountPayed"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Amount Paid</FormLabel>
+                  <FormLabel>Amount Payed</FormLabel>
                   <FormControl>
                     <Input
-                      placeholder="Amount Paid"
+                      placeholder="Amount Payed"
                       {...field}
-                      type="number"
                       className="rounded-2xl placeholder-text-slate-400"
                     />
                   </FormControl>
@@ -607,31 +604,33 @@ const AddPatientPage = () => {
               name="attendedByDoctorId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Select Doctor</FormLabel>
+                  <FormLabel>Doctor</FormLabel>
                   <FormControl>
-                    <select
-                      {...field}
-                      className="rounded-2xl placeholder-text-slate-400f3"
-                      onChange={(e) => {
-                        field.onChange(e); // Ensure form state is updated
-                        form.setValue("attendedByDoctorId", e.target.value); // Manually set form value
-                      }}
-                    >
-                      <option value="" disabled hidden>
-                        Select Doctor
-                      </option>
-                      {doctors.map((doctor) => (
-                        <option key={doctor.id} value={doctor.id}>
-                          {doctor.name}
-                        </option>
-                      ))}
-                    </select>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger>
+                        <button className="rounded-2xl placeholder-text-slate-400 focus:outline-none ml-5">
+                          {selectedDoctorName}
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent>
+                        {doctors.map((doctor) => (
+                          <DropdownMenuItem
+                            key={doctor.id}
+                            onClick={() => {
+                              form.setValue("attendedByDoctorId", doctor.id);
+                              setSelectedDoctorName(doctor.name); // Update selected doctor name
+                            }}
+                          >
+                            {doctor.name}
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
-            />
-
+            />{" "}
             <div className="flex flex-col md:flex-row items-start justify-start gap-3 w-full">
               <Button
                 onClick={() => onSubmit(form.getValues(), true)}

@@ -69,7 +69,7 @@ export const patientSchema = z
     relations: z.array(relationSchema),
     attendedByDoctorId: z.string().min(1, "Attended by doctor ID is required"),
     amountPayed: z
-      .number()
+      .string()
       .min(0, "Amount payed cannot be negative")
       .max(1000000, "Amount payed is too large"),
   })

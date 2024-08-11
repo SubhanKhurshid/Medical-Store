@@ -39,7 +39,7 @@ model Patient {
   catchmentArea     CatchmentArea
   Visit             Visit[]
   tokenNumber       Int 
-  amountPayed       Int 
+  amountPayed       String 
   relation          Relation[]
   
   attendedByDoctor  User      @relation("DoctorPatients", fields: [attendedByDoctorId], references: [id])
