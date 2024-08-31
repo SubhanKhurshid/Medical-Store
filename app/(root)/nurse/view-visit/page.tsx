@@ -19,6 +19,11 @@ interface Relation {
   relationCNIC: string;
 }
 
+interface AttendedByDoctor {
+  id: string;
+  name: string | null;
+}
+
 interface Patient {
   id: string;
   name: string;
@@ -37,6 +42,8 @@ interface Patient {
   catchmentArea: string;
   tokenNumber: number;
   relation: Relation[];
+  attendedByDoctor: AttendedByDoctor;
+  amountPayed: string;
 }
 
 interface Visit {
@@ -56,8 +63,8 @@ const ViewVisitPage = () => {
     } else {
       console.error(result.error);
     }
-    // Add a slight delay before hiding the loader
-    setTimeout(() => setLoading(false), 500); // 500ms delay
+
+    setTimeout(() => setLoading(false), 500);
   };
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -121,6 +128,8 @@ const ViewVisitPage = () => {
               <TableHead>Occupation</TableHead>
               <TableHead>Token</TableHead>
               <TableHead>Relation</TableHead>
+              <TableHead>Attended By</TableHead>
+              <TableHead>Amount Payed</TableHead>
               <TableHead>Visited At</TableHead>
             </TableRow>
           </TableHeader>
@@ -162,6 +171,12 @@ const ViewVisitPage = () => {
                         )
                         .join(", ")
                     : "None"}
+                </TableCell>
+                <TableCell className="capitalize">
+                  {item.patient.attendedByDoctor?.name ?? "Not Available"}
+                </TableCell>
+                <TableCell className="capitalize">
+                  {item.patient.amountPayed}
                 </TableCell>
                 <TableCell>
                   {new Date(item.visitedAt).toLocaleString()}

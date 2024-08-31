@@ -36,7 +36,8 @@ export async function addPatient(
     let setting = await prisma.globalSetting.findFirst();
 
     if (!setting || setting.lastTokenDate.setHours(0, 0, 0, 0) < today) {
-      setting = await prisma.globalSetting.create({
+      setting = await prisma.globalSetting.update({
+        where: { id: setting?.id },
         data: {
           lastToken: 1,
           lastTokenDate: new Date(),
@@ -45,30 +46,32 @@ export async function addPatient(
     } else {
       setting = await prisma.globalSetting.update({
         where: { id: setting.id },
-        data: { lastToken: { increment: 1 } },
+        data: { lastToken: setting.lastToken + 1 },
       });
     }
 
-    // Create the patient with the new token number and relations
+    const { attendedByDoctorId, ...patientData } = data;
     const patient = await prisma.patient.create({
       data: {
-        name: data.name,
-        fatherName: data.fatherName,
-        email: data.email,
-        identity: data.identity,
-        cnic: data.cnic || "",
-        crc: data.crc,
-        crcNumber: data.crcNumber,
-        contactNumber: data.contactNumber,
-        education: data.education,
-        age: data.age,
-        marriageYears: data.marriageYears,
-        occupation: data.occupation,
-        address: data.address,
-        catchmentArea: data.catchmentArea,
+        name: patientData.name,
+        fatherName: patientData.fatherName,
+        email: patientData.email,
+        identity: patientData.identity,
+        cnic: patientData.cnic || "",
+        crc: patientData.crc,
+        crcNumber: patientData.crcNumber,
+        contactNumber: patientData.contactNumber,
+        education: patientData.education,
+        age: patientData.age,
+        marriageYears: patientData.marriageYears,
+        occupation: patientData.occupation,
+        address: patientData.address,
+        catchmentArea: patientData.catchmentArea,
         tokenNumber: setting.lastToken,
+        amountPayed: patientData.amountPayed.toString(),
+        attendedByDoctorId: attendedByDoctorId,
         relation: {
-          create: data.relations.map((rel: any) => ({
+          create: patientData.relations.map((rel: any) => ({
             relation: rel.relation,
             relationName: rel.relationName,
             relationCNIC: rel.relationCNIC,
@@ -94,6 +97,28 @@ export async function addPatient(
   } catch (error) {
     console.error("Error creating patient:", error);
     return { success: false, error: { _errors: ["Something went wrong"] } };
+  }
+}
+
+export async function getDoctorNames() {
+  try {
+    const doctors = await prisma.user.findMany({
+      where: {
+        role: "doctor",
+      },
+      select: {
+        id: true,
+        name: true,
+      },
+    });
+
+    return doctors.map((doctor) => ({
+      id: doctor.id,
+      name: doctor.name || "",
+    }));
+  } catch (error) {
+    console.error("Error retrieving doctors:", error);
+    throw new Error("Failed to retrieve doctors");
   }
 }
 
@@ -140,9 +165,11 @@ export async function searchPatients(
       },
     });
 
+    // Handle null values gracefully in the mapping
     const result = patients.map((patient) => ({
       ...patient,
       lastVisit: patient.Visit.length > 0 ? patient.Visit[0].date : null,
+      attendedByDoctorId: patient.attendedByDoctorId ?? null, // Handle null attendedByDoctorId
     }));
 
     return {
@@ -158,7 +185,6 @@ export async function searchPatients(
     };
   }
 }
-
 type SearchVisit = z.infer<typeof searchSchema>;
 
 export async function searchVisits(
@@ -199,6 +225,7 @@ export async function searchVisits(
           },
           take: 1,
         },
+        attendedByDoctor: true,
       },
     });
 
@@ -226,6 +253,11 @@ export async function searchVisits(
           relationName: rel.relationName,
           relationCNIC: rel.relationCNIC,
         })),
+        attendedByDoctor: {
+          id: patient.attendedByDoctor.id,
+          name: patient.attendedByDoctor.name ?? null,
+        },
+        amountPayed: patient.amountPayed,
       },
     }));
 
@@ -298,8 +330,10 @@ export async function getPatientById(id: string) {
           },
           take: 1,
         },
+        attendedByDoctor: true,
       },
     });
+    console.log(data);
 
     if (!data) {
       return {
@@ -328,22 +362,28 @@ export async function getPatientById(id: string) {
 
 export async function getVisits() {
   try {
-    const data = await prisma.visit.findMany({
+    const visits = await prisma.visit.findMany({
       include: {
         patient: {
           include: {
             relation: true,
+            attendedByDoctor: true, // Include the attendedByDoctor relation
           },
         },
       },
     });
 
+    const formattedVisits = visits.map((visit) => ({
+      visitedAt: visit.date,
+      patient: {
+        ...visit.patient,
+        attendedByDoctor: visit.patient.attendedByDoctor, // Include attendedByDoctor details
+      },
+    }));
+
     return {
       success: true,
-      data: data.map((visit) => ({
-        visitedAt: visit.date,
-        patient: visit.patient,
-      })),
+      data: formattedVisits,
     };
   } catch (error) {
     console.error("Error getting visits:", error);
