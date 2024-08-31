@@ -31,7 +31,7 @@ const Navbar = () => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto w-full px-10 p-5 bg-indigo-950">
+    <div className="max-w-7xl mx-auto w-full px-10 p-5 bg-blue-950">
       {session?.user.role === "nurse" && (
         <>
           <div className="hidden md:block">

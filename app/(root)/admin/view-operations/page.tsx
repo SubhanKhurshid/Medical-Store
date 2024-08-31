@@ -5,7 +5,7 @@ const ViewOperationsPage = () => {
   return (
     <div className='flex flex-col items-center justify-center mt-32 gap-10'>
        <div className="flex flex-col items-center justify-center gap-2">
-          <h1 className="text-3xl md:text-5xl max-w-3xl font-bold tracking-tighter">
+          <h1 className="text-3xl md:text-5xl font-bold tracking-tighter px-10 text-center">
             View your desired item from here
           </h1>
           <h1>Select the operation you want to perform</h1>
