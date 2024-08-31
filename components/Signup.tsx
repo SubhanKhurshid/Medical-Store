@@ -31,6 +31,8 @@ const Signup = () => {
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
+
+    console.log(name)
     e.preventDefault();
     setLoading(true);
 

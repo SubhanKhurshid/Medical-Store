@@ -4,8 +4,6 @@ import { getToken } from "next-auth/jwt";
 export async function middleware(req: any) {
   const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
   const { pathname } = req.nextUrl;
-
-  // Redirect if the user doesn't have a token and is trying to access a protected route
   if (!token) {
     if (
       pathname.startsWith("/admin") ||
@@ -17,7 +15,6 @@ export async function middleware(req: any) {
     }
   }
 
-  // Check if the user has the correct role
   if (pathname.startsWith("/admin") && token?.role !== "admin") {
     return NextResponse.redirect(new URL("/unauthorized", req.url));
   }
