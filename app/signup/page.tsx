@@ -1,10 +1,12 @@
 import Signup from "@/components/Signup";
 import React from "react";
-
+import { Suspense } from "react";
 const page = () => {
   return (
     <div>
-      <Signup />
+      <Suspense>
+        <Signup />
+      </Suspense>
     </div>
   );
 };
