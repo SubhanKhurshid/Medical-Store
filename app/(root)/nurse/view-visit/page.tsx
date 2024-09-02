@@ -103,7 +103,7 @@ const ViewVisitPage = () => {
           placeholder="Search Here"
           value={searchTerm}
           onChange={handleSearchChange}
-          className="w-full max-w-md"
+          className="w-full max-w-md rounded-lg bg-accent text-card-foreground placeholder:text-muted-foreground"
         />
       </div>
 

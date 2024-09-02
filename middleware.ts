@@ -8,8 +8,9 @@ export async function middleware(req: any) {
     if (
       pathname.startsWith("/admin") ||
       pathname.startsWith("/doctor") ||
-      pathname.startsWith("/nurse") ||
-      pathname.startsWith("/pharmacist")
+      pathname.startsWith("/nurse") || // ye frontdesk hai
+      pathname.startsWith("/pharmacist") ||
+      pathname.startsWith("/frontdesk") // ye nurse hai
     ) {
       return NextResponse.redirect(new URL("/signin", req.url));
     }
@@ -27,6 +28,9 @@ export async function middleware(req: any) {
   if (pathname.startsWith("/pharmacist") && token?.role !== "pharmacist") {
     return NextResponse.redirect(new URL("/unauthorized", req.url));
   }
+  if (pathname.startsWith("/frontdesk") && token?.role !== "frontdesk") {
+    return NextResponse.redirect(new URL("/unauthorized", req.url));
+  }
 
   return NextResponse.next();
 }
@@ -37,5 +41,6 @@ export const config = {
     "/doctor/:path*",
     "/nurse/:path*",
     "/pharmacist/:path*",
+    "/frontdesk/:path*",
   ],
 };

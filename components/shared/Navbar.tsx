@@ -9,12 +9,14 @@ import { Sheet, SheetContent, SheetTrigger } from "../ui/sheet";
 import { Separator } from "../ui/separator";
 import menu from "@/public/icons8-menu-50.png";
 import logo from "@/public/WhatsApp Image 2024-08-02 at 23.45.33_0ac66f5d.jpg";
+import { ShieldPlus } from "lucide-react";
 
 const Navbar = () => {
   const pathname = usePathname();
   const router = useRouter();
   const { data: session, status } = useSession();
   const [isOpen, setIsOpen] = useState(false);
+
   useEffect(() => {
     if (status === "loading") return;
     if (!session) {
@@ -31,243 +33,149 @@ const Navbar = () => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto w-full px-10 p-5 bg-blue-950">
+    <div className="max-w-7xl mx-auto w-full px-6 py-4 bg-[#285430] text-white shadow-lg rounded-b-lg">
+      {/* Navbar for Nurse */}
       {session?.user.role === "nurse" && (
         <>
-          <div className="hidden md:block">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <Link
-                  href={"/nurse"}
-                  className="tracking-tight font-bold text-lg"
-                >
-                  {/* <Image
-                    src={logo}
-                    alt="logo"
-                    className="w-[170px] h-[100px]"
-                  /> */}
-                  <h1>Ibrahim Medical</h1>
-                </Link>
-              </div>
-              <div className="flex items-center justify-center gap-5">
-                <Link
-                  className="hover:underline hover:underline-offset-4"
-                  href={"/nurse"}
-                >
-                  Dashboard
-                </Link>
-                <Link
-                  className="hover:underline hover:underline-offset-4"
-                  href={"/nurse/add-patient"}
-                >
-                  Add Patient
-                </Link>
-                <Link
-                  className="hover:underline hover:underline-offset-4"
-                  href={"/nurse/search-patient"}
-                >
-                  Search Patient
-                </Link>
-
-                <Link
-                  className="hover:underline hover:underline-offset-4"
-                  href={"/nurse/view-visit"}
-                >
-                  View Visits
-                </Link>
-              </div>
+          <div className="hidden md:flex items-center justify-between">
+            <Link href={"/nurse"} className="flex items-center gap-2">
+              <ShieldPlus className="text-white h-6 w-6" />
+              <span className="text-xl font-semibold">Ibrahim Medical</span>
+            </Link>
+            <div className="flex items-center space-x-8">
+              <NavLink href="/nurse" currentPath={pathname}>
+                Dashboard
+              </NavLink>
+              <NavLink href="/nurse/add-patient" currentPath={pathname}>
+                Add Patient
+              </NavLink>
+              <NavLink href="/nurse/search-patient" currentPath={pathname}>
+                Search Patient
+              </NavLink>
+              <NavLink href="/nurse/view-visit" currentPath={pathname}>
+                View Visits
+              </NavLink>
             </div>
           </div>
-          <div className="block md:hidden">
-            <div className="flex items-center justify-between">
-              <div>
-                <Link
-                  href={"/nurse"}
-                  className="tracking-tight font-bold text-lg"
-                >
-                  <Image src={logo} alt="logo" className="w-[120px] h-[80px]" />
-                </Link>
-              </div>
-              <Sheet open={isOpen} onOpenChange={setIsOpen}>
-                <SheetTrigger className="align-middle">
-                  {/* <Image
-                    src={menu}
-                    alt="menu"
-                    width={24}
-                    height={24}
-                    className="cursor-pointer "
-                  /> */}
-                  <h1>Ibrahim Medical</h1>
-                </SheetTrigger>
-                <SheetContent className="flex flex-col gap-6 bg-black md:hidden">
-                  <Link
-                    href={"/nurse"}
-                    className="tracking-tight font-bold text-lg"
-                  >
-                    {/* <Image
-                      src={logo}
-                      alt="logo"
-                      className="w-[120px] h-[80px]"
-                    /> */}
-                    <h1>Ibrahim Medical</h1>
-                  </Link>
-                  <Separator className="border border-gray-50" />
-                  <div className="flex flex-col gap-5">
-                    <Link
-                      className="hover:underline hover:underline-offset-4"
-                      href={"/nurse"}
-                    >
-                      Dashboard
-                    </Link>
-                    <Link
-                      className="hover:underline hover:underline-offset-4"
-                      href={"/nurse/add-patient"}
-                    >
-                      Add Patient
-                    </Link>
-                    <Link
-                      className="hover:underline hover:underline-offset-4"
-                      href={"/nurse/search-patient"}
-                    >
-                      Search Patient
-                    </Link>
-
-                    <Link
-                      className="hover:underline hover:underline-offset-4"
-                      href={"/nurse/view-visit"}
-                    >
-                      View Visits
-                    </Link>
-                  </div>
-                </SheetContent>
-              </Sheet>
-            </div>
+          <div className="md:hidden flex items-center justify-between">
+            <Link href={"/nurse"} className="flex items-center gap-2">
+              <ShieldPlus className="text-white h-6 w-6" />
+              <span className="text-xl font-semibold">Ibrahim Medical</span>
+            </Link>
+            <Sheet open={isOpen} onOpenChange={setIsOpen}>
+              <SheetTrigger className="align-middle">
+                <Image
+                  src={menu}
+                  alt="menu"
+                  width={24}
+                  height={24}
+                  className="cursor-pointer"
+                />{" "}
+              </SheetTrigger>
+              <SheetContent className="flex flex-col gap-6 bg-[#285430] text-white md:hidden">
+                <div className="flex items-center gap-2">
+                  <ShieldPlus className="text-white h-6 w-6" />
+                  <span className="text-xl font-semibold">Ibrahim Medical</span>
+                </div>
+                <Separator className="border border-gray-50" />
+                <div className="flex flex-col space-y-4">
+                  <NavLink href="/nurse" currentPath={pathname}>
+                    Dashboard
+                  </NavLink>
+                  <NavLink href="/nurse/add-patient" currentPath={pathname}>
+                    Add Patient
+                  </NavLink>
+                  <NavLink href="/nurse/search-patient" currentPath={pathname}>
+                    Search Patient
+                  </NavLink>
+                  <NavLink href="/nurse/view-visit" currentPath={pathname}>
+                    View Visits
+                  </NavLink>
+                </div>
+              </SheetContent>
+            </Sheet>
           </div>
         </>
       )}
-      {session?.user.role === "admin" &&
-        pathname !== "/signin" &&
-        pathname !== "/signup" && (
-          <>
-            <div className="hidden md:block">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <Link
-                    href={"/admin"}
-                    className="tracking-tight font-bold text-lg"
-                  >
-                    {/* <Image src={logo} alt="logo" /> */}
-                    <h1>Ibrahim Medical</h1>
-                  </Link>
+
+      {/* Navbar for Admin */}
+      {session?.user.role === "admin" && (
+        <>
+          <div className="hidden md:flex items-center justify-between">
+            <Link href={"/admin"} className="flex items-center gap-2">
+              <ShieldPlus className="text-white h-6 w-6" />
+              <span className="text-xl font-semibold">Ibrahim Medical</span>
+            </Link>
+            <div className="flex items-center space-x-8">
+              <NavLink href="/signup" currentPath={pathname}>
+                Add Doctor
+              </NavLink>
+              <NavLink href="/signup" currentPath={pathname}>
+                Add Nurse
+              </NavLink>
+              <NavLink href="/signup" currentPath={pathname}>
+                Add Pharmacist
+              </NavLink>
+              <NavLink href="/signup" currentPath={pathname}>
+                Front Desk
+              </NavLink>
+            </div>
+          </div>
+          <div className="md:hidden flex items-center justify-between">
+            <Link href={"/admin"} className="flex items-center gap-2">
+              <ShieldPlus className="text-white h-6 w-6" />
+            </Link>
+            <Sheet open={isOpen} onOpenChange={setIsOpen}>
+              <SheetTrigger className="align-middle">
+                <Image
+                  src={menu}
+                  alt="menu"
+                  width={24}
+                  height={24}
+                  className="cursor-pointer"
+                />
+              </SheetTrigger>
+              <SheetContent className="flex flex-col gap-6 bg-[#285430] text-white md:hidden">
+                <div className="flex items-center gap-2">
+                  <ShieldPlus className="text-white h-6 w-6" />
+                  <span className="text-xl font-semibold">Ibrahim Medical</span>
                 </div>
-                <div className="flex items-center justify-center gap-5">
-                  {/* <Link
-                    className="hover:underline hover:underline-offset-4"
-                    href={"/admin-dashboard"}
-                  >
-                    Dashboard
-                  </Link> */}
-                  <Link
-                    className="hover:underline hover:underline-offset-4"
-                    href={"/signup"}
-                  >
+                <Separator className="border border-gray-50" />
+                <div className="flex flex-col space-y-4">
+                  <NavLink href="/signup" currentPath={pathname}>
                     Add Doctor
-                  </Link>
-                  <Link
-                    className="hover:underline hover:underline-offset-4"
-                    href={"/signup"}
-                  >
+                  </NavLink>
+                  <NavLink href="/signup" currentPath={pathname}>
                     Add Nurse
-                  </Link>
-                  <Link
-                    className="hover:underline hover:underline-offset-4"
-                    href={"/signup"}
-                  >
+                  </NavLink>
+                  <NavLink href="/signup" currentPath={pathname}>
                     Add Pharmacist
-                  </Link>
-                  <Link
-                    className="hover:underline hover:underline-offset-4"
-                    href={"/signup"}
-                  >
+                  </NavLink>
+                  <NavLink href="/signup" currentPath={pathname}>
                     Front Desk
-                  </Link>
+                  </NavLink>
                 </div>
-              </div>
-            </div>
-            <div className="block md:hidden">
-              <div className="flex items-center justify-between">
-                <div>
-                  <Link
-                    href={"/admin"}
-                    className="tracking-tight font-bold text-lg"
-                  >
-                    <h1>Ibrahim Medical</h1>
-                  </Link>
-                </div>
-                <Sheet open={isOpen} onOpenChange={setIsOpen}>
-                  <SheetTrigger className="align-middle">
-                    <Image
-                      src={menu}
-                      alt="menu"
-                      width={24}
-                      height={24}
-                      className="cursor-pointer "
-                    />
-                  </SheetTrigger>
-                  <SheetContent className="flex flex-col gap-6 bg-blue-800 md:hidden">
-                    <Link
-                      href={"/admin"}
-                      className="tracking-tight font-bold text-lg"
-                    >
-                      {/* <Image src={logo} alt="logo" /> */}
-                      <h1>Ibrahim Medical</h1>
-                    </Link>
-                    <Separator className="border border-gray-50" />
-                    <div className="flex flex-col gap-5">
-                      {/* <Link
-                        className="hover:underline hover:underline-offset-4"
-                        href={"/admin-dashboard"}
-                      >
-                        Dashboard
-                      </Link> */}
-                      <Link
-                        className="hover:underline hover:underline-offset-4"
-                        href={"/signup"}
-                      >
-                        Add Doctor
-                      </Link>
-                      <Link
-                        className="hover:underline hover:underline-offset-4"
-                        href={"/signup"}
-                      >
-                        Add Nurse
-                      </Link>
-                      <Link
-                        className="hover:underline hover:underline-offset-4"
-                        href={"/signup"}
-                      >
-                        Add Pharmacist
-                      </Link>
-                      <Link
-                        className="hover:underline hover:underline-offset-4"
-                        href={"/signup"}
-                      >
-                        Front Desk
-                      </Link>
-                    </div>
-                  </SheetContent>
-                </Sheet>
-              </div>
-            </div>
-          </>
-        )}
-      {/* {session?.user.role === 'doctor' && (
-
-
-      )} */}
-      {/* {session?.user.role === "pharmacist" && ()}  */}
+              </SheetContent>
+            </Sheet>
+          </div>
+        </>
+      )}
     </div>
   );
 };
+
+// NavLink component to avoid repetition and improve readability
+const NavLink = ({ href, currentPath, children }: any) => (
+  <Link
+    href={href}
+    className={`${
+      currentPath === href
+        ? "bg-white text-[#285430] font-semibold rounded-full"
+        : "text-white hover:text-gray-300 transition duration-150 ease-in-out"
+    } px-4 py-2`}
+  >
+    {children}
+  </Link>
+);
 
 export default Navbar;

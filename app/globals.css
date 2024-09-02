@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,37 +6,32 @@
 
 @layer base {
   :root {
-    --background: 210 25% 10%; /* Dark background */
-    --foreground: 210 20% 96%; /* Light foreground for contrast */
-    --primary: 308 56% 47%; /* Darker primary color */
-    --primary-foreground: 210 20% 96%;
-    --secondary: 196 75% 44%; /* Darker secondary color */
-    --secondary-foreground: 210 20% 96%;
-    --accent: 211 86% 50%; /* Slightly brighter accent for emphasis */
-    --accent-foreground: 210 20% 96%;
-    --destructive: 0 93% 37%; /* Darker destructive color */
-    --destructive-foreground: 210 20% 96%;
-    --muted: 210 25% 15%; /* Muted dark color */
-    --muted-foreground: 210 20% 96%;
-    --card: 210 25% 12%; /* Dark card background */
-    --card-foreground: 210 20% 96%;
-    --popover: 210 25% 10%;
-    --popover-foreground: 210 20% 96%;
-    --border: 210 20% 30%; /* Darker border color */
-    --input: 210 25% 20%; /* Dark input background */
-    --ring: 210 20% 40%; /* Darker ring color */
-    --radius: 1rem;
-  }
-}
-
-@layer base {
-  * {
-    @apply border-border;
+    /* Updated light theme colors based on the screenshot */
+    --background: 0 0% 98%; /* Very light background */
+    --foreground: 0 0% 20%; /* Darker text */
+    --primary: 135 60% 42%; /* Green for primary color */
+    --primary-foreground: 0 0% 100%; /* White text on primary */
+    --secondary: 135 55% 85%; /* Lighter green for secondary */
+    --secondary-foreground: 0 0% 20%; /* Darker text on secondary */
+    --accent: 210 10% 90%; /* Neutral gray for accents */
+    --accent-foreground: 0 0% 20%; /* Dark text for accents */
+    --destructive: 0 80% 60%; /* Red color for destructive actions */
+    --destructive-foreground: 0 0% 100%; /* White text on destructive */
+    --muted: 0 0% 90%; /* Muted light color */
+    --muted-foreground: 0 0% 40%; /* Darker muted text */
+    --card: 0 0% 100%; /* White card background */
+    --card-foreground: 0 0% 20%; /* Dark text on card */
+    --popover: 0 0% 98%; /* Light popover background */
+    --popover-foreground: 0 0% 20%; /* Dark text on popover */
+    --border: 0 0% 90%; /* Light border color */
+    --input: 0 0% 100%; /* White input background */
+    --ring: 135 60% 42%; /* Green for focus ring */
+    --radius: 0.75rem; /* Slightly smaller radius for rounded corners */
   }
 
   body {
     @apply bg-background text-foreground font-body;
-    font-family: 'Poppins', sans-serif
+    font-family: 'Poppins', sans-serif;
   }
 
   h1,
@@ -47,14 +42,12 @@
   h6 {
     @apply font-heading;
   }
-}
 
-@layer components {
   .font-body {
-    @apply font-sans; /* or any other font you are using for body text */
+    @apply font-sans; /* Using Poppins for body text */
   }
 
   .font-heading {
-    @apply font-serif; /* or any other font you are using for headings */
+    @apply font-sans; /* Using Poppins for headings as well */
   }
 }

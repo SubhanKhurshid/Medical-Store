@@ -73,7 +73,7 @@ const ViewPatientPage = () => {
           />
         </div>
       ) : patient ? (
-        <div className="px-20 py-10 max-w-md w-full bg-[#223442] rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300">
+        <div className="px-20 py-10 max-w-md w-full bg-[#5f8d4e] rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300">
           <h2 className="text-3xl font-bold mb-2">{patient.name}</h2>
           <p className="text-white mb-2">
             <span className="font-bold">Father's Name: </span>{" "}

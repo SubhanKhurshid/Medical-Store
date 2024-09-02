@@ -69,14 +69,15 @@ const SearchPage = () => {
   return (
     <div className="max-w-7xl mx-auto px-10 p-5">
       <div className="flex flex-col gap-10 items-center justify-center">
-        <h1 className="text-3xl md:text-5xl tracking-tighter font-bold">
+        <h1 className="mt-10 text-3xl md:text-5xl tracking-tighter font-bold border-b-2 border-green-500 py-2">
           Search Patients Here
         </h1>
         <Input
           placeholder="Search Here"
           value={searchTerm}
           onChange={handleSearchChange}
-          className="w-full max-w-md"
+          // className="w-full max-w-md "
+          className="w-full max-w-md rounded-lg bg-accent text-card-foreground placeholder:text-muted-foreground"
         />
         <div className="mt-5 w-full max-w-md">
           {loading && (
@@ -93,18 +94,18 @@ const SearchPage = () => {
               {results.map((patient) => (
                 <li
                   key={patient.id}
-                  className="py-4 px-6 bg-[#223442] rounded-lg shadow-md flex items-center justify-center gap-2"
+                  className="py-4 px-6 bg-[#5f8d4e] rounded-lg shadow-md flex items-center justify-center gap-2"
                 >
                   <div className="max-w-sm">
                     <p className="font-bold text-white">{patient.name}</p>
-                    <p>
+                    <p className="font-bold text-white">
                       {patient.cnic ||
                         (patient.relation.length > 0
                           ? patient.relation[0].relationCNIC
                           : "No CNIC available")}
                     </p>
 
-                    <p className="text-gray-400">
+                    <p className="text-white">
                       Last Visit:{" "}
                       {patient.lastVisit
                         ? new Date(patient.lastVisit).toLocaleString()

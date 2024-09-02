@@ -13,21 +13,10 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-
-import { Select } from "@/components/ui/select";
-import { patientSchema } from "../../../../lib/validator";
-import { Checkbox } from "@/components/ui/checkbox";
-import { addPatient, getDoctorNames } from "../../../../lib/actions/route";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { getDoctorNames, addPatient } from "../../../../lib/actions/route";
 import { toast } from "sonner";
+import { patientSchema } from "../../../../lib/validator";
+
 interface Doctor {
   id: string;
   name: string;
@@ -143,11 +132,11 @@ const AddPatientPage = () => {
   };
 
   return (
-    <div className="mt-10 flex items-center justify-center min-h-screen">
-      <div className="w-full max-w-4xl p-5 shadow-xl rounded-lg bg-[#223442] px-20 py-10">
-        <div className="flex items-center justify-center">
-          <h1 className="border-b-2 border-[#BB35A9] py-2 text-center text-2xl font-bold mb-6">
-            Register A New Client
+    <div className="flex items-center justify-center min-h-screen ">
+      <div className="flex flex-col items-center justify-center w-full max-w-4xl p-8 shadow-2xl rounded-3xl mt-10 px-10">
+        <div className="text-center mb-10">
+          <h1 className="text-3xl md:text-5xl tracking-tighter font-bold border-b-2 border-green-500 max-w-lg py-2">
+            Register a New Client
           </h1>
         </div>
 
@@ -159,18 +148,20 @@ const AddPatientPage = () => {
             }}
             className="space-y-6"
           >
-            <div className="flex flex-col md:flex-row gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <FormField
                 control={form.control}
                 name="name"
                 render={({ field }) => (
-                  <FormItem className="flex-1">
-                    <FormLabel>Enter Patient Name</FormLabel>
+                  <FormItem>
+                    <FormLabel className="text-card-foreground">
+                      Patient Name
+                    </FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="Name"
+                        placeholder="John Doe"
                         {...field}
-                        className="rounded-2xl placeholder-text-slate-400"
+                        className="rounded-lg bg-accent text-card-foreground placeholder:text-muted-foreground"
                       />
                     </FormControl>
                     <FormMessage />
@@ -181,13 +172,15 @@ const AddPatientPage = () => {
                 control={form.control}
                 name="fatherName"
                 render={({ field }) => (
-                  <FormItem className="flex-1">
-                    <FormLabel>Enter Patient Father Name</FormLabel>
+                  <FormItem>
+                    <FormLabel className="text-card-foreground">
+                      Father's Name
+                    </FormLabel>
                     <FormControl>
                       <Input
                         placeholder="Father's Name"
                         {...field}
-                        className="rounded-2xl placeholder-text-slate-400"
+                        className="rounded-lg bg-accent text-card-foreground placeholder:text-muted-foreground"
                       />
                     </FormControl>
                     <FormMessage />
@@ -200,157 +193,112 @@ const AddPatientPage = () => {
               name="email"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Enter Patient Email</FormLabel>
+                  <FormLabel className="text-card-foreground">
+                    Patient Email
+                  </FormLabel>
                   <FormControl>
                     <Input
                       placeholder="Email"
                       {...field}
-                      className="rounded-2xl placeholder-text-slate-400"
+                      className="rounded-lg bg-accent text-card-foreground placeholder:text-muted-foreground"
                     />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            <FormField
-              control={form.control}
-              name="identity"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Select Identity</FormLabel>
-                  <FormControl>
-                    <div className="space-y-2">
-                      <label className="flex items-center space-x-2">
-                        <input
-                          type="radio"
-                          value="PAKISTANI"
-                          checked={field.value === "PAKISTANI"}
-                          onChange={field.onChange}
-                          className="form-radio"
-                        />
-                        <span className="text-white">PAKISTANI</span>
-                      </label>
-                      <label className="flex items-center space-x-2">
-                        <input
-                          type="radio"
-                          value="OTHER"
-                          checked={field.value === "OTHER"}
-                          onChange={field.onChange}
-                          className="form-radio"
-                        />
-                        <span className="text-white">OTHER</span>
-                      </label>
-                    </div>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            {/* <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Name</FormLabel>
-                  <FormControl>
-                    <Input {...field} placeholder="Enter name" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            /> */}
-            <FormField
-              control={form.control}
-              name="relation"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Relationship with Patient</FormLabel>
-                  <FormControl>
-                    <div className="space-y-2">
-                      <label className="flex items-center space-x-2">
-                        <input
-                          type="radio"
-                          value="PARENT"
-                          checked={field.value === "PARENT"}
-                          onChange={(e) => {
-                            field.onChange(e);
-                            handleRelationChange(e);
-                          }}
-                          className="form-radio"
-                        />
-                        <span className="text-white">PARENT</span>
-                      </label>
-                      <label className="flex items-center space-x-2">
-                        <input
-                          type="radio"
-                          value="SIBLING"
-                          checked={field.value === "SIBLING"}
-                          onChange={(e) => {
-                            field.onChange(e);
-                            handleRelationChange(e);
-                          }}
-                          className="form-radio"
-                        />
-                        <span className="text-white">SIBLING</span>
-                      </label>
-                      <label className="flex items-center space-x-2">
-                        <input
-                          type="radio"
-                          value="CHILD"
-                          checked={field.value === "CHILD"}
-                          onChange={(e) => {
-                            field.onChange(e);
-                            handleRelationChange(e);
-                          }}
-                          className="form-radio"
-                        />
-                        <span className="text-white">CHILD</span>
-                      </label>
-                      <label className="flex items-center space-x-2">
-                        <input
-                          type="radio"
-                          value="SPOUSE"
-                          checked={field.value === "SPOUSE"}
-                          onChange={(e) => {
-                            field.onChange(e);
-                            handleRelationChange(e);
-                          }}
-                          className="form-radio"
-                        />
-                        <span className="text-white">SPOUSE</span>
-                      </label>
-                      <label className="flex items-center space-x-2">
-                        <input
-                          type="radio"
-                          value="NONE"
-                          checked={field.value === "NONE"}
-                          onChange={(e) => {
-                            field.onChange(e);
-                            handleRelationChange(e);
-                          }}
-                          className="form-radio"
-                        />
-                        <span className="text-white">NONE</span>
-                      </label>
-                    </div>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <FormField
+                control={form.control}
+                name="identity"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-card-foreground">
+                      Identity
+                    </FormLabel>
+                    <FormControl>
+                      <div className="flex space-x-4">
+                        <label className="flex items-center space-x-2 text-card-foreground">
+                          <input
+                            type="radio"
+                            value="PAKISTANI"
+                            checked={field.value === "PAKISTANI"}
+                            onChange={field.onChange}
+                            className="form-radio text-primary"
+                          />
+                          <span>PAKISTANI</span>
+                        </label>
+                        <label className="flex items-center space-x-2 text-card-foreground">
+                          <input
+                            type="radio"
+                            value="OTHER"
+                            checked={field.value === "OTHER"}
+                            onChange={field.onChange}
+                            className="form-radio text-primary"
+                          />
+                          <span>OTHER</span>
+                        </label>
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="relation"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-card-foreground">
+                      Relationship with Patient
+                    </FormLabel>
+                    <FormControl>
+                      <div className="flex space-x-3">
+                        {["PARENT", "SIBLING", "CHILD", "SPOUSE", "NONE"].map(
+                          (relation) => (
+                            <label
+                              key={relation}
+                              className="flex items-center space-x-2 text-card-foreground"
+                            >
+                              <input
+                                type="radio"
+                                value={relation}
+                                checked={field.value === relation}
+                                onChange={(e) => {
+                                  field.onChange(e);
+                                  handleRelationChange(e);
+                                }}
+                                className="form-radio text-primary"
+                              />
+                              <span>{relation}</span>
+                            </label>
+                          )
+                        )}
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
             {relationType !== "NONE" && (
-              <div className="flex flex-col md:flex-row gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField
                   control={form.control}
                   name="relationName"
                   render={({ field }) => (
-                    <FormItem className="flex-1">
-                      <FormLabel>Relation's Name</FormLabel>
+                    <FormItem>
+                      <FormLabel className="text-card-foreground">
+                        Relation's Name
+                      </FormLabel>
                       <FormControl>
                         <Input
                           placeholder="Relation's Name"
                           {...field}
-                          className="rounded-2xl placeholder-text-slate-400"
+                          className="rounded-lg bg-accent text-card-foreground placeholder:text-muted-foreground"
                         />
                       </FormControl>
                       <FormMessage />
@@ -361,13 +309,15 @@ const AddPatientPage = () => {
                   control={form.control}
                   name="relationCNIC"
                   render={({ field }) => (
-                    <FormItem className="flex-1">
-                      <FormLabel>Relation's CNIC</FormLabel>
+                    <FormItem>
+                      <FormLabel className="text-card-foreground">
+                        Relation's CNIC
+                      </FormLabel>
                       <FormControl>
                         <Input
                           placeholder="Relation's CNIC"
                           {...field}
-                          className="rounded-2xl placeholder-text-slate-400"
+                          className="rounded-lg bg-accent text-card-foreground placeholder:text-muted-foreground"
                         />
                       </FormControl>
                       <FormMessage />
@@ -376,283 +326,159 @@ const AddPatientPage = () => {
                 />
               </div>
             )}
-            {relationType === "NONE" && (
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <FormField
                 control={form.control}
                 name="cnic"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Enter Patient CNIC</FormLabel>
+                    <FormLabel className="text-card-foreground">CNIC</FormLabel>
                     <FormControl>
                       <Input
                         placeholder="CNIC"
                         {...field}
-                        className="rounded-2xl placeholder-text-slate-400"
+                        className="rounded-lg bg-accent text-card-foreground placeholder:text-muted-foreground"
                       />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-            )}
-            <FormField
-              control={form.control}
-              name="crc"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Select CRC</FormLabel>
-                  <FormControl>
-                    <div className="space-y-2">
-                      <label className="flex items-center space-x-2">
-                        <input
-                          type="radio"
-                          value="OLD"
-                          checked={field.value === "OLD"}
-                          onChange={field.onChange}
-                          className="form-radio"
-                        />
-                        <span className="text-white">OLD</span>
-                      </label>
-                      <label className="flex items-center space-x-2">
-                        <input
-                          type="radio"
-                          value="NEW"
-                          checked={field.value === "NEW"}
-                          onChange={field.onChange}
-                          className="form-radio"
-                        />
-                        <span className="text-white">NEW</span>
-                      </label>
-                    </div>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="crcNumber"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>CRC Number</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="CRC Number"
-                      {...field}
-                      className="rounded-2xl placeholder-text-slate-400"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="contactNumber"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Enter Contact Number</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="Contact Number"
-                      {...field}
-                      className="rounded-2xl placeholder-text-slate-400"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="education"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Enter Education</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="Education"
-                      {...field}
-                      className="rounded-2xl placeholder-text-slate-400"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="age"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Enter Age</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="Age"
-                      {...field}
-                      className="rounded-2xl placeholder-text-slate-400"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="marriageYears"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Marriage Years</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="Marriage Years"
-                      {...field}
-                      className="rounded-2xl placeholder-text-slate-400"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="occupation"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Enter Occupation</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="Occupation"
-                      {...field}
-                      className="rounded-2xl placeholder-text-slate-400"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+              <FormField
+                control={form.control}
+                name="education"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-card-foreground">
+                      Education
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Education"
+                        {...field}
+                        className="rounded-lg bg-accent text-card-foreground placeholder:text-muted-foreground"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <FormField
+                control={form.control}
+                name="occupation"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-card-foreground">
+                      Occupation
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Occupation"
+                        {...field}
+                        className="rounded-lg bg-accent text-card-foreground placeholder:text-muted-foreground"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="contactNumber"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-card-foreground">
+                      Contact Number
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Contact Number"
+                        {...field}
+                        className="rounded-lg bg-accent text-card-foreground placeholder:text-muted-foreground"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <FormField
+                control={form.control}
+                name="age"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-card-foreground">Age</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Age"
+                        {...field}
+                        className="rounded-lg bg-accent text-card-foreground placeholder:text-muted-foreground"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="marriageYears"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-card-foreground">
+                      Years Married
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Years Married"
+                        {...field}
+                        className="rounded-lg bg-accent text-card-foreground placeholder:text-muted-foreground"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
             <FormField
               control={form.control}
               name="address"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Enter Address</FormLabel>
+                  <FormLabel className="text-card-foreground">
+                    Address
+                  </FormLabel>
                   <FormControl>
                     <Input
                       placeholder="Address"
                       {...field}
-                      className="rounded-2xl placeholder-text-slate-400"
+                      className="rounded-lg bg-accent text-card-foreground placeholder:text-muted-foreground"
                     />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            <FormField
-              control={form.control}
-              name="catchmentArea"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Select Catchment Area</FormLabel>
-                  <FormControl>
-                    <div className="space-y-2">
-                      <label className="flex items-center space-x-2">
-                        <input
-                          type="radio"
-                          value="URBAN"
-                          checked={field.value === "URBAN"}
-                          onChange={field.onChange}
-                          className="form-radio"
-                        />
-                        <span className="text-white">URBAN</span>
-                      </label>
-                      <label className="flex items-center space-x-2">
-                        <input
-                          type="radio"
-                          value="RURAL"
-                          checked={field.value === "RURAL"}
-                          onChange={field.onChange}
-                          className="form-radio"
-                        />
-                        <span className="text-white">RURAL</span>
-                      </label>
-                    </div>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="amountPayed"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Amount Payed</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="Amount Payed"
-                      {...field}
-                      className="rounded-2xl placeholder-text-slate-400"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="attendedByDoctorId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Doctor</FormLabel>
-                  <FormControl>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger>
-                        <button className="rounded-2xl placeholder-text-slate-400 focus:outline-none ml-5">
-                          {selectedDoctorName}
-                        </button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent>
-                        {doctors.map((doctor) => (
-                          <DropdownMenuItem
-                            key={doctor.id}
-                            onClick={() => {
-                              form.setValue("attendedByDoctorId", doctor.id);
-                              setSelectedDoctorName(doctor.name); // Update selected doctor name
-                            }}
-                          >
-                            {doctor.name}
-                          </DropdownMenuItem>
-                        ))}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />{" "}
-            <div className="flex flex-col md:flex-row items-start justify-start gap-3 w-full">
+
+            <div className="flex justify-between">
               <Button
-                onClick={() => onSubmit(form.getValues(), true)}
-                className="bg-green-500 text-white hover:bg-green-500 hover:opacity-80 w-full"
                 type="button"
-              >
-                {form.formState.isSubmitting
-                  ? "Submitting..."
-                  : "Save Registration & Add Visit"}
-              </Button>
-              <Button
-                onClick={() => onSubmit(form.getValues(), false)}
-                className="bg-yellow-500 text-white hover:bg-yellow-500 hover:opacity-80 w-full"
-                type="button"
-              >
-                Only Register
-              </Button>
-              <Button
                 onClick={handleReset}
-                className="bg-red-500 text-white hover:bg-red-500 hover:opacity-80 w-full"
+                className="px-4 py-2 rounded-lg bg-red-500 text-white font-semibold hover:bg-red-500 hover:opacity-80"
               >
                 Reset
+              </Button>
+              <Button
+                type="submit"
+                className="px-4 py-2 rounded-lg bg-green-500 hover:bg-green-500 hover:opacity-80 text-white font-semibold"
+              >
+                Submit
               </Button>
             </div>
           </form>
