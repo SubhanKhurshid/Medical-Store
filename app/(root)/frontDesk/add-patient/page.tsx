@@ -13,7 +13,6 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { getDoctorNames, addPatient } from "../../../../lib/actions/route";
 import { toast } from "sonner";
 import { patientSchema } from "../../../../lib/validator";
 
@@ -55,29 +54,29 @@ const AddPatientPage = () => {
   const [relationType, setRelationType] = useState("NONE");
   const [doctors, setDoctors] = useState<Doctor[]>([]);
 
-  useEffect(() => {
-    const fetchDoctors = async () => {
-      try {
-        const response = await getDoctorNames();
-        if (response && response.length > 0) {
-          const doctorsData: Doctor[] = response
-            .filter((doctor) => doctor !== null)
-            .map((doctor) => ({
-              id: doctor.id,
-              name: doctor.name as string,
-            }));
+  // useEffect(() => {
+  //   const fetchDoctors = async () => {
+  //     try {
+  //       const response = await getDoctorNames();
+  //       if (response && response.length > 0) {
+  //         const doctorsData: Doctor[] = response
+  //           .filter((doctor) => doctor !== null)
+  //           .map((doctor) => ({
+  //             id: doctor.id,
+  //             name: doctor.name as string,
+  //           }));
 
-          setDoctors(doctorsData);
-        } else {
-          console.error("Failed to fetch doctors:", response);
-        }
-      } catch (error) {
-        console.error("Error fetching doctors:", error);
-      }
-    };
+  //         setDoctors(doctorsData);
+  //       } else {
+  //         console.error("Failed to fetch doctors:", response);
+  //       }
+  //     } catch (error) {
+  //       console.error("Error fetching doctors:", error);
+  //     }
+  //   };
 
-    fetchDoctors();
-  }, []);
+  //   fetchDoctors();
+  // }, []);
 
   const handleRelationChange = (event: any) => {
     const selectedRelation = event.target.value;
@@ -89,43 +88,43 @@ const AddPatientPage = () => {
     }
   };
 
-  const onSubmit = async (values: any, addVisit: any) => {
-    try {
-      const dataToSubmit = {
-        ...values,
-        cnic: values.relation === "NONE" ? values.cnic : undefined,
-        relations:
-          values.relation !== "NONE"
-            ? [
-                {
-                  relation: values.relation,
-                  relationName: values.relationName || "",
-                  relationCNIC: values.relationCNIC || "",
-                },
-              ]
-            : [],
-      };
+  // const onSubmit = async (values: any, addVisit: any) => {
+  //   try {
+  //     const dataToSubmit = {
+  //       ...values,
+  //       cnic: values.relation === "NONE" ? values.cnic : undefined,
+  //       relations:
+  //         values.relation !== "NONE"
+  //           ? [
+  //               {
+  //                 relation: values.relation,
+  //                 relationName: values.relationName || "",
+  //                 relationCNIC: values.relationCNIC || "",
+  //               },
+  //             ]
+  //           : [],
+  //     };
 
-      console.log("Submitting values:", JSON.stringify(dataToSubmit, null, 2));
+  //     console.log("Submitting values:", JSON.stringify(dataToSubmit, null, 2));
 
-      const data = await addPatient(dataToSubmit, addVisit);
+  //     const data = await addPatient(dataToSubmit, addVisit);
 
-      console.log("API Response:", JSON.stringify(data, null, 2));
+  //     console.log("API Response:", JSON.stringify(data, null, 2));
 
-      if (data.success) {
-        toast.success("Patient Added Successfully!");
-        form.reset();
-      } else {
-        const errorMessage =
-          data.error?._errors?.[0] || "Failed to add patient.";
-        toast.error(errorMessage);
-        console.error("Error adding patient:", data.error);
-      }
-    } catch (error) {
-      console.error("Unexpected error during submission:", error);
-      toast.error("An unexpected error occurred.");
-    }
-  };
+  //     if (data.success) {
+  //       toast.success("Patient Added Successfully!");
+  //       form.reset();
+  //     } else {
+  //       const errorMessage =
+  //         data.error?._errors?.[0] || "Failed to add patient.";
+  //       toast.error(errorMessage);
+  //       console.error("Error adding patient:", data.error);
+  //     }
+  //   } catch (error) {
+  //     console.error("Unexpected error during submission:", error);
+  //     toast.error("An unexpected error occurred.");
+  //   }
+  // };
 
   const handleReset = () => {
     form.reset();
@@ -144,7 +143,7 @@ const AddPatientPage = () => {
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              onSubmit(form.getValues(), true);
+              // onSubmit(form.getValues(), true);
             }}
             className="space-y-6"
           >

@@ -4,7 +4,6 @@ import { Input } from "@/components/ui/input";
 import React, { useEffect, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import * as z from "zod";
 import {
   Form,
   FormControl,
@@ -14,37 +13,35 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { patientSchema } from "@/lib/validator";
-import { Checkbox } from "@/components/ui/checkbox";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+
 import { toast } from "sonner";
 import { useParams, useRouter } from "next/navigation";
-import { getPatientById, updatePatient } from "@/lib/actions/route";
 
 const EditPatientPage = () => {
   const { id } = useParams() as { id: string };
   const router = useRouter();
   const [initial, setInitial] = useState<any>(null);
 
-  useEffect(() => {
-    const fetchPatient = async () => {
-      try {
-        const data = await getPatientById(id);
-        if (data.success) {
-          setInitial(data.data);
-          form.reset(data.data);
-        } else {
-          toast.error(data.error || "Failed to fetch patient details.");
-          router.push("/nurse/search-patient");
-        }
-      } catch (error) {
-        console.error("Error fetching patient details:", error);
-        toast.error("An error occurred while fetching patient details.");
-        router.push("/nurse/search-patient");
-      }
-    };
+  // useEffect(() => {
+  //   const fetchPatient = async () => {
+  //     try {
+  //       const data = await getPatientById(id);
+  //       if (data.success) {
+  //         setInitial(data.data);
+  //         form.reset(data.data);
+  //       } else {
+  //         toast.error(data.error || "Failed to fetch patient details.");
+  //         router.push("/nurse/search-patient");
+  //       }
+  //     } catch (error) {
+  //       console.error("Error fetching patient details:", error);
+  //       toast.error("An error occurred while fetching patient details.");
+  //       router.push("/nurse/search-patient");
+  //     }
+  //   };
 
-    fetchPatient();
-  }, [id, router]);
+  //   fetchPatient();
+  // }, [id, router]);
 
   const form = useForm({
     resolver: zodResolver(patientSchema),
@@ -63,39 +60,39 @@ const EditPatientPage = () => {
     }
   };
 
-  const onSubmit = async (values: any) => {
-    try {
-      const dataToSubmit = {
-        ...values,
-        cnic: values.relation === "NONE" ? values.cnic : undefined,
-        relations:
-          values.relation !== "NONE"
-            ? [
-                {
-                  relation: values.relation,
-                  relationName: values.relationName || "",
-                  relationCNIC: values.relationCNIC || "",
-                },
-              ]
-            : [],
-      };
+  // const onSubmit = async (values: any) => {
+  //   try {
+  //     const dataToSubmit = {
+  //       ...values,
+  //       cnic: values.relation === "NONE" ? values.cnic : undefined,
+  //       relations:
+  //         values.relation !== "NONE"
+  //           ? [
+  //               {
+  //                 relation: values.relation,
+  //                 relationName: values.relationName || "",
+  //                 relationCNIC: values.relationCNIC || "",
+  //               },
+  //             ]
+  //           : [],
+  //     };
 
-      console.log(dataToSubmit);
-      const data = await updatePatient(id, dataToSubmit);
-      console.log(data.data);
-      if (data.success) {
-        toast.success("Patient updated successfully!");
-        router.push(`/nurse/search-patient/${id}`);
-      } else {
-        const errorMessage =
-          data.error?._errors?.[0] || "Failed to update patient.";
-        toast.error(errorMessage);
-      }
-    } catch (error) {
-      console.error("Unexpected error during update:", error);
-      toast.error("An unexpected error occurred.");
-    }
-  };
+  //     console.log(dataToSubmit);
+  //     const data = await updatePatient(id, dataToSubmit);
+  //     console.log(data.data);
+  //     if (data.success) {
+  //       toast.success("Patient updated successfully!");
+  //       router.push(`/nurse/search-patient/${id}`);
+  //     } else {
+  //       const errorMessage =
+  //         data.error?._errors?.[0] || "Failed to update patient.";
+  //       toast.error(errorMessage);
+  //     }
+  //   } catch (error) {
+  //     console.error("Unexpected error during update:", error);
+  //     toast.error("An unexpected error occurred.");
+  //   }
+  // };
 
   const handleReset = () => {
     form.reset();
@@ -115,7 +112,7 @@ const EditPatientPage = () => {
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              onSubmit(form.getValues());
+              // onSubmit(form.getValues());
             }}
             className="space-y-6"
           >
@@ -532,7 +529,7 @@ const EditPatientPage = () => {
             />
             <div className="flex flex-col md:flex-row items-start justify-start gap-3 w-full">
               <Button
-                onClick={() => onSubmit(form.getValues())}
+                // onClick={() => onSubmit(form.getValues())}
                 className="bg-yellow-500 text-white hover:bg-yellow-500 hover:opacity-80 w-full"
                 type="button"
               >

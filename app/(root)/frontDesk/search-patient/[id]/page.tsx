@@ -1,7 +1,7 @@
 "use client";
 import { useParams } from "next/navigation";
 import React, { useEffect, useState } from "react";
-import { getPatientById } from "../../../../../lib/actions/route";
+// import { getPatientById } from "../../../../../lib/actions/route";
 import Image from "next/image";
 import plane from "@/public/paper_plane_1x-1.0s-200px-200px-removebg-preview.png";
 
@@ -43,24 +43,24 @@ const ViewPatientPage = () => {
   const [patient, setPatient] = useState<Patient | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const getData = async () => {
-      const result = await getPatientById(id);
+  // useEffect(() => {
+  //   const getData = async () => {
+  //     const result = await getPatientById(id);
 
-      if (result.success && result.data) {
-        setPatient(result.data);
-      } else {
-        console.error(result.error);
-      }
+  //     if (result.success && result.data) {
+  //       setPatient(result.data);
+  //     } else {
+  //       console.error(result.error);
+  //     }
 
-      // Add a slight delay before hiding the loader
-      setTimeout(() => {
-        setLoading(false);
-      }, 500); // 500ms delay
-    };
+  //     // Add a slight delay before hiding the loader
+  //     setTimeout(() => {
+  //       setLoading(false);
+  //     }, 500); // 500ms delay
+  //   };
 
-    getData();
-  }, [id]);
+  //   getData();
+  // }, [id]);
 
   return (
     <div className="flex items-center justify-center min-h-screen">

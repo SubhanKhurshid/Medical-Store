@@ -1,6 +1,6 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import { getVisits, searchVisits } from "../../../../lib/actions/route";
+// import { getVisits, searchVisits } from "../../../../lib/actions/route";
 import {
   Table,
   TableBody,
@@ -56,45 +56,45 @@ const ViewVisitPage = () => {
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(true);
 
-  const getData = async () => {
-    const result = await getVisits();
-    if (result.success) {
-      setPatients(result.data || []);
-    } else {
-      console.error(result.error);
-    }
+  // const getData = async () => {
+  //   const result = await getVisits();
+  //   if (result.success) {
+  //     setPatients(result.data || []);
+  //   } else {
+  //     console.error(result.error);
+  //   }
 
-    setTimeout(() => setLoading(false), 500);
-  };
+  //   setTimeout(() => setLoading(false), 500);
+  // };
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value);
   };
 
-  const searchPatientsByCNIC = async () => {
-    if (searchTerm.trim()) {
-      try {
-        const result = await searchVisits({ cnic: searchTerm.trim() });
-        if (result.success) {
-          setPatients(result.data || []);
-        } else {
-          console.error(result.error);
-        }
-      } catch (error) {
-        console.error("An error occurred while searching:", error);
-      }
-    } else {
-      getData();
-    }
-  };
+  // const searchPatientsByCNIC = async () => {
+  //   if (searchTerm.trim()) {
+  //     try {
+  //       const result = await searchVisits({ cnic: searchTerm.trim() });
+  //       if (result.success) {
+  //         setPatients(result.data || []);
+  //       } else {
+  //         console.error(result.error);
+  //       }
+  //     } catch (error) {
+  //       console.error("An error occurred while searching:", error);
+  //     }
+  //   } else {
+  //     getData();
+  //   }
+  // };
 
-  useEffect(() => {
-    if (searchTerm) {
-      searchPatientsByCNIC();
-    } else {
-      getData();
-    }
-  }, [searchTerm]);
+  // useEffect(() => {
+  //   if (searchTerm) {
+  //     searchPatientsByCNIC();
+  //   } else {
+  //     getData();
+  //   }
+  // }, [searchTerm]);
 
   return (
     <div className="max-w-7xl mx-auto px-10 p-5">

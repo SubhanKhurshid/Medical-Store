@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { searchPatients, addVisit } from "../../../../lib/actions/route";
+// import { searchPatients, addVisit } from "../../../../lib/actions/route";
 import { useRouter } from "next/navigation";
 import plane from "@/public/paper_plane_1x-1.0s-200px-200px-removebg-preview.png";
 import Image from "next/image";
@@ -14,49 +14,49 @@ const SearchPage = () => {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  const handleSearchChange = async (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const term = event.target.value;
-    setSearchTerm(term);
+  // const handleSearchChange = async (
+  //   event: React.ChangeEvent<HTMLInputElement>
+  // ) => {
+  //   const term = event.target.value;
+  //   setSearchTerm(term);
 
-    if (term) {
-      setLoading(true);
-      try {
-        const data = await searchPatients({ cnic: term });
-        if (data.success) {
-          setResults(data.data || []);
-        } else {
-          toast.error(data.error || "Failed to fetch patients.");
-          setResults([]);
-        }
-      } catch (error) {
-        console.error("Error fetching patients:", error);
-        toast.error("An error occurred while fetching patients.");
-        setResults([]);
-      } finally {
-        setTimeout(() => {
-          setLoading(false);
-        }, 500); // Add a slight delay of 500ms before hiding the loading animation
-      }
-    } else {
-      setResults([]);
-    }
-  };
+  //   if (term) {
+  //     setLoading(true);
+  //     try {
+  //       const data = await searchPatients({ cnic: term });
+  //       if (data.success) {
+  //         setResults(data.data || []);
+  //       } else {
+  //         toast.error(data.error || "Failed to fetch patients.");
+  //         setResults([]);
+  //       }
+  //     } catch (error) {
+  //       console.error("Error fetching patients:", error);
+  //       toast.error("An error occurred while fetching patients.");
+  //       setResults([]);
+  //     } finally {
+  //       setTimeout(() => {
+  //         setLoading(false);
+  //       }, 500); // Add a slight delay of 500ms before hiding the loading animation
+  //     }
+  //   } else {
+  //     setResults([]);
+  //   }
+  // };
 
-  const handleAddVisit = async (patientId: string) => {
-    try {
-      const data = await addVisit({ patientId });
-      if (data.success) {
-        toast.success("Visit added successfully!");
-      } else {
-        toast.error(data.error || "Failed to add visit.");
-      }
-    } catch (error) {
-      console.error("Error adding visit:", error);
-      toast.error("An error occurred while adding the visit.");
-    }
-  };
+  // const handleAddVisit = async (patientId: string) => {
+  //   try {
+  //     const data = await addVisit({ patientId });
+  //     if (data.success) {
+  //       toast.success("Visit added successfully!");
+  //     } else {
+  //       toast.error(data.error || "Failed to add visit.");
+  //     }
+  //   } catch (error) {
+  //     console.error("Error adding visit:", error);
+  //     toast.error("An error occurred while adding the visit.");
+  //   }
+  // };
 
   const handleViewPatient = (patientId: string) => {
     router.push(`/nurse/search-patient/${patientId}`);
@@ -75,7 +75,7 @@ const SearchPage = () => {
         <Input
           placeholder="Search Here"
           value={searchTerm}
-          onChange={handleSearchChange}
+          // onChange={handleSearchChange}
           // className="w-full max-w-md "
           className="w-full max-w-md rounded-lg bg-accent text-card-foreground placeholder:text-muted-foreground"
         />
@@ -122,7 +122,7 @@ const SearchPage = () => {
                       </Button>
                       <Button
                         className="bg-green-500 text-white hover:bg-green-600 flex-grow md:flex-none"
-                        onClick={() => handleAddVisit(patient.id)}
+                        // onClick={() => handleAddVisit(patient.id)}
                       >
                         Add Visit
                       </Button>
