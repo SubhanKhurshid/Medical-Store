@@ -23,6 +23,9 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
+import axios from "axios";
+import { toast } from "sonner";
+import { useAuth } from "@/app/providers/AuthProvider";
 
 interface UserData {
   name: string;
@@ -36,6 +39,7 @@ interface UserData {
 }
 
 const Signup = () => {
+  const { user } = useAuth();
   const searchParams = useSearchParams();
   const roleFromQuery = searchParams.get("role") || "";
   const [name, setName] = useState("");
@@ -54,36 +58,34 @@ const Signup = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const userData: UserData = { name, email, password, role };
 
-    if (role === "doctor") {
-      userData.specialization = specialization;
-      userData.license = license;
-      userData.age = age;
+    try {
+      const accessToken = user?.access_token;
+      console.log(accessToken);
+      if (!accessToken) {
+        throw new Error("Access token is missing. Please log in first.");
+      }
+
+      const response = await axios.post(
+        "http://localhost:3000/users",
+        {
+          name,
+          email,
+          password,
+          role,
+        },
+        {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }
+      );
+      console.log(response.data);
+
+      toast.success(`${role} has been added successfully!`);
+    } catch (error) {
+      console.error("Signup Error: ", error);
+    } finally {
+      setLoading(false);
     }
-
-    if (role === "nurse" || role === "pharmacist" || role === "frontdesk") {
-      userData.age = age;
-      userData.qualification = qualification;
-    }
-
-    const response = await fetch("/api/auth/signup", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(userData),
-    });
-
-    const data = await response.json();
-
-    if (response.ok) {
-      router.push("/signin");
-    } else {
-      setError(data.message);
-    }
-
-    setLoading(false);
   };
 
   return (
@@ -174,7 +176,7 @@ const Signup = () => {
                       <SelectItem value="frontdesk">FrontDesk</SelectItem>
                     </SelectContent>
                   </Select>
-                  {role === "doctor" && (
+                  {/* {role === "doctor" && (
                     <>
                       <div className="space-y-4">
                         <div className="space-y-2">
@@ -305,10 +307,10 @@ const Signup = () => {
                         </div>
                       </div>
                     </>
-                  )}
+                  )} */}
                 </div>
                 {error && <p className="text-red-500">{error}</p>}
-                <Button type="submit" className="w-full" disabled={loading}>
+                <Button onClick={handleSubmit} className="w-full">
                   {loading ? "Signing Up..." : "Sign Up"}
                 </Button>
               </form>

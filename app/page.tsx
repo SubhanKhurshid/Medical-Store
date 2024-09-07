@@ -1,15 +1,14 @@
-// app/page.js
-"use client";
-
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+'use client'
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
 export default function Home() {
   const router = useRouter();
 
   useEffect(() => {
-    router.replace("/signin");
+    // Redirect to the /signin page
+    router.push('/signin');
   }, [router]);
 
-  return null;
+  return null; // Return nothing while redirecting
 }

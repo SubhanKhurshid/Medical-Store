@@ -1,42 +1,29 @@
 "use client";
 
 import Link from "next/link";
-import { useSession } from "next-auth/react";
 import { usePathname, useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import { Sheet, SheetContent, SheetTrigger } from "../ui/sheet";
 import { Separator } from "../ui/separator";
 import menu from "@/public/icons8-menu-50.png";
-import logo from "@/public/WhatsApp Image 2024-08-02 at 23.45.33_0ac66f5d.jpg";
 import { ShieldPlus } from "lucide-react";
+import { useAuth } from "@/app/providers/AuthProvider";
 
 const Navbar = () => {
+  const { user } = useAuth();
   const pathname = usePathname();
-  const router = useRouter();
-  const { data: session, status } = useSession();
   const [isOpen, setIsOpen] = useState(false);
+  const role = user?.role;
 
-  useEffect(() => {
-    if (status === "loading") return;
-    if (!session) {
-      router.push("/signin");
-    }
-  }, [session, status, router]);
-
-  if (
-    status === "loading" ||
-    pathname === "/signin" ||
-    pathname === "/signup"
-  ) {
-    return null;
-  }
+  if (!role) return null; // Hide the navbar if no role is present
 
   return (
     <div className="max-w-7xl mx-auto w-full px-6 py-4 bg-[#285430] text-white shadow-lg rounded-b-lg">
-      {/* Navbar for Nurse */}
-      {session?.user.role === "nurse" && (
+      {/* Conditional rendering based on user role */}
+      {role === "nurse" && (
         <>
+          {/* Nurse-specific navbar */}
           <div className="hidden md:flex items-center justify-between">
             <Link href={"/nurse"} className="flex items-center gap-2">
               <ShieldPlus className="text-white h-6 w-6" />
@@ -70,12 +57,11 @@ const Navbar = () => {
                   width={24}
                   height={24}
                   className="cursor-pointer"
-                />{" "}
+                />
               </SheetTrigger>
               <SheetContent className="flex flex-col gap-6 bg-[#285430] text-white md:hidden">
                 <div className="flex items-center gap-2">
                   <ShieldPlus className="text-white h-6 w-6" />
-                  <span className="text-xl font-semibold">Ibrahim Medical</span>
                 </div>
                 <Separator className="border border-gray-50" />
                 <div className="flex flex-col space-y-4">
@@ -97,10 +83,9 @@ const Navbar = () => {
           </div>
         </>
       )}
-
-      {/* Navbar for Admin */}
-      {session?.user.role === "admin" && (
+      {role === "admin" && (
         <>
+          {/* Admin-specific navbar */}
           <div className="hidden md:flex items-center justify-between">
             <Link href={"/admin"} className="flex items-center gap-2">
               <ShieldPlus className="text-white h-6 w-6" />
@@ -168,11 +153,10 @@ const Navbar = () => {
 const NavLink = ({ href, currentPath, children }: any) => (
   <Link
     href={href}
-    className={`${
-      currentPath === href
+    className={`${currentPath === href
         ? "bg-white text-[#285430] font-semibold rounded-full"
         : "text-white hover:text-gray-300 transition duration-150 ease-in-out"
-    } px-4 py-2`}
+      } px-4 py-2`}
   >
     {children}
   </Link>

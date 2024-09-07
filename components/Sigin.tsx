@@ -1,6 +1,5 @@
 "use client";
 import React, { useState } from "react";
-import { signIn, getSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import {
@@ -11,10 +10,12 @@ import {
   CardContent,
   CardFooter,
 } from "@/components/ui/card";
+import axios from "axios";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/app/providers/AuthProvider";
 
 const Signin = () => {
   const [email, setEmail] = useState("");
@@ -22,6 +23,8 @@ const Signin = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const router = useRouter();
+
+  const { login } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,44 +36,27 @@ const Signin = () => {
 
     setLoading(true);
 
-    const result = await signIn("credentials", {
-      redirect: false,
-      email,
-      password,
-    });
+    try {
+      const result = await login(email, password);
+      console.log(result);
+      if (result && result.role) {
+        if (result.role === "admin") {
+          router.push("/admin");
+        } else if (result.role === "frontDesk") {
+          router.push("/frontDesk");
+        } else if (result.role === "nurse") {
+          router.push("/nurse");
+        } else if (result.role === "doctor") {
+          router.push("/doctor");
+        } else {
+          console.log("Unhandled role:", result.role);
+        }
+      }
+    } catch (error) {
+      console.log(error);
+    }
 
     setLoading(false);
-
-    if (result?.error) {
-      if (result.error === "CredentialsSignin") {
-        setError("Incorrect email or password. Please try again.");
-      } else {
-        setError("An unexpected error occurred. Please try again later.");
-      }
-    } else {
-      const session = await getSession();
-      if (session?.user.role) {
-        switch (session.user.role) {
-          case "admin":
-            router.push("/admin");
-            break;
-          case "doctor":
-            router.push("/doctor");
-            break;
-          case "nurse":
-            router.push("/nurse");
-            break;
-          case "pharmacist":
-            router.push("/pharmacist");
-            break;
-          default:
-            router.push("/");
-            break;
-        }
-      } else {
-        router.push("/");
-      }
-    }
   };
 
   return (
@@ -151,7 +137,7 @@ const Signin = () => {
                 <Link
                   href="/signup"
                   className="font-medium underline underline-offset-4 hover:text-primary"
-                  prefetch={false}
+                  
                 >
                   Sign Up
                 </Link>
