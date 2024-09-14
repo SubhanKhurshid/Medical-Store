@@ -1,6 +1,5 @@
 "use client";
 import React, { useEffect, useState } from "react";
-// import { getVisits, searchVisits } from "../../../../lib/actions/route";
 import {
   Table,
   TableBody,
@@ -12,6 +11,9 @@ import {
 import { Input } from "@/components/ui/input";
 import Image from "next/image";
 import plane from "@/public/paper_plane_1x-1.0s-200px-200px-removebg-preview.png";
+import axios from "axios";
+import { useAuth } from "@/app/providers/AuthProvider";
+import { toast } from "sonner";
 
 interface Relation {
   relation: string;
@@ -55,47 +57,75 @@ const ViewVisitPage = () => {
   const [patients, setPatients] = useState<Visit[]>([]);
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(true);
+  const { user } = useAuth();
 
-  // const getData = async () => {
-  //   const result = await getVisits();
-  //   if (result.success) {
-  //     setPatients(result.data || []);
-  //   } else {
-  //     console.error(result.error);
-  //   }
+  const accessToken = sessionStorage.getItem("accessToken");
 
-  //   setTimeout(() => setLoading(false), 500);
-  // };
-
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchTerm(e.target.value);
+  const fetchAllVisits = async () => {
+    try {
+      const response = await axios.get(
+        "http://localhost:3000/frontdesk/all-visits",
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+      if (response.data?.success) {
+        setPatients(response.data.data);
+      } else {
+        toast.error(response.data?.error || "Failed to fetch visits");
+      }
+    } catch (error:any) {
+      console.error("Error while fetching visits:", error);
+      toast.error("Error while fetching visits: " + error.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // const searchPatientsByCNIC = async () => {
-  //   if (searchTerm.trim()) {
-  //     try {
-  //       const result = await searchVisits({ cnic: searchTerm.trim() });
-  //       if (result.success) {
-  //         setPatients(result.data || []);
-  //       } else {
-  //         console.error(result.error);
-  //       }
-  //     } catch (error) {
-  //       console.error("An error occurred while searching:", error);
-  //     }
-  //   } else {
-  //     getData();
-  //   }
-  // };
+  const handleSearchChange = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const term = event.target.value;
+    setSearchTerm(term);
 
-  // useEffect(() => {
-  //   if (searchTerm) {
-  //     searchPatientsByCNIC();
-  //   } else {
-  //     getData();
-  //   }
-  // }, [searchTerm]);
+    if (term) {
+      setLoading(true);
+      try {
+        const { data } = await axios.get(
+          "http://localhost:3000/frontdesk/visits",
+          {
+            params: { cnic: term },
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+            },
+          }
+        );
 
+        if (data.success) {
+          setPatients(data.data || []); // Set to empty array if no data
+        } else {
+          toast.error(data.error || "Failed to fetch patients.");
+          setPatients([]);
+        }
+      } catch (error) {
+        console.error("Error fetching patients:", error);
+        toast.error("An error occurred while fetching patients.");
+        setPatients([]);
+      } finally {
+        setTimeout(() => {
+          setLoading(false);
+        }, 500);
+      }
+    } else {
+      setPatients([]); // Clear patients if search term is empty
+    }
+  };
+
+  useEffect(() => {
+    fetchAllVisits(); // Call the function to fetch visits on component mount
+  }, []);
   return (
     <div className="max-w-7xl mx-auto px-10 p-5">
       <div className="flex flex-col items-center justify-center mb-10">
@@ -137,34 +167,34 @@ const ViewVisitPage = () => {
             {patients.map((item, index) => (
               <TableRow key={index}>
                 <TableCell className="capitalize">
-                  {item.patient.name}
+                  {item.patient?.name}
                 </TableCell>
                 <TableCell className="capitalize">
-                  {item.patient.fatherName}
+                  {item.patient?.fatherName}
                 </TableCell>
                 <TableCell className="capitalize">
-                  {item.patient.relation && item.patient.relation.length > 0
+                  {item.patient?.relation && item.patient?.relation.length > 0
                     ? "Not Available"
-                    : item.patient.cnic}
+                    : item.patient?.cnic}
                 </TableCell>
                 <TableCell className="capitalize">
-                  {item.patient.education}
+                  {item.patient?.education}
                 </TableCell>
                 <TableCell className="capitalize">
-                  {item.patient.identity}
+                  {item.patient?.identity}
                 </TableCell>
                 <TableCell className="capitalize">
-                  {item.patient.catchmentArea}
+                  {item.patient?.catchmentArea}
                 </TableCell>
                 <TableCell className="capitalize">
-                  {item.patient.occupation}
+                  {item.patient?.occupation}
                 </TableCell>
                 <TableCell className="capitalize">
-                  {item.patient.tokenNumber}
+                  {item.patient?.tokenNumber}
                 </TableCell>
                 <TableCell className="capitalize">
-                  {item.patient.relation && item.patient.relation.length > 0
-                    ? item.patient.relation
+                  {item.patient?.relation && item.patient?.relation.length > 0
+                    ? item.patient?.relation
                         .map(
                           (rel) =>
                             `${rel.relation}: ${rel.relationName} (CNIC: ${rel.relationCNIC})`
@@ -173,13 +203,13 @@ const ViewVisitPage = () => {
                     : "None"}
                 </TableCell>
                 <TableCell className="capitalize">
-                  {item.patient.attendedByDoctor?.name ?? "Not Available"}
+                  {item.patient?.attendedByDoctor?.name ?? "Not Available"}
                 </TableCell>
                 <TableCell className="capitalize">
-                  {item.patient.amountPayed}
+                  {item.patient?.amountPayed}
                 </TableCell>
                 <TableCell>
-                  {new Date(item.visitedAt).toLocaleString()}
+                  {new Date(item?.visitedAt).toLocaleString()}
                 </TableCell>
               </TableRow>
             ))}

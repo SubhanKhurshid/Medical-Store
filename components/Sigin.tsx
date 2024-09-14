@@ -42,7 +42,7 @@ const Signin = () => {
       if (result && result.role) {
         if (result.role === "admin") {
           router.push("/admin");
-        } else if (result.role === "frontDesk") {
+        } else if (result.role === "frontdesk") {
           router.push("/frontDesk");
         } else if (result.role === "nurse") {
           router.push("/nurse");
@@ -70,7 +70,7 @@ const Signin = () => {
             transition={{ duration: 0.8, ease: "easeOut" }}
             className="text-center"
           >
-            <h1 className="text-7xl max-w-lg tracking-tighter font-bold text-green-700 mb-4">
+            <h1 className="text-7xl tracking-tighter font-bold text-green-700 mb-4">
               Login to N.S Ibrahim Medical Store
             </h1>
             <p className="text-lg text-green-600 tracking-tighter">

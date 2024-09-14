@@ -6,8 +6,14 @@ import plane from "@/public/paper_plane_1x-1.0s-200px-200px-removebg-preview.png
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/app/providers/AuthProvider";
+import Unauthorized from "../unauthorized/page";
 
 const AdminPage = () => {
+  const { user } = useAuth();
+  if (user?.role !== "admin") {
+    return <Unauthorized />;
+  }
   return (
     <>
       <div className="mt-10 flex flex-col items-center justify-center gap-10">

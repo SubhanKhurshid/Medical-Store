@@ -73,14 +73,20 @@ const Signup = () => {
           email,
           password,
           role,
+          specialization,
+          qualification,
+          age,
+          license,
         },
         {
           headers: { Authorization: `Bearer ${accessToken}` },
         }
       );
       console.log(response.data);
-
-      toast.success(`${role} has been added successfully!`);
+      if (response.data.success) {
+        toast.success(`${role} has been added successfully!`);
+        router.push("/admin/add-operations");
+      }
     } catch (error) {
       console.error("Signup Error: ", error);
     } finally {
@@ -91,7 +97,6 @@ const Signup = () => {
   return (
     <div className="flex min-h-[100vh] items-center justify-center bg-background px-4 py-12 sm:px-6 lg:px-8">
       <div className="flex w-full max-w-7xl">
-        {/* Left Side - Welcome Message with Animation */}
         <div className="hidden lg:flex w-1/2 flex-col items-center justify-center p-12 rounded-l-md">
           <motion.div
             initial={{ opacity: 0, x: -50 }}
@@ -99,13 +104,12 @@ const Signup = () => {
             transition={{ duration: 0.8, ease: "easeOut" }}
             className="text-center"
           >
-            <h1 className="text-7xl max-w-md tracking-tighter font-bold text-green-700 mb-4">
+            <h1 className="text-7xl tracking-tighter font-bold text-green-700 mb-4">
               Welcome to N.S Ibrahim Medical
             </h1>
             <p className="text-lg text-green-600 tracking-tighter">
               Join us and be part of a community dedicated to better healthcare.
             </p>
-            {/* Add smooth animation */}
             <motion.div
               animate={{ rotate: [0, 15, -15, 0] }}
               transition={{
@@ -118,7 +122,6 @@ const Signup = () => {
           </motion.div>
         </div>
 
-        {/* Right Side - Signup Form */}
         <div className="w-full lg:w-1/2 flex items-center justify-center">
           <Card className="w-full max-w-md">
             <CardHeader className="space-y-1 text-center">
@@ -164,7 +167,7 @@ const Signup = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="role">Role</Label>
+                  {/* <Label htmlFor="role">Role</Label>
                   <Select onValueChange={setRole}>
                     <SelectTrigger className="w-full max-w-md rounded-lg bg-accent text-card-foreground placeholder:text-muted-foreground">
                       <SelectValue placeholder="Select role" />
@@ -175,8 +178,8 @@ const Signup = () => {
                       <SelectItem value="pharmacist">Pharmacist</SelectItem>
                       <SelectItem value="frontdesk">FrontDesk</SelectItem>
                     </SelectContent>
-                  </Select>
-                  {/* {role === "doctor" && (
+                  </Select> */}
+                  {role === "doctor" && (
                     <>
                       <div className="space-y-4">
                         <div className="space-y-2">
@@ -257,7 +260,7 @@ const Signup = () => {
                             className="w-full max-w-md rounded-lg bg-accent text-card-foreground placeholder:text-muted-foreground"
                             id="age"
                             type="text"
-                            placeholder="20"
+                            placeholder="25"
                             value={age}
                             onChange={(e) => setAge(e.target.value)}
                             required
@@ -269,9 +272,9 @@ const Signup = () => {
                             className="w-full max-w-md rounded-lg bg-accent text-card-foreground placeholder:text-muted-foreground"
                             id="qualification"
                             type="text"
-                            placeholder="BS Nuse"
-                            value={license}
-                            onChange={(e) => setAge(e.target.value)}
+                            placeholder="BSN"
+                            value={qualification}
+                            onChange={(e) => setQualification(e.target.value)}
                             required
                           />
                         </div>
@@ -287,7 +290,7 @@ const Signup = () => {
                             className="w-full max-w-md rounded-lg bg-accent text-card-foreground placeholder:text-muted-foreground"
                             id="age"
                             type="text"
-                            placeholder="20"
+                            placeholder="25"
                             value={age}
                             onChange={(e) => setAge(e.target.value)}
                             required
@@ -299,15 +302,15 @@ const Signup = () => {
                             className="w-full max-w-md rounded-lg bg-accent text-card-foreground placeholder:text-muted-foreground"
                             id="qualification"
                             type="text"
-                            placeholder="BS Nuse"
-                            value={license}
-                            onChange={(e) => setAge(e.target.value)}
+                            placeholder="BSN"
+                            value={qualification}
+                            onChange={(e) => setQualification(e.target.value)}
                             required
                           />
                         </div>
                       </div>
                     </>
-                  )} */}
+                  )}
                 </div>
                 {error && <p className="text-red-500">{error}</p>}
                 <Button onClick={handleSubmit} className="w-full">

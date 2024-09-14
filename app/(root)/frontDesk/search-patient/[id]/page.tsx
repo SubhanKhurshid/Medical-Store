@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 // import { getPatientById } from "../../../../../lib/actions/route";
 import Image from "next/image";
 import plane from "@/public/paper_plane_1x-1.0s-200px-200px-removebg-preview.png";
+import axios from "axios";
 
 interface Relation {
   id: string;
@@ -43,24 +44,38 @@ const ViewPatientPage = () => {
   const [patient, setPatient] = useState<Patient | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // useEffect(() => {
-  //   const getData = async () => {
-  //     const result = await getPatientById(id);
+  useEffect(() => {
+    const getData = async () => {
+      try {
+        const accessToken = sessionStorage.getItem("accessToken");
 
-  //     if (result.success && result.data) {
-  //       setPatient(result.data);
-  //     } else {
-  //       console.error(result.error);
-  //     }
+        const response = await axios.get(
+          `frontdesk/patients/${id}`, // Replace with your actual API endpoint
+          {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+            },
+          }
+        );
 
-  //     // Add a slight delay before hiding the loader
-  //     setTimeout(() => {
-  //       setLoading(false);
-  //     }, 500); // 500ms delay
-  //   };
+        if (response.data.success && response.data.data) {
+          setPatient(response.data.data);
+        } else {
+          console.error(response.data.error || "Error fetching patient");
+        }
+      } catch (error) {
+        console.error("Error fetching patient:", error);
+      } finally {
+        setLoading(false);
+      }
+      // Add a slight delay before hiding the loader
+      setTimeout(() => {
+        setLoading(false);
+      }, 500); // 500ms delay
+    };
 
-  //   getData();
-  // }, [id]);
+    getData();
+  }, [id]);
 
   return (
     <div className="flex items-center justify-center min-h-screen">

@@ -10,11 +10,11 @@ export default function RootLayout({
 }) {
   return (
     <AuthProvider> {/* Wrap everything inside AuthProvider */}
+      <Toaster richColors /> {/* Add Toaster component here */}
       <div className="flex h-screen flex-col">
-        <Navbar /> {/* Navbar is rendered only once here */}
+        <Navbar />
         <main className="flex-1">
           {children}
-          <Toaster />
         </main>
         <Footer />
       </div>
