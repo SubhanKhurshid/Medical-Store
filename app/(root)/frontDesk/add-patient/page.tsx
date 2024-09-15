@@ -28,6 +28,8 @@ const AddPatientPage = () => {
   const [selectedDoctorId, setSelectedDoctorId] = useState("");
   const [relationType, setRelationType] = useState("NONE");
   const { user } = useAuth();
+  const [addVisit, setAddVisit] = useState(false); // New state for determining if visit should be added
+
   const initialValues = {
     attendedByDoctorId: "",
     name: "",
@@ -45,9 +47,13 @@ const AddPatientPage = () => {
     address: "",
     catchmentArea: "URBAN",
     amountPayed: "",
-    relation: "NONE",
-    relationName: "",
-    relationCNIC: "",
+    relation: [
+      {
+        relation: "NONE", // Default to NONE to simplify
+        relationName: "",
+        relationCNIC: "",
+      },
+    ],
   };
 
   const form = useForm({
@@ -56,7 +62,6 @@ const AddPatientPage = () => {
   });
 
   const accessToken = user?.access_token;
-
 
   useEffect(() => {
     const fetchDoctors = async () => {
@@ -81,19 +86,48 @@ const AddPatientPage = () => {
   const handleRelationChange = (event: any) => {
     const selectedRelation = event.target.value;
     setRelationType(selectedRelation);
-    form.setValue("relation", selectedRelation, { shouldValidate: true });
+
+    // Use template literals to set the nested value correctly
+    form.setValue(`relation.0.relation`, selectedRelation, {
+      shouldValidate: true,
+    });
+
+    // If "NONE", clear out relationName and relationCNIC fields
     if (selectedRelation === "NONE") {
-      form.setValue("relationName", "");
-      form.setValue("relationCNIC", "");
+      form.setValue(`relation.0.relationName`, "");
+      form.setValue(`relation.0.relationCNIC`, "");
     }
   };
 
-  const addPatient = async (patientData: any) => {
+  const addPatient = async (patientData: any, includeVisit: boolean) => {
     try {
-      console.log(patientData)
+      // Clean the object by removing undefined values
+      const cleanedPatientData = JSON.parse(
+        JSON.stringify(patientData, (key, value) =>
+          value === undefined ? undefined : value
+        )
+      );
+
+      console.log("Cleaned Patient Data:", cleanedPatientData); // Log cleaned data
+
+      // Adjust relation structure as needed, always sending it as an array
+      const requestData = {
+        ...cleanedPatientData,
+        relation: Array.isArray(cleanedPatientData.relation)
+          ? cleanedPatientData.relation
+          : [cleanedPatientData.relation], // Ensure it's always an array
+        Visit: includeVisit
+          ? [
+              {
+                date: new Date(), // Ensure date is a Date instance
+              },
+            ]
+          : [], // No visit if not included
+      };
+
       const response = await axios.post(
         "http://localhost:3000/frontdesk/patients",
-        patientData,
+        requestData,
         {
           headers: {
             Authorization: `Bearer ${accessToken}`,
@@ -101,39 +135,51 @@ const AddPatientPage = () => {
         }
       );
       return response.data;
-    } catch (error) {
-      console.error("Error adding patient:", error);
-      return { success: false, error };
+    } catch (error: any) {
+      console.error("Server Response Error:", error.response.data); // Log full error response
+      console.error("Detailed Error Messages:", error.response.data.message); // Log detailed error messages
+      return { success: false, error: error.response.data };
     }
   };
 
-  const onSubmit = async (values: z.infer<typeof patientSchema>) => {
-    console.log(values)
+  const onSubmit: SubmitHandler<FieldValues> = async (values) => {
     const dataToSubmit = {
       ...values,
       attendedByDoctorId: selectedDoctorId,
-      cnic: values.relation === "NONE" ? values.cnic : undefined,
-      relations:
-        values.relation !== "NONE"
-          ? [
-            {
-              relation: values.relation,
-              relationName: values.relationName || "",
-              relationCNIC: values.relationCNIC || "",
-            },
-          ]
-          : [],
+      cnic: values.relation[0].relation === "NONE" ? values.cnic : undefined, // Only send CNIC if no relation
+      relation:
+        values.relation[0].relation === "NONE"
+          ? [] // Send an empty array if relation is NONE
+          : values.relation, // Always send the relation as an array
     };
 
-    console.log("Form Values:", dataToSubmit); // Log the submitted form values
-    const patient = await addPatient(dataToSubmit)
-  };
+    // Clean the data by removing undefined values
+    const finalDataToSubmit = JSON.parse(
+      JSON.stringify(dataToSubmit, (key, value) =>
+        value === undefined ? undefined : value
+      )
+    );
 
+    // Log the cleaned data for debugging
+    console.log("Final Data to Submit:", finalDataToSubmit);
+
+    // Make the API call with cleaned data
+    const patient = await addPatient(finalDataToSubmit, addVisit);
+  };
 
   const handleReset = () => {
     form.reset();
   };
 
+  const handleAddPatient = () => {
+    setAddVisit(false); // Disable visit addition
+    form.handleSubmit(onSubmit)(); // Submit the form
+  };
+
+  const handleAddPatientAndVisit = () => {
+    setAddVisit(true); // Enable visit addition
+    form.handleSubmit(onSubmit)(); // Submit the form
+  };
   return (
     <div className="flex items-center justify-center min-h-screen">
       <div className="flex flex-col items-center justify-center w-full max-w-4xl p-8 shadow-2xl rounded-3xl mt-10 px-10">
@@ -143,7 +189,10 @@ const AddPatientPage = () => {
           </h1>
         </div>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit as SubmitHandler<FieldValues>)} className="space-y-6">
+          <form
+            onSubmit={form.handleSubmit(onSubmit as SubmitHandler<FieldValues>)}
+            className="space-y-6"
+          >
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <FormField
                 control={form.control}
@@ -245,7 +294,7 @@ const AddPatientPage = () => {
 
               <FormField
                 control={form.control}
-                name="relation"
+                name="relation.0.relation"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-card-foreground">
@@ -280,12 +329,12 @@ const AddPatientPage = () => {
                 )}
               />
             </div>
-
-            {relationType !== "NONE" && (
+            {/* Conditional rendering for relation name and CNIC */}
+            {relationType !== "NONE" ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField
                   control={form.control}
-                  name="relationName"
+                  name="relation.0.relationName"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-card-foreground">
@@ -304,7 +353,7 @@ const AddPatientPage = () => {
                 />
                 <FormField
                   control={form.control}
-                  name="relationCNIC"
+                  name="relation.0.relationCNIC"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-card-foreground">
@@ -322,46 +371,48 @@ const AddPatientPage = () => {
                   )}
                 />
               </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <FormField
+                  control={form.control}
+                  name="cnic"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-card-foreground">
+                        CNIC
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="CNIC"
+                          {...field}
+                          className="rounded-lg bg-accent text-card-foreground placeholder:text-muted-foreground"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
             )}
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <FormField
-                control={form.control}
-                name="cnic"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-card-foreground">CNIC</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="CNIC"
-                        {...field}
-                        className="rounded-lg bg-accent text-card-foreground placeholder:text-muted-foreground"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="education"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-card-foreground">
-                      Education
-                    </FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="Education"
-                        {...field}
-                        className="rounded-lg bg-accent text-card-foreground placeholder:text-muted-foreground"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+            <FormField
+              control={form.control}
+              name="education"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-card-foreground">
+                    Education
+                  </FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="Education"
+                      {...field}
+                      className="rounded-lg bg-accent text-card-foreground placeholder:text-muted-foreground"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <FormField
@@ -480,14 +531,17 @@ const AddPatientPage = () => {
                       </select>
                     </FormControl>
                     <FormMessage />
-                  </FormItem>)}
+                  </FormItem>
+                )}
               />
               <FormField
                 control={form.control}
                 name="crcNumber"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-card-foreground">CRC Number</FormLabel>
+                    <FormLabel className="text-card-foreground">
+                      CRC Number
+                    </FormLabel>
                     <FormControl>
                       <Input
                         placeholder="CRC Number"
@@ -507,7 +561,9 @@ const AddPatientPage = () => {
                 name="catchmentArea"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-card-foreground">Catchment Area</FormLabel>
+                    <FormLabel className="text-card-foreground">
+                      Catchment Area
+                    </FormLabel>
                     <FormControl>
                       <select
                         {...field}
@@ -526,10 +582,11 @@ const AddPatientPage = () => {
                 name="amountPayed"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-card-foreground">Amount Paid</FormLabel>
+                    <FormLabel className="text-card-foreground">
+                      Amount Paid
+                    </FormLabel>
                     <FormControl>
                       <Input
-
                         type="number"
                         placeholder="Amount Paid"
                         {...field}
@@ -582,10 +639,18 @@ const AddPatientPage = () => {
                 Reset
               </Button>
               <Button
-                type="submit"
+                type="button"
+                onClick={handleAddPatient} // Add patient only
+                className="px-4 py-2 rounded-lg bg-blue-500 hover:bg-blue-500 hover:opacity-80 text-white font-semibold"
+              >
+                Add Patient
+              </Button>
+              <Button
+                type="button"
+                onClick={handleAddPatientAndVisit} // Add patient and visit
                 className="px-4 py-2 rounded-lg bg-green-500 hover:bg-green-500 hover:opacity-80 text-white font-semibold"
               >
-                Submit
+                Add Patient & Visit
               </Button>
             </div>
           </form>
