@@ -1,24 +1,41 @@
+// lib/validator.ts
 import * as z from "zod";
 
 // Relation schema definition
-const relationSchema = z.object({
-  relation: z.enum(["PARENT", "SIBLING", "CHILD", "SPOUSE", "NONE"]),
-  relationName: z.string().optional(),
-  relationCNIC: z.string().optional(),
-});
+type RelationType = "NONE" | "PARENT" | "SIBLING" | "CHILD" | "SPOUSE";
+
+// Relation schema definition using discriminated unions
+export const relationSchema = z.discriminatedUnion("relation", [
+  // Schema for relation === "NONE"
+  z.object({
+    relation: z.literal("NONE"),
+    relationName: z.undefined(),
+    relationCNIC: z.undefined(),
+  }),
+  // Schema for other relations where relationName and relationCNIC are required
+  z.object({
+    relation: z.enum(["PARENT", "SIBLING", "CHILD", "SPOUSE"]),
+    relationName: z.string().min(1, "Relation's name is required"),
+    relationCNIC: z.string().min(1, "Relation's CNIC is required"),
+  }),
+]);
 
 // Visit schema definition
-const visitSchema = z.object({
-  date: z.string().min(1, "Date is required"), // Adjust the format if necessary
-  tokenNumber: z
-    .number()
-    .int()
-    .positive("Token Number must be a positive integer"),
+export const visitSchema = z.object({
+  date: z.preprocess((arg) => {
+    if (typeof arg === "string" || arg instanceof Date) {
+      const date = new Date(arg);
+      return isNaN(date.getTime()) ? undefined : date;
+    }
+  }, z.date().refine((date) => !isNaN(date.getTime()), {
+    message: "Invalid date format",
+  })),
 });
 
 // Main patient schema
 export const patientSchema = z
   .object({
+    attendedByDoctorId: z.string().min(1, "Doctor selection is required"),
     name: z
       .string()
       .min(1, "Name is required")
@@ -33,7 +50,7 @@ export const patientSchema = z
       .min(1, "Email is required")
       .max(100, "Email cannot be that long"),
     identity: z.enum(["PAKISTANI", "OTHER"]),
-    cnic: z.string().optional(), // CNIC is optional but conditionally validated
+    cnic: z.string().optional(), // Conditionally required
     crc: z.enum(["OLD", "NEW"]),
     crcNumber: z
       .string()
@@ -66,37 +83,35 @@ export const patientSchema = z
       .min(1, "Amount paid is required")
       .max(100, "Amount cannot be that long"),
 
-    // Relation validation
+    // Make relation required with at least one item
     relation: z
-      .array(
-        z.object({
-          relation: z.enum(["PARENT", "SIBLING", "CHILD", "SPOUSE"]),
-          relationName: z.string(),
-          relationCNIC: z.string(),
-        })
-      )
-      .optional(),
+      .array(relationSchema)
+      .min(1, "At least one relation is required"),
+    Visit: z.array(visitSchema).optional(),
   })
-  .refine(
-    (data) => {
-      if (data.relation && data.relation.length > 0) {
-        return data.relation.every(
-          (r) => r.relationName && r.relationCNIC // Ensure both relationName and relationCNIC are present if any relation exists
-        );
+  .superRefine((data, ctx) => {
+    if (data.relation[0].relation === "NONE") {
+      if (!data.cnic || data.cnic.trim() === "") {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "CNIC is required when relation is NONE.",
+          path: ["cnic"],
+        });
       }
-      return true;
-    },
-    {
-      message:
-        "Relation name and CNIC are required when a relation is selected.",
-      path: ["relation"], // Attach the error to the relation field
     }
-  );
-
-// Search schema
+  });
+// Other schemas remain unchanged
 export const searchSchema = z.object({
   cnic: z
     .string()
     .min(1, "CNIC is required")
     .max(15, "CNIC cannot be that long"),
+});
+
+export const additionalDetailsSchema = z.object({
+  weight: z.number().min(0, "Weight must be non-negative").optional(),
+  sugarLevel: z.number().min(0, "Sugar level must be non-negative").optional(),
+  temperature: z.number().min(0, "Temperature must be non-negative").optional(),
+  height: z.number().min(0, "Height must be non-negative").optional(),
+  bloodPressure: z.string().optional(),
 });

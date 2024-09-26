@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import React, { useState, useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm, SubmitHandler, FieldValues } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import * as z from "zod";
 import {
   Form,
@@ -17,6 +17,18 @@ import { toast } from "sonner";
 import { patientSchema } from "../../../../lib/validator";
 import axios from "axios";
 import { useAuth } from "@/app/providers/AuthProvider";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+
+// Define the allowed relation types
+type RelationType = "NONE" | "PARENT" | "SIBLING" | "CHILD" | "SPOUSE";
 
 interface Doctor {
   id: string;
@@ -26,11 +38,12 @@ interface Doctor {
 const AddPatientPage = () => {
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [selectedDoctorId, setSelectedDoctorId] = useState("");
-  const [relationType, setRelationType] = useState("NONE");
+  const [relationType, setRelationType] = useState<RelationType>("NONE");
   const { user } = useAuth();
-  const [addVisit, setAddVisit] = useState(false); // New state for determining if visit should be added
+  // Removed addVisit state as we'll pass it directly
 
-  const initialValues = {
+  // Explicitly type initialValues
+  const initialValues: z.infer<typeof patientSchema> = {
     attendedByDoctorId: "",
     name: "",
     fatherName: "",
@@ -49,14 +62,14 @@ const AddPatientPage = () => {
     amountPayed: "",
     relation: [
       {
-        relation: "NONE", // Default to NONE to simplify
-        relationName: "",
-        relationCNIC: "",
+        relation: "NONE",
+        relationName: undefined,
+        relationCNIC: undefined,
       },
     ],
   };
 
-  const form = useForm({
+  const form = useForm<z.infer<typeof patientSchema>>({
     resolver: zodResolver(patientSchema),
     defaultValues: initialValues,
   });
@@ -75,55 +88,58 @@ const AddPatientPage = () => {
           }
         );
         setDoctors(response.data);
+        console.log("Doctors fetched:", response.data);
       } catch (error) {
         console.error("Error fetching doctors", error);
+        toast.error("Failed to fetch doctors.");
       }
     };
 
-    fetchDoctors();
+    if (accessToken) {
+      fetchDoctors();
+    }
   }, [accessToken]);
 
-  const handleRelationChange = (event: any) => {
-    const selectedRelation = event.target.value;
-    setRelationType(selectedRelation);
+  // Improved type safety by specifying the event type and using RelationType
+  const handleRelationChange = (value: RelationType) => {
+    setRelationType(value);
+    form.setValue(`relation.0.relation`, value, { shouldValidate: true });
 
-    // Use template literals to set the nested value correctly
-    form.setValue(`relation.0.relation`, selectedRelation, {
-      shouldValidate: true,
-    });
-
-    // If "NONE", clear out relationName and relationCNIC fields
-    if (selectedRelation === "NONE") {
+    if (value === "NONE") {
+      form.setValue(`relation.0.relationName`, undefined);
+      form.setValue(`relation.0.relationCNIC`, undefined);
+    } else {
       form.setValue(`relation.0.relationName`, "");
       form.setValue(`relation.0.relationCNIC`, "");
     }
   };
-
-  const addPatient = async (patientData: any, includeVisit: boolean) => {
+  const addPatient = async (
+    patientData: z.infer<typeof patientSchema>,
+    includeVisit: boolean
+  ) => {
     try {
-      // Clean the object by removing undefined values
       const cleanedPatientData = JSON.parse(
         JSON.stringify(patientData, (key, value) =>
           value === undefined ? undefined : value
         )
       );
-
-      console.log("Cleaned Patient Data:", cleanedPatientData); // Log cleaned data
-
-      // Adjust relation structure as needed, always sending it as an array
       const requestData = {
         ...cleanedPatientData,
         relation: Array.isArray(cleanedPatientData.relation)
           ? cleanedPatientData.relation
-          : [cleanedPatientData.relation], // Ensure it's always an array
-        Visit: includeVisit
-          ? [
-              {
-                date: new Date(), // Ensure date is a Date instance
-              },
-            ]
-          : [], // No visit if not included
+          : [cleanedPatientData.relation],
+        ...(includeVisit
+          ? {
+              Visit: [
+                {
+                  date: new Date().toISOString(),
+                },
+              ],
+            }
+          : []),
       };
+
+      console.log("Request Data to Send:", requestData);
 
       const response = await axios.post(
         "http://localhost:3000/frontdesk/patients",
@@ -134,63 +150,87 @@ const AddPatientPage = () => {
           },
         }
       );
+      if (response.data) {
+        form.reset();
+        toast.success("Patient has been added successfully");
+        console.log("Patient added successfully:", response.data);
+      }
       return response.data;
     } catch (error: any) {
-      console.error("Server Response Error:", error.response.data); // Log full error response
-      console.error("Detailed Error Messages:", error.response.data.message); // Log detailed error messages
-      return { success: false, error: error.response.data };
+      const errorMessage =
+        error.response?.data?.message || "Some error occurred";
+      toast.error(errorMessage);
+      console.error("Server Response Error:", error.response?.data);
+      console.error("Detailed Error Messages:", error.response?.data.message);
+      return { success: false, error: error.response?.data };
     }
   };
 
-  const onSubmit: SubmitHandler<FieldValues> = async (values) => {
+  // Modified onSubmit to accept includeVisit as a parameter
+  const onSubmit = async (
+    values: z.infer<typeof patientSchema>,
+    includeVisit: boolean
+  ) => {
+    console.log("onSubmit called with includeVisit:", includeVisit);
+    console.log("Form Values:", values);
+
     const dataToSubmit = {
       ...values,
-      attendedByDoctorId: selectedDoctorId,
-      cnic: values.relation[0].relation === "NONE" ? values.cnic : undefined, // Only send CNIC if no relation
-      relation:
-        values.relation[0].relation === "NONE"
-          ? [] // Send an empty array if relation is NONE
-          : values.relation, // Always send the relation as an array
     };
 
-    // Clean the data by removing undefined values
-    const finalDataToSubmit = JSON.parse(
+    const cleanedPatientData = JSON.parse(
       JSON.stringify(dataToSubmit, (key, value) =>
         value === undefined ? undefined : value
       )
     );
 
-    // Log the cleaned data for debugging
-    console.log("Final Data to Submit:", finalDataToSubmit);
+    const requestData = {
+      ...cleanedPatientData,
+      relation: Array.isArray(cleanedPatientData.relation)
+        ? cleanedPatientData.relation
+        : [cleanedPatientData.relation],
+      ...(includeVisit && {
+        Visit: [
+          {
+            date: new Date().toISOString(),
+          },
+        ],
+      }),
+    };
 
-    // Make the API call with cleaned data
-    const patient = await addPatient(finalDataToSubmit, addVisit);
+    console.log("Request Data to Send:", requestData);
+
+    await addPatient(requestData, includeVisit);
+  };
+
+  // Handle adding patient without visit
+  const handleAddPatient = () => {
+    console.log("Add Patient button clicked");
+    form.handleSubmit((data) => onSubmit(data, false))();
+  };
+
+  // Handle adding patient with visit
+  const handleAddPatientAndVisit = () => {
+    console.log("Add Patient & Visit button clicked");
+    form.handleSubmit((data) => onSubmit(data, true))();
   };
 
   const handleReset = () => {
     form.reset();
+    console.log("Form reset");
   };
 
-  const handleAddPatient = () => {
-    setAddVisit(false); // Disable visit addition
-    form.handleSubmit(onSubmit)(); // Submit the form
-  };
-
-  const handleAddPatientAndVisit = () => {
-    setAddVisit(true); // Enable visit addition
-    form.handleSubmit(onSubmit)(); // Submit the form
-  };
   return (
-    <div className="flex items-center justify-center min-h-screen">
-      <div className="flex flex-col items-center justify-center w-full max-w-4xl p-8 shadow-2xl rounded-3xl mt-10 px-10">
-        <div className="text-center mb-10">
-          <h1 className="text-3xl md:text-5xl tracking-tighter font-bold border-b-2 border-[#5f8d4e] max-w-lg py-2">
-            Register a New Patient
-          </h1>
-        </div>
+    <Card className="w-full max-w-4xl mx-auto mt-10 bg-white shadow-xl rounded-xl">
+      <CardHeader>
+        <CardTitle className="text-3xl font-bold text-center text-emerald-600">
+          Register a New Patient
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
         <Form {...form}>
           <form
-            onSubmit={form.handleSubmit(onSubmit as SubmitHandler<FieldValues>)}
+            onSubmit={form.handleSubmit((data) => onSubmit(data, false))}
             className="space-y-6"
           >
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -199,14 +239,12 @@ const AddPatientPage = () => {
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-card-foreground">
-                      Patient Name
-                    </FormLabel>
+                    <FormLabel>Patient Name</FormLabel>
                     <FormControl>
                       <Input
                         placeholder="John Doe"
                         {...field}
-                        className="rounded-lg bg-accent text-card-foreground placeholder:text-muted-foreground"
+                        className="rounded-md border-emerald-200 focus:border-emerald-500 focus:ring-emerald-500"
                       />
                     </FormControl>
                     <FormMessage />
@@ -218,14 +256,12 @@ const AddPatientPage = () => {
                 name="fatherName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-card-foreground">
-                      Father's Name
-                    </FormLabel>
+                    <FormLabel>Father's Name</FormLabel>
                     <FormControl>
                       <Input
                         placeholder="Father's Name"
                         {...field}
-                        className="rounded-lg bg-accent text-card-foreground placeholder:text-muted-foreground"
+                        className="rounded-md border-emerald-200 focus:border-emerald-500 focus:ring-emerald-500"
                       />
                     </FormControl>
                     <FormMessage />
@@ -239,14 +275,12 @@ const AddPatientPage = () => {
               name="email"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-card-foreground">
-                    Patient Email
-                  </FormLabel>
+                  <FormLabel>Patient Email</FormLabel>
                   <FormControl>
                     <Input
                       placeholder="Email"
                       {...field}
-                      className="rounded-lg bg-accent text-card-foreground placeholder:text-muted-foreground"
+                      className="rounded-md border-emerald-200 focus:border-emerald-500 focus:ring-emerald-500"
                     />
                   </FormControl>
                   <FormMessage />
@@ -260,32 +294,28 @@ const AddPatientPage = () => {
                 name="identity"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-card-foreground">
-                      Identity
-                    </FormLabel>
+                    <FormLabel>Identity</FormLabel>
                     <FormControl>
-                      <div className="flex space-x-4">
-                        <label className="flex items-center space-x-2 text-card-foreground">
-                          <input
-                            type="radio"
-                            value="PAKISTANI"
-                            checked={field.value === "PAKISTANI"}
-                            onChange={field.onChange}
-                            className="form-radio text-primary"
-                          />
-                          <span>PAKISTANI</span>
-                        </label>
-                        <label className="flex items-center space-x-2 text-card-foreground">
-                          <input
-                            type="radio"
-                            value="OTHER"
-                            checked={field.value === "OTHER"}
-                            onChange={field.onChange}
-                            className="form-radio text-primary"
-                          />
-                          <span>OTHER</span>
-                        </label>
-                      </div>
+                      <RadioGroup
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                        className="flex space-x-4"
+                      >
+                        <FormItem className="flex items-center space-x-2">
+                          <FormControl>
+                            <RadioGroupItem value="PAKISTANI" />
+                          </FormControl>
+                          <FormLabel className="font-normal">
+                            Pakistani
+                          </FormLabel>
+                        </FormItem>
+                        <FormItem className="flex items-center space-x-2">
+                          <FormControl>
+                            <RadioGroupItem value="OTHER" />
+                          </FormControl>
+                          <FormLabel className="font-normal">Other</FormLabel>
+                        </FormItem>
+                      </RadioGroup>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -297,39 +327,34 @@ const AddPatientPage = () => {
                 name="relation.0.relation"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-card-foreground">
-                      Relationship with Patient
-                    </FormLabel>
-                    <FormControl>
-                      <div className="flex space-x-3">
+                    <FormLabel>Relationship with Patient</FormLabel>
+                    <Select
+                      onValueChange={(value) =>
+                        handleRelationChange(value as RelationType)
+                      }
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger className="rounded-md border-emerald-200 focus:border-emerald-500 focus:ring-emerald-500">
+                          <SelectValue placeholder="Select relationship" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
                         {["PARENT", "SIBLING", "CHILD", "SPOUSE", "NONE"].map(
                           (relation) => (
-                            <label
-                              key={relation}
-                              className="flex items-center space-x-2 text-card-foreground"
-                            >
-                              <input
-                                type="radio"
-                                value={relation}
-                                checked={field.value === relation}
-                                onChange={(e) => {
-                                  field.onChange(e);
-                                  handleRelationChange(e);
-                                }}
-                                className="form-radio text-primary"
-                              />
-                              <span>{relation}</span>
-                            </label>
+                            <SelectItem key={relation} value={relation}>
+                              {relation}
+                            </SelectItem>
                           )
                         )}
-                      </div>
-                    </FormControl>
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
               />
             </div>
-            {/* Conditional rendering for relation name and CNIC */}
+
             {relationType !== "NONE" ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField
@@ -337,14 +362,12 @@ const AddPatientPage = () => {
                   name="relation.0.relationName"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-card-foreground">
-                        Relation's Name
-                      </FormLabel>
+                      <FormLabel>Relation's Name</FormLabel>
                       <FormControl>
                         <Input
                           placeholder="Relation's Name"
                           {...field}
-                          className="rounded-lg bg-accent text-card-foreground placeholder:text-muted-foreground"
+                          className="rounded-md border-emerald-200 focus:border-emerald-500 focus:ring-emerald-500"
                         />
                       </FormControl>
                       <FormMessage />
@@ -356,14 +379,12 @@ const AddPatientPage = () => {
                   name="relation.0.relationCNIC"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-card-foreground">
-                        Relation's CNIC
-                      </FormLabel>
+                      <FormLabel>Relation's CNIC</FormLabel>
                       <FormControl>
                         <Input
                           placeholder="Relation's CNIC"
                           {...field}
-                          className="rounded-lg bg-accent text-card-foreground placeholder:text-muted-foreground"
+                          className="rounded-md border-emerald-200 focus:border-emerald-500 focus:ring-emerald-500"
                         />
                       </FormControl>
                       <FormMessage />
@@ -372,28 +393,26 @@ const AddPatientPage = () => {
                 />
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <FormField
-                  control={form.control}
-                  name="cnic"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-card-foreground">
-                        CNIC
-                      </FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="CNIC"
-                          {...field}
-                          className="rounded-lg bg-accent text-card-foreground placeholder:text-muted-foreground"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+              <FormField
+                control={form.control}
+                name="cnic"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>CNIC</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="CNIC"
+                        {...field}
+                        className="rounded-md border-emerald-200 focus:border-emerald-500 focus:ring-emerald-500"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             )}
+
+            {/* ... (other form fields) ... */}
             <FormField
               control={form.control}
               name="education"
@@ -406,7 +425,7 @@ const AddPatientPage = () => {
                     <Input
                       placeholder="Education"
                       {...field}
-                      className="rounded-lg bg-accent text-card-foreground placeholder:text-muted-foreground"
+                      className="rounded-md border-emerald-200 focus:border-emerald-500 focus:ring-emerald-500"
                     />
                   </FormControl>
                   <FormMessage />
@@ -414,6 +433,7 @@ const AddPatientPage = () => {
               )}
             />
 
+            {/* Occupation and Contact Number */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <FormField
                 control={form.control}
@@ -427,7 +447,7 @@ const AddPatientPage = () => {
                       <Input
                         placeholder="Occupation"
                         {...field}
-                        className="rounded-lg bg-accent text-card-foreground placeholder:text-muted-foreground"
+                        className="rounded-md border-emerald-200 focus:border-emerald-500 focus:ring-emerald-500"
                       />
                     </FormControl>
                     <FormMessage />
@@ -446,7 +466,7 @@ const AddPatientPage = () => {
                       <Input
                         placeholder="Contact Number"
                         {...field}
-                        className="rounded-lg bg-accent text-card-foreground placeholder:text-muted-foreground"
+                        className="rounded-md border-emerald-200 focus:border-emerald-500 focus:ring-emerald-500"
                       />
                     </FormControl>
                     <FormMessage />
@@ -455,6 +475,7 @@ const AddPatientPage = () => {
               />
             </div>
 
+            {/* Age and Marriage Years */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <FormField
                 control={form.control}
@@ -466,7 +487,7 @@ const AddPatientPage = () => {
                       <Input
                         placeholder="Age"
                         {...field}
-                        className="rounded-lg bg-accent text-card-foreground placeholder:text-muted-foreground"
+                        className="rounded-md border-emerald-200 focus:border-emerald-500 focus:ring-emerald-500"
                       />
                     </FormControl>
                     <FormMessage />
@@ -485,7 +506,7 @@ const AddPatientPage = () => {
                       <Input
                         placeholder="Years Married"
                         {...field}
-                        className="rounded-lg bg-accent text-card-foreground placeholder:text-muted-foreground"
+                        className="rounded-md border-emerald-200 focus:border-emerald-500 focus:ring-emerald-500"
                       />
                     </FormControl>
                     <FormMessage />
@@ -494,6 +515,7 @@ const AddPatientPage = () => {
               />
             </div>
 
+            {/* Address */}
             <FormField
               control={form.control}
               name="address"
@@ -506,7 +528,7 @@ const AddPatientPage = () => {
                     <Input
                       placeholder="Address"
                       {...field}
-                      className="rounded-lg bg-accent text-card-foreground placeholder:text-muted-foreground"
+                      className="rounded-md border-emerald-200 focus:border-emerald-500 focus:ring-emerald-500"
                     />
                   </FormControl>
                   <FormMessage />
@@ -514,22 +536,28 @@ const AddPatientPage = () => {
               )}
             />
 
+            {/* CRC and CRC Number */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <FormField
                 control={form.control}
                 name="crc"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-card-foreground">CRC</FormLabel>
-                    <FormControl>
-                      <select
-                        {...field}
-                        className="w-full p-2 rounded-lg bg-accent text-card-foreground"
-                      >
-                        <option value="OLD">OLD</option>
-                        <option value="NEW">NEW</option>
-                      </select>
-                    </FormControl>
+                    <FormLabel>CRC</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger className="rounded-md border-emerald-200 focus:border-emerald-500 focus:ring-emerald-500">
+                          <SelectValue placeholder="Select CRC" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="OLD">OLD</SelectItem>
+                        <SelectItem value="NEW">NEW</SelectItem>
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -539,14 +567,12 @@ const AddPatientPage = () => {
                 name="crcNumber"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-card-foreground">
-                      CRC Number
-                    </FormLabel>
+                    <FormLabel>CRC Number</FormLabel>
                     <FormControl>
                       <Input
                         placeholder="CRC Number"
                         {...field}
-                        className="rounded-lg bg-accent text-card-foreground placeholder:text-muted-foreground"
+                        className="rounded-md border-emerald-200 focus:border-emerald-500 focus:ring-emerald-500"
                       />
                     </FormControl>
                     <FormMessage />
@@ -555,24 +581,29 @@ const AddPatientPage = () => {
               />
             </div>
 
+            {/* Catchment Area and Amount Paid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <FormField
                 control={form.control}
                 name="catchmentArea"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-card-foreground">
-                      Catchment Area
-                    </FormLabel>
-                    <FormControl>
-                      <select
-                        {...field}
-                        className="w-full p-2 rounded-lg bg-accent text-card-foreground"
-                      >
-                        <option value="URBAN">URBAN</option>
-                        <option value="RURAL">RURAL</option>
-                      </select>
-                    </FormControl>
+                    <FormLabel>Catchment Area</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger className="rounded-md border-emerald-200 focus:border-emerald-500 focus:ring-emerald-500">
+                          <SelectValue placeholder="Select Catchment Area" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="URBAN">URBAN</SelectItem>
+                        <SelectItem value="RURAL">RURAL</SelectItem>
+                        <SelectItem value="SLUM">SLUM</SelectItem>
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -582,15 +613,13 @@ const AddPatientPage = () => {
                 name="amountPayed"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-card-foreground">
-                      Amount Paid
-                    </FormLabel>
+                    <FormLabel>Amount Paid</FormLabel>
                     <FormControl>
                       <Input
                         type="number"
                         placeholder="Amount Paid"
                         {...field}
-                        className="rounded-lg bg-accent text-card-foreground placeholder:text-muted-foreground"
+                        className="rounded-md border-emerald-200 focus:border-emerald-500 focus:ring-emerald-500"
                       />
                     </FormControl>
                     <FormMessage />
@@ -598,65 +627,62 @@ const AddPatientPage = () => {
                 )}
               />
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <FormField
-                control={form.control}
-                name="attendedByDoctorId"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col gap-2">
-                    <FormLabel className="text-card-foreground">
-                      Attended by Doctor
-                    </FormLabel>
+
+            <FormField
+              control={form.control}
+              name="attendedByDoctorId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Attended by Doctor</FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
+                  >
                     <FormControl>
-                      <select
-                        value={field.value}
-                        onChange={(e) => {
-                          field.onChange(e.target.value);
-                          setSelectedDoctorId(e.target.value);
-                        }}
-                        className="rounded-lg bg-accent text-card-foreground"
-                      >
-                        <option value="">Select a Doctor</option>
-                        {doctors.map((doctor) => (
-                          <option key={doctor.id} value={doctor.id}>
-                            {doctor.name}
-                          </option>
-                        ))}
-                      </select>
+                      <SelectTrigger className="rounded-md border-emerald-200 focus:border-emerald-500 focus:ring-emerald-500">
+                        <SelectValue placeholder="Select a Doctor" />
+                      </SelectTrigger>
                     </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+                    <SelectContent>
+                      {doctors.map((doctor) => (
+                        <SelectItem key={doctor.id} value={doctor.id}>
+                          {doctor.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <div className="flex justify-between">
               <Button
                 type="button"
                 onClick={handleReset}
-                className="px-4 py-2 rounded-lg bg-red-500 text-white font-semibold hover:bg-red-500 hover:opacity-80"
+                className="bg-red-500 hover:bg-red-600 text-white"
               >
                 Reset
               </Button>
               <Button
-                type="button"
+                type="button" // Changed to type="button"
                 onClick={handleAddPatient} // Add patient only
-                className="px-4 py-2 rounded-lg bg-blue-500 hover:bg-blue-500 hover:opacity-80 text-white font-semibold"
+                className="bg-emerald-500 hover:bg-emerald-600 text-white"
               >
                 Add Patient
               </Button>
               <Button
-                type="button"
+                type="button" // Changed to type="button"
                 onClick={handleAddPatientAndVisit} // Add patient and visit
-                className="px-4 py-2 rounded-lg bg-green-500 hover:bg-green-500 hover:opacity-80 text-white font-semibold"
+                className="bg-emerald-600 hover:bg-emerald-700 text-white"
               >
                 Add Patient & Visit
               </Button>
             </div>
           </form>
         </Form>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 };
 

@@ -22,14 +22,14 @@ interface AuthState {
   logout: () => void;
 }
 
-// Zustand Store Setup
+// ... existing code ...
+
 export const createAuthStore = () => {
   return createStore<AuthState>()(
     persist(
       (set, get) => ({
         user: null,
         login: async (email, password) => {
-          // Ensure this logic runs only on the client side
           if (typeof window === "undefined") {
             console.log("Login attempted during SSR; skipping");
             return null;
@@ -40,15 +40,15 @@ export const createAuthStore = () => {
               "http://localhost:3000/auth/login",
               { email, password }
             );
-            set({ user: { ...response.data } });
-            return response.data;
+            const userData = { ...response.data };
+            set({ user: userData });
+            return userData;
           } catch (error) {
             console.error("Login Error: ", error);
             return null;
           }
         },
         logout: () => {
-          // Ensure logout only runs on the client side
           if (typeof window === "undefined") {
             console.log("Logout attempted during SSR; skipping");
             return;
@@ -58,8 +58,9 @@ export const createAuthStore = () => {
       }),
       {
         name: "auth-storage",
-        storage: createJSONStorage(() => sessionStorage), // Wrap sessionStorage with createJSONStorage
+        storage: createJSONStorage(() => localStorage), // Change to localStorage
       }
     )
   );
 };
+

@@ -16,13 +16,6 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-} from "@/components/ui/select";
 import axios from "axios";
 import { toast } from "sonner";
 import { useAuth } from "@/app/providers/AuthProvider";
@@ -61,7 +54,6 @@ const Signup = () => {
 
     try {
       const accessToken = user?.access_token;
-      console.log(accessToken);
       if (!accessToken) {
         throw new Error("Access token is missing. Please log in first.");
       }
@@ -82,258 +74,191 @@ const Signup = () => {
           headers: { Authorization: `Bearer ${accessToken}` },
         }
       );
-      console.log(response.data);
-      if (response.data.success) {
+      if (response.data) {
         toast.success(`${role} has been added successfully!`);
         router.push("/admin/add-operations");
       }
     } catch (error) {
       console.error("Signup Error: ", error);
+      setError("An error occurred during signup. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
-  return (
-    <div className="flex min-h-[100vh] items-center justify-center bg-background px-4 py-12 sm:px-6 lg:px-8">
-      <div className="flex w-full max-w-7xl">
-        <div className="hidden lg:flex w-1/2 flex-col items-center justify-center p-12 rounded-l-md">
-          <motion.div
-            initial={{ opacity: 0, x: -50 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.8, ease: "easeOut" }}
-            className="text-center"
-          >
-            <h1 className="text-7xl tracking-tighter font-bold text-green-700 mb-4">
-              Welcome to N.S Ibrahim Medical
-            </h1>
-            <p className="text-lg text-green-600 tracking-tighter">
-              Join us and be part of a community dedicated to better healthcare.
-            </p>
-            <motion.div
-              animate={{ rotate: [0, 15, -15, 0] }}
-              transition={{
-                duration: 2,
-                repeat: Infinity,
-                repeatType: "reverse",
-              }}
-              className="mt-8"
-            ></motion.div>
-          </motion.div>
-        </div>
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1,
+        delayChildren: 0.3,
+      },
+    },
+  };
 
-        <div className="w-full lg:w-1/2 flex items-center justify-center">
-          <Card className="w-full max-w-md">
-            <CardHeader className="space-y-1 text-center">
-              <CardTitle className="text-2xl font-bold">Welcome</CardTitle>
-              <CardDescription>Create a new account</CardDescription>
+  const itemVariants = {
+    hidden: { y: 20, opacity: 0 },
+    visible: {
+      y: 0,
+      opacity: 1,
+      transition: {
+        type: "spring",
+        stiffness: 100,
+      },
+    },
+  };
+
+  return (
+    <motion.div
+      initial="hidden"
+      animate="visible"
+      variants={containerVariants}
+      className="min-h-screen bg-gradient-to-b from-emerald-50 to-white py-12 px-4 sm:px-6 lg:px-8 flex items-center justify-center"
+    >
+      <div className="w-full max-w-4xl flex flex-col lg:flex-row bg-white rounded-xl shadow-2xl overflow-hidden">
+        <motion.div
+          className="lg:w-1/2 bg-emerald-600 p-12 text-white flex flex-col justify-center"
+          variants={itemVariants}
+        >
+          <h1 className="text-4xl font-bold mb-4">Welcome to N.S Ibrahim Medical</h1>
+          <p className="text-lg mb-8">Join us and be part of a community dedicated to better healthcare.</p>
+          <motion.div
+            animate={{ rotate: [0, 15, -15, 0] }}
+            transition={{
+              duration: 2,
+              repeat: Infinity,
+              repeatType: "reverse",
+            }}
+            className="w-32 h-32 bg-white rounded-full mx-auto flex items-center justify-center"
+          >
+            <span className="text-emerald-600 text-4xl font-bold">IMC</span>
+          </motion.div>
+        </motion.div>
+
+        <motion.div className="lg:w-1/2 p-12" variants={itemVariants}>
+          <Card className="w-full border-none shadow-none">
+            <CardHeader className="space-y-1">
+              <CardTitle className="text-2xl font-bold text-emerald-700">Create an Account</CardTitle>
+              <CardDescription>Enter your details to sign up</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="name">Name</Label>
                   <Input
-                    className="w-full max-w-md rounded-lg bg-accent text-card-foreground placeholder:text-muted-foreground"
                     id="name"
                     type="text"
-                    placeholder="Name"
+                    placeholder="Your full name"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     required
+                    className="w-full rounded-md border-emerald-300 focus:border-emerald-500 focus:ring-emerald-500"
                   />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
                   <Input
-                    className="w-full max-w-md rounded-lg bg-accent text-card-foreground placeholder:text-muted-foreground"
                     id="email"
                     type="email"
-                    placeholder="user@example.com"
+                    placeholder="your@email.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
+                    className="w-full rounded-md border-emerald-300 focus:border-emerald-500 focus:ring-emerald-500"
                   />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="password">Password</Label>
                   <Input
-                    className="w-full max-w-md rounded-lg bg-accent text-card-foreground placeholder:text-muted-foreground"
                     id="password"
                     type="password"
-                    placeholder="****"
+                    placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
+                    className="w-full rounded-md border-emerald-300 focus:border-emerald-500 focus:ring-emerald-500"
                   />
                 </div>
+                {role === "doctor" && (
+                  <>
+                    <div className="space-y-2">
+                      <Label htmlFor="specialization">Specialization</Label>
+                      <Input
+                        id="specialization"
+                        type="text"
+                        placeholder="e.g., Cardiology"
+                        value={specialization}
+                        onChange={(e) => setSpecialization(e.target.value)}
+                        required
+                        className="w-full rounded-md border-emerald-300 focus:border-emerald-500 focus:ring-emerald-500"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="license">License Number</Label>
+                      <Input
+                        id="license"
+                        type="text"
+                        placeholder="Your license number"
+                        value={license}
+                        onChange={(e) => setLicense(e.target.value)}
+                        required
+                        className="w-full rounded-md border-emerald-300 focus:border-emerald-500 focus:ring-emerald-500"
+                      />
+                    </div>
+                  </>
+                )}
+                {(role === "nurse" || role === "pharmacist" || role === "frontdesk") && (
+                  <div className="space-y-2">
+                    <Label htmlFor="qualification">Qualification</Label>
+                    <Input
+                      id="qualification"
+                      type="text"
+                      placeholder="Your highest qualification"
+                      value={qualification}
+                      onChange={(e) => setQualification(e.target.value)}
+                      required
+                      className="w-full rounded-md border-emerald-300 focus:border-emerald-500 focus:ring-emerald-500"
+                    />
+                  </div>
+                )}
                 <div className="space-y-2">
-                  {/* <Label htmlFor="role">Role</Label>
-                  <Select onValueChange={setRole}>
-                    <SelectTrigger className="w-full max-w-md rounded-lg bg-accent text-card-foreground placeholder:text-muted-foreground">
-                      <SelectValue placeholder="Select role" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="doctor">Doctor</SelectItem>
-                      <SelectItem value="nurse">Nurse</SelectItem>
-                      <SelectItem value="pharmacist">Pharmacist</SelectItem>
-                      <SelectItem value="frontdesk">FrontDesk</SelectItem>
-                    </SelectContent>
-                  </Select> */}
-                  {role === "doctor" && (
-                    <>
-                      <div className="space-y-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="specialization">Specialization</Label>
-                          <Input
-                            className="w-full max-w-md rounded-lg bg-accent text-card-foreground placeholder:text-muted-foreground"
-                            id="specialization"
-                            type="text"
-                            placeholder="Cardiology"
-                            value={specialization}
-                            onChange={(e) => setSpecialization(e.target.value)}
-                            required
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="license">License Number</Label>
-                          <Input
-                            className="w-full max-w-md rounded-lg bg-accent text-card-foreground placeholder:text-muted-foreground"
-                            id="license"
-                            type="text"
-                            placeholder="License Number"
-                            value={license}
-                            onChange={(e) => setLicense(e.target.value)}
-                            required
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="age">Age</Label>
-                          <Input
-                            className="w-full max-w-md rounded-lg bg-accent text-card-foreground placeholder:text-muted-foreground"
-                            id="age"
-                            type="text"
-                            placeholder="age"
-                            value={age}
-                            onChange={(e) => setAge(e.target.value)}
-                            required
-                          />
-                        </div>
-                      </div>
-                    </>
-                  )}
-                  {role === "nurse" && (
-                    <>
-                      <div className="space-y-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="age">Age</Label>
-                          <Input
-                            className="w-full max-w-md rounded-lg bg-accent text-card-foreground placeholder:text-muted-foreground"
-                            id="age"
-                            type="text"
-                            placeholder="25"
-                            value={age}
-                            onChange={(e) => setAge(e.target.value)}
-                            required
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="qualification">Qualification</Label>
-                          <Input
-                            className="w-full max-w-md rounded-lg bg-accent text-card-foreground placeholder:text-muted-foreground"
-                            id="qualification"
-                            type="text"
-                            placeholder="BSN"
-                            value={qualification}
-                            onChange={(e) => setQualification(e.target.value)}
-                            required
-                          />
-                        </div>
-                      </div>
-                    </>
-                  )}
-                  {role === "pharmacist" && (
-                    <>
-                      <div className="space-y-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="age">Age</Label>
-                          <Input
-                            className="w-full max-w-md rounded-lg bg-accent text-card-foreground placeholder:text-muted-foreground"
-                            id="age"
-                            type="text"
-                            placeholder="25"
-                            value={age}
-                            onChange={(e) => setAge(e.target.value)}
-                            required
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="qualification">Qualification</Label>
-                          <Input
-                            className="w-full max-w-md rounded-lg bg-accent text-card-foreground placeholder:text-muted-foreground"
-                            id="qualification"
-                            type="text"
-                            placeholder="BSN"
-                            value={qualification}
-                            onChange={(e) => setQualification(e.target.value)}
-                            required
-                          />
-                        </div>
-                      </div>
-                    </>
-                  )}
-                  {role === "frontdesk" && (
-                    <>
-                      <div className="space-y-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="age">Age</Label>
-                          <Input
-                            className="w-full max-w-md rounded-lg bg-accent text-card-foreground placeholder:text-muted-foreground"
-                            id="age"
-                            type="text"
-                            placeholder="25"
-                            value={age}
-                            onChange={(e) => setAge(e.target.value)}
-                            required
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="qualification">Qualification</Label>
-                          <Input
-                            className="w-full max-w-md rounded-lg bg-accent text-card-foreground placeholder:text-muted-foreground"
-                            id="qualification"
-                            type="text"
-                            placeholder="BSN"
-                            value={qualification}
-                            onChange={(e) => setQualification(e.target.value)}
-                            required
-                          />
-                        </div>
-                      </div>
-                    </>
-                  )}
+                  <Label htmlFor="age">Age</Label>
+                  <Input
+                    id="age"
+                    type="number"
+                    placeholder="Your age"
+                    value={age}
+                    onChange={(e) => setAge(e.target.value)}
+                    required
+                    className="w-full rounded-md border-emerald-300 focus:border-emerald-500 focus:ring-emerald-500"
+                  />
                 </div>
-                {error && <p className="text-red-500">{error}</p>}
-                <Button onClick={handleSubmit} className="w-full">
+                {error && <p className="text-red-500 text-sm">{error}</p>}
+                <Button
+                  type="submit"
+                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded-md transition duration-300"
+                  disabled={loading}
+                >
                   {loading ? "Signing Up..." : "Sign Up"}
                 </Button>
               </form>
             </CardContent>
             <CardFooter className="text-center">
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-gray-600">
                 Already have an account?{" "}
                 <Link
                   href="/signin"
-                  className="font-medium underline underline-offset-4 hover:text-primary"
-                  prefetch={false}
+                  className="font-medium text-emerald-600 hover:text-emerald-500 underline"
                 >
                   Sign In
                 </Link>
               </p>
             </CardFooter>
           </Card>
-        </div>
+        </motion.div>
       </div>
-    </div>
+    </motion.div>
   );
 };
 
