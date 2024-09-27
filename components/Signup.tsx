@@ -59,7 +59,7 @@ const Signup = () => {
       }
 
       const response = await axios.post(
-        "http://localhost:3000/users",
+        "https://beautiful-kizzee-uni2234-59db14f4.koyeb.app/users",
         {
           name,
           email,

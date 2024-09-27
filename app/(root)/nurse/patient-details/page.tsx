@@ -27,7 +27,7 @@ const PatientDetailsSearch = () => {
     if (term) {
       setLoading(true)
       try {
-        const { data } = await axios.get("http://localhost:3000/frontdesk/patients", {
+        const { data } = await axios.get("https://beautiful-kizzee-uni2234-59db14f4.koyeb.app/frontdesk/patients", {
           params: { cnic: term },
           headers: {
             Authorization: `Bearer ${accessToken}`,

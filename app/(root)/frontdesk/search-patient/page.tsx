@@ -27,7 +27,7 @@ const SearchPage = () => {
     if (term) {
       setLoading(true)
       try {
-        const { data } = await axios.get("http://localhost:3000/frontdesk/patients", {
+        const { data } = await axios.get("https://beautiful-kizzee-uni2234-59db14f4.koyeb.app/frontdesk/patients", {
           params: { cnic: term },
           headers: {
             Authorization: `Bearer ${accessToken}`,
@@ -57,7 +57,7 @@ const SearchPage = () => {
   const handleAddVisit = async (patientId: string) => {
     try {
       const { data } = await axios.post(
-        "http://localhost:3000/frontdesk/visits",
+        "https://beautiful-kizzee-uni2234-59db14f4.koyeb.app/frontdesk/visits",
         { patientId: patientId },
         { headers: { Authorization: `Bearer ${accessToken}` } }
       )

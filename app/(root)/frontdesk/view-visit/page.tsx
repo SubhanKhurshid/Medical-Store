@@ -67,7 +67,7 @@ const ViewVisitPage = () => {
     const fetchVisits = async () => {
       try {
         const response = await axios.get(
-          "http://localhost:3000/frontdesk/all-visits",
+          "https://beautiful-kizzee-uni2234-59db14f4.koyeb.app/frontdesk/all-visits",
           {
             headers: {
               Authorization: `Bearer ${accessToken}`,
@@ -99,7 +99,7 @@ const ViewVisitPage = () => {
       setLoading(true);
       try {
         const { data } = await axios.get(
-          "http://localhost:3000/frontdesk/visits",
+          "https://beautiful-kizzee-uni2234-59db14f4.koyeb.app/frontdesk/visits",
           {
             params: { cnic: term },
             headers: {

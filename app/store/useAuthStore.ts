@@ -37,7 +37,7 @@ export const createAuthStore = () => {
 
           try {
             const response = await axios.post(
-              "http://localhost:3000/auth/login",
+              "https://beautiful-kizzee-uni2234-59db14f4.koyeb.app/auth/login",
               { email, password }
             );
             const userData = { ...response.data };
