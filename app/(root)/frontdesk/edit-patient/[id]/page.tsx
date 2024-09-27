@@ -56,10 +56,10 @@ const EditPatientPage = () => {
     const fetchData = async () => {
       try {
         const [docResponse, patResponse] = await Promise.all([
-          axios.get("https://beautiful-kizzee-uni2234-59db14f4.koyeb.app/frontdesk/doctors", {
+          axios.get("https://select-albatross-uni2234-d130c019.koyeb.app/frontdesk/doctors", {
             headers: { Authorization: `Bearer ${accessToken}` },
           }),
-          axios.get(`https://beautiful-kizzee-uni2234-59db14f4.koyeb.app/frontdesk/patient/${id}`, {
+          axios.get(`https://select-albatross-uni2234-d130c019.koyeb.app/frontdesk/patient/${id}`, {
             headers: { Authorization: `Bearer ${accessToken}` },
           }),
         ]);
@@ -109,7 +109,7 @@ const EditPatientPage = () => {
     try {
       console.log("Submitting with values:", values);
       const response = await axios.put(
-        `https://beautiful-kizzee-uni2234-59db14f4.koyeb.app/frontdesk/${id}`,
+        `https://select-albatross-uni2234-d130c019.koyeb.app/frontdesk/${id}`,
         values,
         {
           headers: {
