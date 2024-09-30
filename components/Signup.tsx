@@ -59,7 +59,7 @@ const Signup = () => {
       }
 
       const response = await axios.post(
-        "https://select-albatross-uni2234-d130c019.koyeb.app/users",
+        "https://annual-johna-uni2234-7798c123.koyeb.app/users",
         {
           name,
           email,

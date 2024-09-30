@@ -80,7 +80,7 @@ const AddPatientPage = () => {
     const fetchDoctors = async () => {
       try {
         const response = await axios.get(
-          "https://select-albatross-uni2234-d130c019.koyeb.app/frontdesk/doctors",
+          "https://annual-johna-uni2234-7798c123.koyeb.app/frontdesk/doctors",
           {
             headers: {
               Authorization: `Bearer ${accessToken}`,
@@ -142,7 +142,7 @@ const AddPatientPage = () => {
       console.log("Request Data to Send:", requestData);
 
       const response = await axios.post(
-        "https://select-albatross-uni2234-d130c019.koyeb.app/frontdesk/patients",
+        "https://annual-johna-uni2234-7798c123.koyeb.app/frontdesk/patients",
         requestData,
         {
           headers: {
