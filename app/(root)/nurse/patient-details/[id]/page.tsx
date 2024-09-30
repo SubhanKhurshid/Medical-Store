@@ -50,7 +50,7 @@ const NurseEditingPage = () => {
     try {
       // Sending POST request to the backend
       const response = await axios.post(
-        `http://localhost:3001/nurse/${id}/details`, // Endpoint from the service you built
+        `https://select-albatross-uni2234-d130c019.koyeb.app/nurse/${id}/details`, // Endpoint from the service you built
         data,
         {
           headers: {

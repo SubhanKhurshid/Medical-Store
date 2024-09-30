@@ -16,7 +16,7 @@ export const relationSchema = z.discriminatedUnion("relation", [
   z.object({
     relation: z.enum(["PARENT", "SIBLING", "CHILD", "SPOUSE"]),
     relationName: z.string().min(1, "Relation's name is required"),
-    relationCNIC: z.string().min(1, "Relation's CNIC is required"),
+    relationCNIC: z.string().length(13, 'Relation\'s CNIC must be 13 characters long').min(1, "Relation's CNIC is required"),
   }),
 ]);
 
@@ -50,16 +50,15 @@ export const patientSchema = z
       .min(1, "Email is required")
       .max(100, "Email cannot be that long"),
     identity: z.enum(["PAKISTANI", "OTHER"]),
-    cnic: z.string().optional(), // Conditionally required
+    cnic: z.string().length(13, "CNIC must be 13 characters long").optional(),
     crc: z.enum(["OLD", "NEW"]),
     crcNumber: z
       .string()
       .min(1, "CRC Number is required")
       .max(15, "CRC Number cannot be that long"),
     contactNumber: z
-      .string()
-      .min(1, "Contact number is required")
-      .max(15, "Contact number cannot be that long"),
+      .string().length(11, "Contact number must be 11 characters long")
+      .min(1, "Contact number is required"),
     education: z
       .string()
       .min(1, "Education is required")
@@ -112,7 +111,7 @@ export const additionalDetailsSchema = z.object({
   weight: z
     .string()
     .transform((val) => (val ? parseFloat(val) : undefined))
-    .refine((val) => !isNaN(val) && val >= 0, {
+    .refine((val): val is number => val !== undefined && !isNaN(val) && val >= 0, {
       message: "Weight must be a non-negative number",
     })
     .optional(),
@@ -120,7 +119,7 @@ export const additionalDetailsSchema = z.object({
   sugarLevel: z
     .string()
     .transform((val) => (val ? parseFloat(val) : undefined))
-    .refine((val) => !isNaN(val) && val >= 0, {
+    .refine((val): val is number => val !== undefined && !isNaN(val) && val >= 0, {
       message: "Sugar level must be a non-negative number",
     })
     .optional(),
@@ -128,7 +127,7 @@ export const additionalDetailsSchema = z.object({
   temperature: z
     .string()
     .transform((val) => (val ? parseFloat(val) : undefined))
-    .refine((val) => !isNaN(val) && val >= 0, {
+    .refine((val): val is number => val !== undefined && !isNaN(val) && val >= 0, {
       message: "Temperature must be a non-negative number",
     })
     .optional(),
@@ -136,7 +135,7 @@ export const additionalDetailsSchema = z.object({
   height: z
     .string()
     .transform((val) => (val ? parseFloat(val) : undefined))
-    .refine((val) => !isNaN(val) && val >= 0, {
+    .refine((val): val is number => val !== undefined && !isNaN(val) && val >= 0, {
       message: "Height must be a non-negative number",
     })
     .optional(),

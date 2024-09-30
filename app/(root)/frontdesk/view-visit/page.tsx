@@ -99,7 +99,7 @@ const ViewVisitPage = () => {
       setLoading(true);
       try {
         const { data } = await axios.get(
-          "http://localhost:3000/frontdesk/visits",
+          "https://select-albatross-uni2234-d130c019.koyeb.app/frontdesk/visits",
           {
             params: { cnic: term },
             headers: {
@@ -250,7 +250,7 @@ const ViewVisitPage = () => {
                       transition={{ delay: index * 0.1 }}
                       className="hover:bg-emerald-50 transition-colors duration-200"
                     >
-                      <TableCell className="capitalize font-medium text-emerald-700">
+                      <TableCell className="capitalize font-bold text-emerald-700">
                         {item.patient?.name || "Not Available"}
                       </TableCell>
                       <TableCell className="capitalize">
