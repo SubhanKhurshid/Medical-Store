@@ -99,7 +99,7 @@ const ViewVisitPage = () => {
       setLoading(true);
       try {
         const { data } = await axios.get(
-          "https://select-albatross-uni2234-d130c019.koyeb.app/frontdesk/visits",
+          "http://localhost:3000/frontdesk/visits",
           {
             params: { cnic: term },
             headers: {
@@ -108,8 +108,29 @@ const ViewVisitPage = () => {
           }
         );
 
+        console.log("Backend response: ", data.data);
+
         if (data.success) {
-          setPatients(data.data || []);
+          // Assuming the response data structure is consistent
+          const visits = data.data.map((patient: any) => ({
+            patient: {
+              name: patient.name || "Not Available",
+              fatherName: patient.fatherName || "Not Available",
+              cnic: patient.cnic || "Not Available",
+              relation: patient.relation || [],
+              attendedByDoctor: patient.attendedByDoctor || {},
+              education: patient.education,
+              identity: patient.identity || "Not Available",
+              catchmentArea: patient.catchmentArea || "Not Available",
+              occupation: patient.occupation || "Not Available",
+              tokenNumber: patient.tokenNumber || "Not Available",
+              amountPayed: patient.amountPayed || "Not Available",
+            },
+            visitedAt: patient.lastVisit || "Not Available",
+          }));
+
+          setPatients(visits);
+          console.log("Patient Data: ", visits);
         } else {
           toast.error(data.error || "Failed to fetch patients.");
           setPatients([]);
@@ -119,12 +140,10 @@ const ViewVisitPage = () => {
         toast.error("An error occurred while fetching patients.");
         setPatients([]);
       } finally {
-        setTimeout(() => {
-          setLoading(false);
-        }, 500);
+        setLoading(false);
       }
     } else {
-      setPatients([]);
+      setPatients([]); // Clear patients when search term is empty
     }
   };
 
@@ -199,18 +218,27 @@ const ViewVisitPage = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="bg-emerald-600 text-white">Name</TableHead>
-                    <TableHead className="bg-emerald-600 text-white">Father Name</TableHead>
-                    <TableHead className="bg-emerald-600 text-white">CNIC</TableHead>
-                    <TableHead className="bg-emerald-600 text-white">Education</TableHead>
-                    <TableHead className="bg-emerald-600 text-white">Identity</TableHead>
-                    <TableHead className="bg-emerald-600 text-white">Catchment Area</TableHead>
-                    <TableHead className="bg-emerald-600 text-white">Occupation</TableHead>
-                    <TableHead className="bg-emerald-600 text-white">Token</TableHead>
-                    <TableHead className="bg-emerald-600 text-white">Relation</TableHead>
-                    <TableHead className="bg-emerald-600 text-white">Attended By</TableHead>
-                    <TableHead className="bg-emerald-600 text-white">Amount Paid</TableHead>
-                    <TableHead className="bg-emerald-600 text-white">Visited At</TableHead>
+                    {[
+                      "Name",
+                      "Father Name",
+                      "CNIC",
+                      "Education",
+                      "Identity",
+                      "Catchment Area",
+                      "Occupation",
+                      "Token",
+                      "Relation",
+                      "Attended By",
+                      "Amount Paid",
+                      "Visited At",
+                    ].map((header, index) => (
+                      <TableHead
+                        key={index}
+                        className="bg-emerald-600 text-white"
+                      >
+                        {header}
+                      </TableHead>
+                    ))}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -223,22 +251,33 @@ const ViewVisitPage = () => {
                       className="hover:bg-emerald-50 transition-colors duration-200"
                     >
                       <TableCell className="capitalize font-medium text-emerald-700">
-                        {item.patient?.name}
+                        {item.patient?.name || "Not Available"}
                       </TableCell>
-                      <TableCell className="capitalize">{item.patient?.fatherName}</TableCell>
-                      <TableCell>
-                        {item.patient?.relation && item.patient?.relation.length > 0
-                          ? "Not Available"
-                          : item.patient?.cnic}
+                      <TableCell className="capitalize">
+                        {item.patient?.fatherName || "Not Available"}
                       </TableCell>
-                      <TableCell className="capitalize">{item.patient?.education}</TableCell>
-                      <TableCell className="capitalize">{item.patient?.identity}</TableCell>
-                      <TableCell className="capitalize">{item.patient?.catchmentArea}</TableCell>
-                      <TableCell className="capitalize">{item.patient?.occupation}</TableCell>
-                      <TableCell>{item.patient?.tokenNumber}</TableCell>
                       <TableCell>
-                        {item.patient?.relation && item.patient?.relation.length > 0
-                          ? item.patient?.relation
+                        {item.patient?.cnic || "Not Available"}
+                      </TableCell>
+                      <TableCell className="capitalize">
+                        {item.patient?.education || "Not Available"}
+                      </TableCell>
+                      <TableCell className="capitalize">
+                        {item.patient?.identity || "Not Available"}
+                      </TableCell>
+                      <TableCell className="capitalize">
+                        {item.patient?.catchmentArea || "Not Available"}
+                      </TableCell>
+                      <TableCell className="capitalize">
+                        {item.patient?.occupation || "Not Available"}
+                      </TableCell>
+                      <TableCell>
+                        {item.patient?.tokenNumber || "Not Available"}
+                      </TableCell>
+                      <TableCell>
+                        {item.patient?.relation &&
+                        item.patient.relation.length > 0
+                          ? item.patient.relation
                               .map(
                                 (rel) =>
                                   `${rel.relation}: ${rel.relationName} (CNIC: ${rel.relationCNIC})`
@@ -247,10 +286,15 @@ const ViewVisitPage = () => {
                           : "None"}
                       </TableCell>
                       <TableCell>
-                        {item.patient?.attendedByDoctor?.name ?? "Not Available"}
+                        {item.patient?.attendedByDoctor?.name ||
+                          "Not Available"}
                       </TableCell>
-                      <TableCell>{item.patient?.amountPayed}</TableCell>
-                      <TableCell>{new Date(item?.visitedAt).toLocaleString()}</TableCell>
+                      <TableCell>
+                        {item.patient?.amountPayed || "Not Available"}
+                      </TableCell>
+                      <TableCell>
+                        {new Date(item.visitedAt).toLocaleString()}
+                      </TableCell>
                     </motion.tr>
                   ))}
                 </TableBody>

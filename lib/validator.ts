@@ -109,9 +109,38 @@ export const searchSchema = z.object({
 });
 
 export const additionalDetailsSchema = z.object({
-  weight: z.number().min(0, "Weight must be non-negative").optional(),
-  sugarLevel: z.number().min(0, "Sugar level must be non-negative").optional(),
-  temperature: z.number().min(0, "Temperature must be non-negative").optional(),
-  height: z.number().min(0, "Height must be non-negative").optional(),
-  bloodPressure: z.string().optional(),
+  weight: z
+    .string()
+    .transform((val) => (val ? parseFloat(val) : undefined))
+    .refine((val) => !isNaN(val) && val >= 0, {
+      message: "Weight must be a non-negative number",
+    })
+    .optional(),
+  
+  sugarLevel: z
+    .string()
+    .transform((val) => (val ? parseFloat(val) : undefined))
+    .refine((val) => !isNaN(val) && val >= 0, {
+      message: "Sugar level must be a non-negative number",
+    })
+    .optional(),
+  
+  temperature: z
+    .string()
+    .transform((val) => (val ? parseFloat(val) : undefined))
+    .refine((val) => !isNaN(val) && val >= 0, {
+      message: "Temperature must be a non-negative number",
+    })
+    .optional(),
+  
+  height: z
+    .string()
+    .transform((val) => (val ? parseFloat(val) : undefined))
+    .refine((val) => !isNaN(val) && val >= 0, {
+      message: "Height must be a non-negative number",
+    })
+    .optional(),
+  
+  bloodPressure: z.string().optional(), // Blood pressure stays as string
 });
+

@@ -16,6 +16,8 @@ import { Button } from "@/components/ui/button";
 import { additionalDetailsSchema } from "@/lib/validator";
 import { motion } from "framer-motion"; // Import framer-motion for animations
 import { useParams } from "next/navigation";
+import axios from "axios"; // Using axios for API call
+import { useAuth } from "@/app/providers/AuthProvider";
 
 interface Patient {
   id: string;
@@ -28,9 +30,10 @@ interface Patient {
 
 // Add modern font styling to the form layout
 const NurseEditingPage = () => {
-  const { id } = useParams() as { id: string };
-
+  const { id } = useParams() as { id: string }; // Fetching patient ID from the URL
+  const { user } = useAuth();
   const [patient, setPatient] = useState<Patient | null>(null);
+  const accessToken = user?.access_token;
   const form = useForm<z.infer<typeof additionalDetailsSchema>>({
     resolver: zodResolver(additionalDetailsSchema),
     defaultValues: {
@@ -42,8 +45,25 @@ const NurseEditingPage = () => {
     },
   });
 
-  const onSubmit = (data: z.infer<typeof additionalDetailsSchema>) =>
-    console.log(data);
+  // Updated onSubmit function to send POST request
+  const onSubmit = async (data: z.infer<typeof additionalDetailsSchema>) => {
+    try {
+      // Sending POST request to the backend
+      const response = await axios.post(
+        `http://localhost:3001/nurse/${id}/details`, // Endpoint from the service you built
+        data,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`, // Include your JWT token here if needed
+          },
+        }
+      );
+
+      console.log("Patient details added successfully:", response.data);
+    } catch (error) {
+      console.error("Error adding patient details:", error);
+    }
+  };
 
   return (
     <motion.div
