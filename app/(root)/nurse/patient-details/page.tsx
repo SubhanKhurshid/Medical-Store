@@ -3,6 +3,7 @@
 import React, { useState } from "react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
+import { AlertCircle } from "lucide-react"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
 import axios from "axios"
@@ -27,7 +28,7 @@ const PatientDetailsSearch = () => {
     if (term) {
       setLoading(true)
       try {
-        const { data } = await axios.get("https://annual-johna-uni2234-7798c123.koyeb.app/frontdesk/patients", {
+        const { data } = await axios.get("http://localhost:3001/nurse/details", {
           params: { cnic: term },
           headers: {
             Authorization: `Bearer ${accessToken}`,
@@ -54,21 +55,24 @@ const PatientDetailsSearch = () => {
     }
   }
 
-
-
   const handleEditPatient = (patientId: string) => {
     router.push(`/nurse/patient-details/${patientId}`)
   }
 
+
+  const handleRecords = (patientId: string) => {
+    router.push(`/nurse/view-details/${patientId}`)
+  }
+
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="min-h-screen bg-gradient-to-b from-emerald-50 to-white py-12"
+      className="min-h-screen  py-12"
     >
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        <motion.h1 
+        <motion.h1
           initial={{ y: -50, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.5 }}
@@ -76,7 +80,7 @@ const PatientDetailsSearch = () => {
         >
           Search Patients
         </motion.h1>
-        <motion.div 
+        <motion.div
           initial={{ y: 50, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.5, delay: 0.2 }}
@@ -90,6 +94,7 @@ const PatientDetailsSearch = () => {
           />
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-emerald-500" />
         </motion.div>
+
         <AnimatePresence>
           {loading && (
             <motion.div
@@ -108,53 +113,66 @@ const PatientDetailsSearch = () => {
                 <path
                   className="opacity-75"
                   fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 4.243 1.582 8 4.291 10.707l2.121-2.121z"
                 ></path>
               </svg>
             </motion.div>
           )}
-        </AnimatePresence>
-        <AnimatePresence>
-          {results.length > 0 && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
+
+          {!loading && results.length > 0 && (
+            <motion.ul
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
               className="space-y-4"
             >
-              {results.map((patient, index) => (
-                <motion.div
+              {results.map((patient) => (
+                <motion.li
                   key={patient.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  transition={{ duration: 0.3, delay: index * 0.1 }}
+                  initial={{ opacity: 0, x: -50 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -50 }}
+                  className="bg-white shadow overflow-hidden sm:rounded-lg px-4 py-5 sm:px-6"
                 >
-                  <Card className="overflow-hidden hover:shadow-lg transition-shadow duration-300">
-                    <CardContent className="p-6">
-                      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                        <div>
-                          <h2 className="text-xl font-semibold text-emerald-700">{patient.name}</h2>
-                          <p className="text-sm text-gray-500">
-                            CNIC: {patient.cnic || (patient.relation.length > 0 ? patient.relation[0].relationCNIC : "No CNIC available")}
-                          </p>
-                          <p className="text-sm text-gray-500">
-                            Last Visit: {patient.lastVisit ? new Date(patient.lastVisit).toLocaleString() : "No visits yet"}
-                          </p>
-                        </div>
-                        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-                          <Button
-                            className="bg-amber-500 hover:bg-amber-600 text-white transition-colors duration-300"
-                            onClick={() => handleEditPatient(patient.id)}
-                          >
-                            <Edit className="mr-2 h-4 w-4" /> Edit
-                          </Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-lg leading-6 font-medium text-gray-900">
+                        {patient.name}
+                      </h3>
+                      <p className="mt-1 max-w-2xl text-sm text-gray-500">
+                        CNIC: {patient.cnic}
+                      </p>
+                      <p className="mt-1 max-w-2xl text-sm text-gray-500">
+                        Age: {patient.age}
+                      </p>
+
+                    </div>
+                    <div className="flex flex-col items-center justify-center gap-3 md:flex-row md:gap-4">
+                      <Button onClick={() => handleRecords(patient.id)} className="w-full md:w-auto px-6 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200">
+                        View Records
+                      </Button>
+                      <button
+                        onClick={() => handleEditPatient(patient.id)}
+                        className="w-full md:w-auto px-6 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-all duration-200"
+                      >
+                        Edit
+                      </button>
+                    </div>
+
+                  </div>
+                </motion.li>
               ))}
+            </motion.ul>
+          )}
+
+          {!loading && results.length === 0 && searchTerm && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="text-center text-gray-500"
+            >
+              No patients found.
             </motion.div>
           )}
         </AnimatePresence>

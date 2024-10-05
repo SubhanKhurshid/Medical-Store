@@ -142,4 +142,3 @@ export const additionalDetailsSchema = z.object({
   
   bloodPressure: z.string().optional(), // Blood pressure stays as string
 });
-

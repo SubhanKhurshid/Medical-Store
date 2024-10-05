@@ -1,29 +1,52 @@
+'use client'
 import { Link } from "lucide-react";
 import React from "react";
+import { motion } from 'framer-motion';
+
 
 const Footer = () => {
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1,
+        delayChildren: 0.3,
+      },
+    },
+  }
+  const itemVariants = {
+    hidden: { y: 20, opacity: 0 },
+    visible: {
+      y: 0,
+      opacity: 1,
+      transition: {
+        type: "spring",
+        stiffness: 100,
+      },
+    },
+  }
   return (
-    <footer className="flex flex-col gap-2 sm:flex-row py-6 w-full shrink-0 items-center px-4 md:px-6  text-[#E7E7E4] mt-20">
-      <p className="text-xs">
-        &copy; 2024 Ibrahim Medical. All rights reserved.
-      </p>
-      <nav className="sm:ml-auto flex gap-4 sm:gap-6">
-        <Link
-          href="#"
-          className="text-xs hover:underline underline-offset-4"
-          
-        >
-          Terms of Service
-        </Link>
-        <Link
-          href="#"
-          className="text-xs hover:underline underline-offset-4"
-          
-        >
-          Privacy
-        </Link>
-      </nav>
-    </footer>
+    <div className="mt-10">
+      <motion.footer
+        className="w-full py-8 bg-emerald-800 text-white"
+        variants={containerVariants}
+      >
+        <div className="container px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center">
+          <motion.p variants={itemVariants} className="text-sm md:text-base">
+            © 2024 Ibrahim Medical. All rights reserved.
+          </motion.p>
+          <motion.div variants={itemVariants} className="flex space-x-4 mt-4 md:mt-0">
+            <h1 className="text-sm md:text-base hover:underline">
+              Privacy Policy
+            </h1>
+            <h1 className="text-sm md:text-base hover:underline">
+              Terms of Service
+            </h1>
+          </motion.div>
+        </div>
+      </motion.footer>
+    </div>
   );
 };
 

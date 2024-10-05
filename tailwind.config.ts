@@ -1,7 +1,8 @@
 import { fontFamily } from "tailwindcss/defaultTheme";
+import { withUt } from "uploadthing/tw";
 
 /** @type {import('tailwindcss').Config} */
-export default {
+export default withUt({
   content: ["./components/**/*.{js,ts,jsx,tsx}", "./app/**/*.{js,ts,jsx,tsx}"],
   theme: {
     extend: {
@@ -52,12 +53,12 @@ export default {
       },
       keyframes: {
         "accordion-down": {
-          from: { height: 0 },
+          from: { height: "0px" },
           to: { height: "var(--radix-accordion-content-height)" },
         },
         "accordion-up": {
           from: { height: "var(--radix-accordion-content-height)" },
-          to: { height: 0 },
+          to: { height: "0px" },
         },
       },
       animation: {
@@ -67,4 +68,4 @@ export default {
     },
   },
   plugins: [require("tailwindcss-animate")],
-};
+});

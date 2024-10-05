@@ -1,89 +1,130 @@
 "use client";
-import React from "react";
-import { motion } from "framer-motion";
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { Stethoscope, Syringe, Pill, UserCircle } from "lucide-react";
 
-const ViewOperationsPage = () => {
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1,
-        delayChildren: 0.3,
-      },
-    },
+import React, { useState, useEffect } from "react";
+import Select from "react-select";
+import { Card } from "@/components/ui/card";
+import { useAuth } from "@/app/providers/AuthProvider";
+
+type Role = keyof typeof roleFields;
+
+const rolesOptions = [
+  { value: "doctor", label: "Doctors" },
+  { value: "nurse", label: "Nurses" },
+  { value: "frontdesk", label: "Front Desk" },
+  { value: "pharmacist", label: "Pharmacists" },
+];
+
+const roleFields = {
+  doctor: ["Image", "Name", "Email", "Specialization", "License", "Age", "Status"],
+  nurse: ["Image", "Name", "Email", "Qualification", "Age", "Status"],
+  frontdesk: ["Image", "Name", "Email", "Qualification", "Age", "Status"],
+  pharmacist: ["Image", "Name", "Email", "Qualification", "Age", "Status"],
+};
+
+const RoleTable = () => {
+  const [selectedRole, setSelectedRole] = useState<Role>(rolesOptions[0].value as Role);
+  const [roleData, setRoleData] = useState<any[]>([]);
+  const { user } = useAuth();
+  const accessToken = user?.access_token;
+
+  const handleRoleChange = (selectedOption: any) => {
+    setSelectedRole(selectedOption.value as Role);
   };
 
-  const itemVariants = {
-    hidden: { y: 20, opacity: 0 },
-    visible: {
-      y: 0,
-      opacity: 1,
-      transition: {
-        type: "spring",
-        stiffness: 100,
-      },
-    },
+  useEffect(() => {
+    const fetchRoleData = async () => {
+      try {
+        const response = await fetch(`http://localhost:3001/admin/${selectedRole}`, {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        });
+        const result = await response.json();
+        if (Array.isArray(result)) {
+          setRoleData(result);
+        } else if (result.data) {
+          setRoleData(result.data);
+        } else {
+          console.warn("Unexpected data format:", result);
+          setRoleData([]);
+        }
+      } catch (error) {
+        console.error("Error fetching role data:", error);
+        setRoleData([]);
+      }
+    };
+
+    fetchRoleData();
+  }, [selectedRole, accessToken]);
+
+  const getStatusStyle = (status: string) => {
+    switch (status) {
+      case "Active":
+        return "whitespace-nowrap text-green-500 bg-green-200 px-4 py-2 rounded-full font-bold";
+      case "Not Active":
+        return "whitespace-nowrap text-red-500 bg-red-200 px-4 py-2 rounded-full font-bold";
+      default:
+        return "text-gray-500";
+    }
   };
 
-  const viewOperations = [
-    { href: "/admin/view-doctors", label: "View Doctors", icon: Stethoscope },
-    { href: "/admin/view-nurses", label: "View Nurses", icon: Syringe },
-    { href: "/admin/view-pharmacists", label: "View Pharmacists", icon: Pill },
-    { href: "/admin/view-frontdesk", label: "View Frontdesk", icon: UserCircle },
-  ];
+  const getImageStyle = (image: string) => (
+    <img src={image} alt="User Image" className="w-12 h-12 rounded-full object-cover" />
+  );
 
   return (
-    <motion.div
-      initial="hidden"
-      animate="visible"
-      variants={containerVariants}
-      className="min-h-screen bg-gradient-to-b from-emerald-50 to-white py-12 px-4 sm:px-6 lg:px-8"
-    >
-      <div className="max-w-4xl mx-auto">
-        <motion.div
-          className="text-center mb-12"
-          variants={itemVariants}
-        >
-          <motion.h1
-            className="text-4xl sm:text-5xl md:text-6xl font-bold text-emerald-700 mb-4"
-            initial={{ opacity: 0, y: -50 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-          >
-            View Your Desired Items
-          </motion.h1>
-          <motion.p
-            className="text-xl text-emerald-600"
-            variants={itemVariants}
-          >
-            Select the operation you want to perform
-          </motion.p>
-        </motion.div>
-
-        <motion.div
-          className="grid grid-cols-1 sm:grid-cols-2 gap-6"
-          variants={containerVariants}
-        >
-          {viewOperations.map((op) => (
-            <motion.div key={op.href} variants={itemVariants}>
-              <Link href={op.href} passHref>
-                <Button
-                  className="w-full h-32 text-xl font-semibold bg-emerald-600 hover:bg-emerald-700 text-white transition-all duration-300 ease-in-out transform hover:scale-105 hover:shadow-lg rounded-xl flex items-center justify-center space-x-4"
-                >
-                  <op.icon className="h-8 w-8" />
-                  <span>{op.label}</span>
-                </Button>
-              </Link>
-            </motion.div>
-          ))}
-        </motion.div>
-      </div>
-    </motion.div>
+    <div className="bg-gray-100 py-12 px-4 sm:px-6 lg:px-8 flex items-center justify-center">
+      <Card className="w-full max-w-5xl bg-white rounded-xl shadow-lg overflow-hidden">
+        <div className="p-6">
+          <h1 className="text-2xl font-bold text-emerald-600 mb-4">Staff Directory</h1>
+          <Select
+            options={rolesOptions}
+            onChange={handleRoleChange}
+            className="mb-6"
+            placeholder="Select Role"
+          />
+          <table className="min-w-full bg-white border border-gray-200">
+            <thead>
+              <tr className="bg-emerald-600 text-white">
+                {roleFields[selectedRole].map((field: string) => (
+                  <th key={field} className="py-2 px-4 border-b border-gray-200 text-left">
+                    {field}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {Array.isArray(roleData) && roleData.length > 0 ? (
+                roleData.map((item: any, index: number) => (
+                  <tr key={index} className="hover:bg-gray-100">
+                    {roleFields[selectedRole].map((field: string) => (
+                      <td key={field} className="py-2 px-4 border-b border-gray-200">
+                        {field === "Image" ? (
+                          getImageStyle(item.image)
+                        ) : field === "Status" ? (
+                          <span className={getStatusStyle(item[field.toLowerCase().replace(" ", "_")])}>
+                            {item[field.toLowerCase().replace(" ", "_")]}
+                          </span>
+                        ) : (
+                          item[field.toLowerCase().replace(" ", "_")]
+                        )}
+                      </td>
+                    ))}
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={roleFields[selectedRole].length} className="text-center">
+                    {roleData.length === 0 ? "No data available" : "Loading..."}
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+    </div>
   );
 };
 
-export default ViewOperationsPage;
+export default RoleTable;

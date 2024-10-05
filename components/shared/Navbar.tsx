@@ -9,6 +9,7 @@ import { Separator } from "@/components/ui/separator"
 import { ShieldPlus } from "lucide-react"
 import { useAuth } from "@/app/providers/AuthProvider"
 import { Button } from "@/components/ui/button"
+import logo from "@/public/logo.jpg";
 
 const Navbar = () => {
   const { user, logout } = useAuth()
@@ -52,8 +53,9 @@ const Navbar = () => {
         <div className="flex justify-between h-16">
           <div className="flex">
             <Link href={`/${role}`} className="flex-shrink-0 flex items-center">
-              <ShieldPlus className="h-8 w-8 text-emerald-500" />
-              <span className="ml-2 text-xl font-semibold text-gray-900">Ibrahim Medical</span>
+              {/* <ShieldPlus className="h-8 w-8 text-emerald-500" />
+              <span className="ml-2 text-xl font-semibold text-gray-900">Ibrahim Medical</span> */}
+              <Image src={logo} alt="logo" width={50} height={50} />
             </Link>
           </div>
           <div className="hidden md:flex md:items-center md:space-x-4">
@@ -92,8 +94,10 @@ const Navbar = () => {
               </SheetTrigger>
               <SheetContent className="w-[300px] sm:w-[400px]">
                 <div className="flex items-center mb-6">
-                  <ShieldPlus className="h-8 w-8 text-emerald-500" />
-                  <span className="ml-2 text-xl font-semibold text-gray-900">Ibrahim Medical</span>
+                  {/* <ShieldPlus className="h-8 w-8 text-emerald-500" />
+                  <span className="ml-2 text-xl font-semibold text-gray-900">Ibrahim Medical</span> */}
+                  <Image src={logo} alt="logo" width={50} height={50} />
+
                 </div>
                 <Separator className="mb-6" />
                 <div className="flex flex-col space-y-4">
