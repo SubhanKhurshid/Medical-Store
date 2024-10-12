@@ -3,7 +3,14 @@
 import React, { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+  CardFooter,
+} from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import Link from "next/link";
@@ -29,16 +36,13 @@ const Signup = () => {
   const [license, setLicense] = useState("");
   const [image, setImage] = useState("");
 
-
-
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    console.log({ name, email })
+    console.log({ name, email, image, qualification });
     try {
-
       const accessToken = user?.access_token;
       if (!accessToken) {
         throw new Error("Access token is missing. Please log in first.");
@@ -55,7 +59,7 @@ const Signup = () => {
           qualification,
           age,
           license,
-          image
+          image,
         },
         {
           headers: { Authorization: `Bearer ${accessToken}` },
@@ -73,9 +77,6 @@ const Signup = () => {
     }
   };
 
-
-
-
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -85,14 +86,18 @@ const Signup = () => {
     >
       <div className="w-full max-w-4xl flex flex-col lg:flex-row bg-white rounded-3xl shadow-lg overflow-hidden">
         {/* Left side - Welcome */}
-        <motion.div 
+        <motion.div
           className="lg:w-1/2 bg-emerald-600 p-12 text-white flex flex-col justify-center"
           initial={{ x: -100, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
           transition={{ duration: 0.7 }}
         >
-          <h1 className="text-4xl font-extrabold mb-6">Welcome to N.S Ibrahim Medical</h1>
-          <p className="text-lg leading-relaxed mb-8">Join us in delivering quality healthcare. Sign up to get started!</p>
+          <h1 className="text-4xl font-extrabold mb-6">
+            Welcome to N.S Ibrahim Medical
+          </h1>
+          <p className="text-lg leading-relaxed mb-8">
+            Join us in delivering quality healthcare. Sign up to get started!
+          </p>
         </motion.div>
 
         {/* Right side - Form */}
@@ -104,16 +109,20 @@ const Signup = () => {
         >
           <Card className="w-full border-none shadow-none">
             <CardHeader className="space-y-2">
-              <CardTitle className="text-3xl font-bold text-emerald-700">Create Your Account</CardTitle>
-              <CardDescription className="text-sm text-gray-500">Join our community and make an impact.</CardDescription>
+              <CardTitle className="text-3xl font-bold text-emerald-700">
+                Create Your Account
+              </CardTitle>
+              <CardDescription className="text-sm text-gray-500">
+                Join our community and make an impact.
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="space-y-1">
                   <Label htmlFor="name">Full Name</Label>
                   <Input
-                    id="name" 
-                    placeholder="John Doe" 
+                    id="name"
+                    placeholder="John Doe"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     className="rounded-lg border-emerald-300 focus:border-emerald-500 focus:ring-emerald-500"
@@ -126,11 +135,11 @@ const Signup = () => {
                 </div>
 
                 <div className="space-y-1">
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="email">Username</Label>
                   <Input
-                    id="email" 
-                    placeholder="example@medical.com" 
-                    type="email" 
+                    id="email"
+                    placeholder="John123"
+                    type="text"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="rounded-lg border-emerald-300 focus:border-emerald-500 focus:ring-emerald-500"
@@ -142,7 +151,7 @@ const Signup = () => {
                   <Input
                     id="password"
                     type="password"
-                    placeholder="••••••••" 
+                    placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     className="rounded-lg border-emerald-300 focus:border-emerald-500 focus:ring-emerald-500"
@@ -154,8 +163,8 @@ const Signup = () => {
                     <div className="space-y-1">
                       <Label htmlFor="specialization">Specialization</Label>
                       <Input
-                        id="specialization" 
-                        placeholder="Cardiology" 
+                        id="specialization"
+                        placeholder="Cardiology"
                         value={specialization}
                         onChange={(e) => setSpecialization(e.target.value)}
                         className="rounded-lg border-emerald-300 focus:border-emerald-500 focus:ring-emerald-500"
@@ -165,8 +174,8 @@ const Signup = () => {
                     <div className="space-y-1">
                       <Label htmlFor="license">License Number</Label>
                       <Input
-                        id="license" 
-                        placeholder="12345678" 
+                        id="license"
+                        placeholder="12345678"
                         value={license}
                         onChange={(e) => setLicense(e.target.value)}
                         className="rounded-lg border-emerald-300 focus:border-emerald-500 focus:ring-emerald-500"
@@ -178,7 +187,7 @@ const Signup = () => {
                 <div className="space-y-1">
                   <Label htmlFor="qualification">Qualification</Label>
                   <Input
-                    id="qualification" 
+                    id="qualification"
                     placeholder="MBBS"
                     value={qualification}
                     onChange={(e) => setQualification(e.target.value)}
@@ -189,8 +198,8 @@ const Signup = () => {
                 <div className="space-y-1">
                   <Label htmlFor="age">Age</Label>
                   <Input
-                    id="age" 
-                    placeholder="22" 
+                    id="age"
+                    placeholder="22"
                     value={age}
                     onChange={(e) => setAge(e.target.value)}
                     className="rounded-lg border-emerald-300 focus:border-emerald-500 focus:ring-emerald-500"
@@ -200,7 +209,7 @@ const Signup = () => {
                 {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
 
                 <Button
-                  type="submit" 
+                  type="submit"
                   className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2 px-4 rounded-lg transition duration-300"
                   disabled={loading}
                 >
@@ -210,7 +219,12 @@ const Signup = () => {
             </CardContent>
 
             <CardFooter className="text-center mt-4">
-              <Link href="/login" className="text-emerald-600 hover:underline text-sm">Already have an account? Login</Link>
+              <Link
+                href="/login"
+                className="text-emerald-600 hover:underline text-sm"
+              >
+                Already have an account? Login
+              </Link>
             </CardFooter>
           </Card>
         </motion.div>

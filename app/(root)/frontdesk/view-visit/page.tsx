@@ -9,13 +9,18 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
-import Image from "next/image";
-import plane from "@/public/paper_plane_1x-1.0s-200px-200px-removebg-preview.png";
 import axios from "axios";
 import { useAuth } from "@/app/providers/AuthProvider";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search } from "lucide-react";
+import { Search, CalendarIcon } from "lucide-react";
+import { format } from "date-fns";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 interface Relation {
   relation: string;
@@ -58,22 +63,33 @@ interface Visit {
 const ViewVisitPage = () => {
   const [patients, setPatients] = useState<Visit[]>([]);
   const [searchTerm, setSearchTerm] = useState<string>("");
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(
+    new Date()
+  );
   const [loading, setLoading] = useState<boolean>(true);
   const { user } = useAuth();
 
   const accessToken = user?.access_token;
 
   useEffect(() => {
-    const fetchVisits = async () => {
+    const fetchVisits = async (date?: Date) => {
+      setLoading(true);
       try {
+        const formattedDate = date
+          ? date.toISOString().split("T")[0]
+          : undefined;
         const response = await axios.get(
-          "https://annual-johna-uni2234-7798c123.koyeb.app/frontdesk/all-visits",
+          "http://localhost:3001/frontdesk/all-visits",
           {
             headers: {
               Authorization: `Bearer ${accessToken}`,
             },
+            params: {
+              date: formattedDate, // Ensure the date is sent in local format (yyyy-MM-dd)
+            },
           }
         );
+
         if (response.data?.success) {
           setPatients(response.data.data);
         } else {
@@ -86,8 +102,8 @@ const ViewVisitPage = () => {
         setLoading(false);
       }
     };
-    fetchVisits();
-  }, [accessToken]);
+    fetchVisits(selectedDate);
+  }, [accessToken, selectedDate]);
 
   const handleSearchChange = async (
     event: React.ChangeEvent<HTMLInputElement>
@@ -99,7 +115,7 @@ const ViewVisitPage = () => {
       setLoading(true);
       try {
         const { data } = await axios.get(
-          "https://annual-johna-uni2234-7798c123.koyeb.app/frontdesk/visits",
+          "http://localhost:3001/frontdesk/visits",
           {
             params: { cnic: term },
             headers: {
@@ -108,10 +124,7 @@ const ViewVisitPage = () => {
           }
         );
 
-        console.log("Backend response: ", data.data);
-
         if (data.success) {
-          // Assuming the response data structure is consistent
           const visits = data.data.map((patient: any) => ({
             patient: {
               name: patient.name || "Not Available",
@@ -130,7 +143,6 @@ const ViewVisitPage = () => {
           }));
 
           setPatients(visits);
-          console.log("Patient Data: ", visits);
         } else {
           toast.error(data.error || "Failed to fetch patients.");
           setPatients([]);
@@ -163,6 +175,40 @@ const ViewVisitPage = () => {
         >
           Visit Details
         </motion.h1>
+
+        {/* Date Picker */}
+        <motion.div
+          initial={{ y: 50, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+          className="mb-8 flex justify-center items-center"
+        >
+          <Popover>
+            <PopoverTrigger asChild>
+              <button
+                className="flex items-center gap-2 px-4 py-2 border border-emerald-300 rounded-md shadow-sm text-emerald-700 bg-white hover:bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500"
+                aria-label="Select a date"
+              >
+                <CalendarIcon className="w-5 h-5" />
+                {selectedDate ? (
+                  <span>{format(selectedDate, "PPP")}</span>
+                ) : (
+                  <span>Select a date</span>
+                )}
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="center">
+              <Calendar
+                mode="single"
+                selected={selectedDate}
+                onSelect={setSelectedDate}
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
+        </motion.div>
+
+        {/* Search Input */}
         <motion.div
           initial={{ y: 50, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
@@ -187,6 +233,7 @@ const ViewVisitPage = () => {
               exit={{ opacity: 0, scale: 0.8 }}
               className="flex justify-center mb-8"
             >
+              {/* Loader SVG */}
               <svg
                 className="animate-spin h-10 w-10 text-emerald-500"
                 xmlns="http://www.w3.org/2000/svg"

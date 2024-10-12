@@ -30,6 +30,10 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 // Define the allowed relation types
 type RelationType = "NONE" | "PARENT" | "SIBLING" | "CHILD" | "SPOUSE";
 
+type FormType = "ADD_PATIENT" | "ADD_PATIENT_AND_VISIT";
+const isFormType = (value: string): value is FormType => {
+  return value === "ADD_PATIENT" || value === "ADD_PATIENT_AND_VISIT";
+};
 interface Doctor {
   id: string;
   name: string;
@@ -37,13 +41,13 @@ interface Doctor {
 
 const AddPatientPage = () => {
   const [doctors, setDoctors] = useState<Doctor[]>([]);
-  const [selectedDoctorId, setSelectedDoctorId] = useState("");
   const [relationType, setRelationType] = useState<RelationType>("NONE");
   const { user } = useAuth();
-  // Removed addVisit state as we'll pass it directly
+  const [formType, setFormType] = useState<FormType>("ADD_PATIENT");
 
   // Explicitly type initialValues
   const initialValues: z.infer<typeof patientSchema> = {
+    formType: "ADD_PATIENT",
     attendedByDoctorId: "",
     name: "",
     fatherName: "",
@@ -88,7 +92,6 @@ const AddPatientPage = () => {
           }
         );
         setDoctors(response.data);
-        console.log("Doctors fetched:", response.data);
       } catch (error) {
         console.error("Error fetching doctors", error);
         toast.error("Failed to fetch doctors.");
@@ -100,7 +103,7 @@ const AddPatientPage = () => {
     }
   }, [accessToken]);
 
-  // Improved type safety by specifying the event type and using RelationType
+  // Handle relation change
   const handleRelationChange = (value: RelationType) => {
     setRelationType(value);
     form.setValue(`relation.0.relation`, value, { shouldValidate: true });
@@ -109,25 +112,38 @@ const AddPatientPage = () => {
       form.setValue(`relation.0.relationName`, undefined);
       form.setValue(`relation.0.relationCNIC`, undefined);
     } else {
-      form.setValue(`relation.0.relationName`, "");
-      form.setValue(`relation.0.relationCNIC`, "");
+      // Set empty values if it's not NONE
+      form.setValue(
+        `relation.0.relationName`,
+        form.getValues(`relation.0.relationName`) || ""
+      );
+      form.setValue(
+        `relation.0.relationCNIC`,
+        form.getValues(`relation.0.relationCNIC`) || ""
+      );
     }
   };
-  const addPatient = async (
-    patientData: z.infer<typeof patientSchema>,
-    includeVisit: boolean
-  ) => {
+  const addPatient = async (patientData: z.infer<typeof patientSchema>) => {
     try {
-      const cleanedPatientData = JSON.parse(
-        JSON.stringify(patientData, (key, value) =>
-          value === undefined ? undefined : value
+      // Destructure formType from patientData
+      const { formType, ...restData } = patientData;
+
+      // Determine if a visit should be included
+      const includeVisit = formType === "ADD_PATIENT_AND_VISIT";
+
+      // Remove empty strings and formType from the data
+      const cleanedData = Object.fromEntries(
+        Object.entries(restData).filter(
+          ([_, value]) => value !== "" && value !== undefined && value !== null
         )
       );
+
+      // Prepare request data
       const requestData = {
-        ...cleanedPatientData,
-        relation: Array.isArray(cleanedPatientData.relation)
-          ? cleanedPatientData.relation
-          : [cleanedPatientData.relation],
+        ...cleanedData,
+        relation: Array.isArray(cleanedData.relation)
+          ? cleanedData.relation
+          : [cleanedData.relation],
         ...(includeVisit
           ? {
               Visit: [
@@ -136,13 +152,14 @@ const AddPatientPage = () => {
                 },
               ],
             }
-          : []),
+          : {}),
       };
 
       console.log("Request Data to Send:", requestData);
 
+      // Send the request
       const response = await axios.post(
-        "https://annual-johna-uni2234-7798c123.koyeb.app/frontdesk/patients",
+        "http://localhost:3001/frontdesk/patients",
         requestData,
         {
           headers: {
@@ -150,8 +167,11 @@ const AddPatientPage = () => {
           },
         }
       );
+
       if (response.data) {
         form.reset();
+        setRelationType("NONE");
+        setFormType("ADD_PATIENT");
         toast.success("Patient has been added successfully");
         console.log("Patient added successfully:", response.data);
       }
@@ -166,57 +186,18 @@ const AddPatientPage = () => {
     }
   };
 
-  // Modified onSubmit to accept includeVisit as a parameter
-  const onSubmit = async (
-    values: z.infer<typeof patientSchema>,
-    includeVisit: boolean
-  ) => {
-    console.log("onSubmit called with includeVisit:", includeVisit);
+  // onSubmit function
+  const onSubmit = async (values: z.infer<typeof patientSchema>) => {
     console.log("Form Values:", values);
 
-    const dataToSubmit = {
-      ...values,
-    };
-
-    const cleanedPatientData = JSON.parse(
-      JSON.stringify(dataToSubmit, (key, value) =>
-        value === undefined ? undefined : value
-      )
-    );
-
-    const requestData = {
-      ...cleanedPatientData,
-      relation: Array.isArray(cleanedPatientData.relation)
-        ? cleanedPatientData.relation
-        : [cleanedPatientData.relation],
-      ...(includeVisit && {
-        Visit: [
-          {
-            date: new Date().toISOString(),
-          },
-        ],
-      }),
-    };
-
-    console.log("Request Data to Send:", requestData);
-
-    await addPatient(requestData, includeVisit);
+    await addPatient(values);
   };
 
-  // Handle adding patient without visit
-  const handleAddPatient = () => {
-    console.log("Add Patient button clicked");
-    form.handleSubmit((data) => onSubmit(data, false))();
-  };
-
-  // Handle adding patient with visit
-  const handleAddPatientAndVisit = () => {
-    console.log("Add Patient & Visit button clicked");
-    form.handleSubmit((data) => onSubmit(data, true))();
-  };
-
+  // Handle form reset
   const handleReset = () => {
     form.reset();
+    setRelationType("NONE");
+    setFormType("ADD_PATIENT");
     console.log("Form reset");
   };
 
@@ -224,15 +205,43 @@ const AddPatientPage = () => {
     <Card className="w-full max-w-4xl mx-auto mt-10 bg-white shadow-xl rounded-xl">
       <CardHeader>
         <CardTitle className="text-3xl font-bold text-center text-emerald-600">
-          Register a New Patient
+          {formType === "ADD_PATIENT"
+            ? "Register a New Patient"
+            : "Register a New Patient and Visit"}
         </CardTitle>
       </CardHeader>
       <CardContent>
         <Form {...form}>
-          <form
-            onSubmit={form.handleSubmit((data) => onSubmit(data, false))}
-            className="space-y-6"
-          >
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            {/* Form Type Selection */}
+            <FormItem>
+              <FormLabel>Form Type</FormLabel>
+              <Select
+                onValueChange={(value) => {
+                  if (isFormType(value)) {
+                    setFormType(value);
+                    form.setValue("formType", value);
+                  } else {
+                    console.error("Invalid form type selected:", value);
+                  }
+                }}
+                defaultValue={formType}
+              >
+                <FormControl>
+                  <SelectTrigger className="rounded-md border-emerald-200 focus:border-emerald-500 focus:ring-emerald-500">
+                    <SelectValue placeholder="Select Form Type" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="ADD_PATIENT">Add Patient</SelectItem>
+                  <SelectItem value="ADD_PATIENT_AND_VISIT">
+                    Add Patient and Visit
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </FormItem>
+
+            {/* Patient Name and Father's Name */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <FormField
                 control={form.control}
@@ -270,6 +279,7 @@ const AddPatientPage = () => {
               />
             </div>
 
+            {/* Email */}
             <FormField
               control={form.control}
               name="email"
@@ -288,6 +298,7 @@ const AddPatientPage = () => {
               )}
             />
 
+            {/* Identity and Relation */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <FormField
                 control={form.control}
@@ -355,6 +366,7 @@ const AddPatientPage = () => {
               />
             </div>
 
+            {/* Relation Details or CNIC */}
             {relationType !== "NONE" ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField
@@ -412,7 +424,7 @@ const AddPatientPage = () => {
               />
             )}
 
-            {/* ... (other form fields) ... */}
+            {/* Education */}
             <FormField
               control={form.control}
               name="education"
@@ -581,74 +593,26 @@ const AddPatientPage = () => {
               />
             </div>
 
-            {/* Catchment Area and Amount Paid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <FormField
-                control={form.control}
-                name="catchmentArea"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Catchment Area</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger className="rounded-md border-emerald-200 focus:border-emerald-500 focus:ring-emerald-500">
-                          <SelectValue placeholder="Select Catchment Area" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="URBAN">URBAN</SelectItem>
-                        <SelectItem value="RURAL">RURAL</SelectItem>
-                        <SelectItem value="SLUM">SLUM</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="amountPayed"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Amount Paid</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        placeholder="Amount Paid"
-                        {...field}
-                        className="rounded-md border-emerald-200 focus:border-emerald-500 focus:ring-emerald-500"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
+            {/* Catchment Area */}
             <FormField
               control={form.control}
-              name="attendedByDoctorId"
+              name="catchmentArea"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Attended by Doctor</FormLabel>
+                  <FormLabel>Catchment Area</FormLabel>
                   <Select
                     onValueChange={field.onChange}
                     defaultValue={field.value}
                   >
                     <FormControl>
                       <SelectTrigger className="rounded-md border-emerald-200 focus:border-emerald-500 focus:ring-emerald-500">
-                        <SelectValue placeholder="Select a Doctor" />
+                        <SelectValue placeholder="Select Catchment Area" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {doctors.map((doctor) => (
-                        <SelectItem key={doctor.id} value={doctor.id}>
-                          {doctor.name}
-                        </SelectItem>
-                      ))}
+                      <SelectItem value="URBAN">URBAN</SelectItem>
+                      <SelectItem value="RURAL">RURAL</SelectItem>
+                      <SelectItem value="SLUM">SLUM</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -656,6 +620,61 @@ const AddPatientPage = () => {
               )}
             />
 
+            {/* Conditionally render Amount Paid and Attended by Doctor */}
+            {formType === "ADD_PATIENT_AND_VISIT" && (
+              <>
+                {/* Amount Paid */}
+                <FormField
+                  control={form.control}
+                  name="amountPayed"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Amount Paid</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          placeholder="Amount Paid"
+                          {...field}
+                          className="rounded-md border-emerald-200 focus:border-emerald-500 focus:ring-emerald-500"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Attended by Doctor */}
+                <FormField
+                  control={form.control}
+                  name="attendedByDoctorId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Attended by Doctor</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="rounded-md border-emerald-200 focus:border-emerald-500 focus:ring-emerald-500">
+                            <SelectValue placeholder="Select a Doctor" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {doctors.map((doctor) => (
+                            <SelectItem key={doctor.id} value={doctor.id}>
+                              {doctor.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </>
+            )}
+
+            {/* Submit and Reset Buttons */}
             <div className="flex justify-between">
               <Button
                 type="button"
@@ -665,18 +684,12 @@ const AddPatientPage = () => {
                 Reset
               </Button>
               <Button
-                type="button" // Changed to type="button"
-                onClick={handleAddPatient} // Add patient only
+                type="submit"
                 className="bg-emerald-500 hover:bg-emerald-600 text-white"
               >
-                Add Patient
-              </Button>
-              <Button
-                type="button" // Changed to type="button"
-                onClick={handleAddPatientAndVisit} // Add patient and visit
-                className="bg-emerald-600 hover:bg-emerald-700 text-white"
-              >
-                Add Patient & Visit
+                {formType === "ADD_PATIENT"
+                  ? "Add Patient"
+                  : "Add Patient & Visit"}
               </Button>
             </div>
           </form>
