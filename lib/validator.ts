@@ -176,5 +176,14 @@ export const additionalDetailsSchema = z.object({
     )
     .optional(),
 
-  bloodPressure: z.string().optional(), // Blood pressure stays as string
+  bloodPressure: z.string().optional(),
+
+  // New optional fields
+  injection: z.string().optional(),
+  timeOfInjection: z.string().optional(),
+  bedNumber: z.string().optional(),
+  medicine: z.string().optional(),
+  timeOfMedicine: z.string().optional(),
+  drip: z.string().optional(),
+  expiryOfDrip: z.string().optional(),
 });

@@ -159,7 +159,7 @@ const AddPatientPage = () => {
 
       // Send the request
       const response = await axios.post(
-        "http://localhost:3001/frontdesk/patients",
+        "https://annual-johna-uni2234-7798c123.koyeb.app/frontdesk/patients",
         requestData,
         {
           headers: {

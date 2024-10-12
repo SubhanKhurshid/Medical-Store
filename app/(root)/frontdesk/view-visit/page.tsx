@@ -79,7 +79,7 @@ const ViewVisitPage = () => {
           ? date.toISOString().split("T")[0]
           : undefined;
         const response = await axios.get(
-          "http://localhost:3001/frontdesk/all-visits",
+          "https://annual-johna-uni2234-7798c123.koyeb.app/frontdesk/all-visits",
           {
             headers: {
               Authorization: `Bearer ${accessToken}`,
@@ -115,7 +115,7 @@ const ViewVisitPage = () => {
       setLoading(true);
       try {
         const { data } = await axios.get(
-          "http://localhost:3001/frontdesk/visits",
+          "https://annual-johna-uni2234-7798c123.koyeb.app/frontdesk/visits",
           {
             params: { cnic: term },
             headers: {

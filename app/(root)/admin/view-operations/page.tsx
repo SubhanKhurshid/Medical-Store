@@ -34,7 +34,7 @@ const RoleTable = () => {
   useEffect(() => {
     const fetchRoleData = async () => {
       try {
-        const response = await fetch(`http://localhost:3001/admin/${selectedRole}`, {
+        const response = await fetch(`https://annual-johna-uni2234-7798c123.koyeb.app/admin/${selectedRole}`, {
           headers: {
             Authorization: `Bearer ${accessToken}`,
           },

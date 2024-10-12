@@ -28,7 +28,7 @@ const PatientDetailsSearch = () => {
     if (term) {
       setLoading(true)
       try {
-        const { data } = await axios.get("http://localhost:3001/nurse/details", {
+        const { data } = await axios.get("https://annual-johna-uni2234-7798c123.koyeb.app/nurse/details", {
           params: { cnic: term },
           headers: {
             Authorization: `Bearer ${accessToken}`,
