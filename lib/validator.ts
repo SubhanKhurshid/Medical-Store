@@ -5,37 +5,35 @@ import * as z from "zod";
 type RelationType = "NONE" | "PARENT" | "SIBLING" | "CHILD" | "SPOUSE";
 
 // Relation schema definition using discriminated unions
-export const relationSchema = z.discriminatedUnion("relation", [
-  // Schema for relation === "NONE"
-  z.object({
-    relation: z.literal("NONE"),
-    relationName: z.undefined(),
-    relationCNIC: z.undefined(),
-  }),
-  // Schema for other relations where relationName and relationCNIC are required
-  z.object({
-    relation: z.enum(["PARENT", "SIBLING", "CHILD", "SPOUSE"]),
-    relationName: z.string().min(1, "Relation's name is required"),
-    relationCNIC: z.string().length(13, 'Relation\'s CNIC must be 13 characters long').min(1, "Relation's CNIC is required"),
-  }),
-]);
-
+export const relationSchema = z.object({
+  relation: z.enum(["PARENT", "SIBLING", "CHILD", "SPOUSE", "NONE"]),
+  relationName: z.string().optional(),
+  relationCNIC: z.string().optional(),
+});
 // Visit schema definition
 export const visitSchema = z.object({
-  date: z.preprocess((arg) => {
-    if (typeof arg === "string" || arg instanceof Date) {
-      const date = new Date(arg);
-      return isNaN(date.getTime()) ? undefined : date;
-    }
-  }, z.date().refine((date) => !isNaN(date.getTime()), {
-    message: "Invalid date format",
-  })),
+  date: z.preprocess(
+    (arg) => {
+      if (typeof arg === "string" || arg instanceof Date) {
+        const date = new Date(arg);
+        return isNaN(date.getTime()) ? undefined : date;
+      }
+    },
+    z.date().refine((date) => !isNaN(date.getTime()), {
+      message: "Invalid date format",
+    })
+  ),
 });
 
 // Main patient schema
 export const patientSchema = z
   .object({
-    attendedByDoctorId: z.string().min(1, "Doctor selection is required"),
+    formType: z.enum(["ADD_PATIENT", "ADD_PATIENT_AND_VISIT"]),
+
+    // Make these fields optional initially
+    attendedByDoctorId: z.string().optional(),
+    amountPayed: z.string().optional(),
+
     name: z
       .string()
       .min(1, "Name is required")
@@ -50,14 +48,15 @@ export const patientSchema = z
       .min(1, "Email is required")
       .max(100, "Email cannot be that long"),
     identity: z.enum(["PAKISTANI", "OTHER"]),
-    cnic: z.string().length(13, "CNIC must be 13 characters long").optional(),
+    cnic: z.string().optional(), // CNIC for patient, optional initially
     crc: z.enum(["OLD", "NEW"]),
     crcNumber: z
       .string()
       .min(1, "CRC Number is required")
       .max(15, "CRC Number cannot be that long"),
     contactNumber: z
-      .string().length(11, "Contact number must be 11 characters long")
+      .string()
+      .length(11, "Contact number must be 11 characters long")
       .min(1, "Contact number is required"),
     education: z
       .string()
@@ -77,24 +76,49 @@ export const patientSchema = z
       .min(1, "Address is required")
       .max(200, "Address cannot be that long"),
     catchmentArea: z.enum(["URBAN", "RURAL", "SLUM"]),
-    amountPayed: z
-      .string()
-      .min(1, "Amount paid is required")
-      .max(100, "Amount cannot be that long"),
 
-    // Make relation required with at least one item
+    // Relation is required and has at least one relation
     relation: z
       .array(relationSchema)
       .min(1, "At least one relation is required"),
-    Visit: z.array(visitSchema).optional(),
+
+    // Optional visit data
+    Visit: z
+      .array(
+        z.object({
+          date: z.string().optional(),
+        })
+      )
+      .optional(),
   })
   .superRefine((data, ctx) => {
+    // If the relation is "NONE", the patient's own CNIC must be provided
     if (data.relation[0].relation === "NONE") {
-      if (!data.cnic || data.cnic.trim() === "") {
+      if (!data.cnic || data.cnic.trim().length !== 13) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: "CNIC is required when relation is NONE.",
+          message:
+            "CNIC is required and must be 13 characters long when relation is NONE.",
           path: ["cnic"],
+        });
+      }
+    }
+
+    // Conditional validation based on form type
+    if (data.formType === "ADD_PATIENT_AND_VISIT") {
+      if (!data.attendedByDoctorId || data.attendedByDoctorId.trim() === "") {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Attended by Doctor is required for adding a visit.",
+          path: ["attendedByDoctorId"],
+        });
+      }
+
+      if (!data.amountPayed || data.amountPayed.trim() === "") {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Amount Paid is required for adding a visit.",
+          path: ["amountPayed"],
         });
       }
     }
@@ -111,34 +135,46 @@ export const additionalDetailsSchema = z.object({
   weight: z
     .string()
     .transform((val) => (val ? parseFloat(val) : undefined))
-    .refine((val): val is number => val !== undefined && !isNaN(val) && val >= 0, {
-      message: "Weight must be a non-negative number",
-    })
+    .refine(
+      (val): val is number => val !== undefined && !isNaN(val) && val >= 0,
+      {
+        message: "Weight must be a non-negative number",
+      }
+    )
     .optional(),
-  
+
   sugarLevel: z
     .string()
     .transform((val) => (val ? parseFloat(val) : undefined))
-    .refine((val): val is number => val !== undefined && !isNaN(val) && val >= 0, {
-      message: "Sugar level must be a non-negative number",
-    })
+    .refine(
+      (val): val is number => val !== undefined && !isNaN(val) && val >= 0,
+      {
+        message: "Sugar level must be a non-negative number",
+      }
+    )
     .optional(),
-  
+
   temperature: z
     .string()
     .transform((val) => (val ? parseFloat(val) : undefined))
-    .refine((val): val is number => val !== undefined && !isNaN(val) && val >= 0, {
-      message: "Temperature must be a non-negative number",
-    })
+    .refine(
+      (val): val is number => val !== undefined && !isNaN(val) && val >= 0,
+      {
+        message: "Temperature must be a non-negative number",
+      }
+    )
     .optional(),
-  
+
   height: z
     .string()
     .transform((val) => (val ? parseFloat(val) : undefined))
-    .refine((val): val is number => val !== undefined && !isNaN(val) && val >= 0, {
-      message: "Height must be a non-negative number",
-    })
+    .refine(
+      (val): val is number => val !== undefined && !isNaN(val) && val >= 0,
+      {
+        message: "Height must be a non-negative number",
+      }
+    )
     .optional(),
-  
+
   bloodPressure: z.string().optional(), // Blood pressure stays as string
 });

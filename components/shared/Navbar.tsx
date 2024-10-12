@@ -1,30 +1,30 @@
-'use client'
+"use client";
 
-import Link from "next/link"
-import { usePathname, useRouter } from "next/navigation"
-import React, { useState } from "react"
-import Image from "next/image"
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
-import { Separator } from "@/components/ui/separator"
-import { ShieldPlus } from "lucide-react"
-import { useAuth } from "@/app/providers/AuthProvider"
-import { Button } from "@/components/ui/button"
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import React, { useState } from "react";
+import Image from "next/image";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Separator } from "@/components/ui/separator";
+import { ShieldPlus } from "lucide-react";
+import { useAuth } from "@/app/providers/AuthProvider";
+import { Button } from "@/components/ui/button";
 import logo from "@/public/logo.jpg";
 
 const Navbar = () => {
-  const { user, logout } = useAuth()
-  const pathname = usePathname()
-  const [isOpen, setIsOpen] = useState(false)
-  const role = user?.role
-  const router = useRouter()
+  const { user, logout } = useAuth();
+  const pathname = usePathname();
+  const [isOpen, setIsOpen] = useState(false);
+  const role = user?.role;
+  const router = useRouter();
 
   const handleLogout = (event: React.MouseEvent) => {
-    event.preventDefault()
-    logout()
-    router.push("/signin")
-  }
+    event.preventDefault();
+    logout();
+    router.push("/signin");
+  };
 
-  if (!role) return null
+  if (!role) return null;
 
   const navItems = {
     nurse: [
@@ -38,14 +38,14 @@ const Navbar = () => {
       { href: "/frontdesk/view-visit", label: "View Visits" },
     ],
     admin: [
-      { href: "/signup", label: "Add Doctor" },
-      { href: "/signup", label: "Add Nurse" },
-      { href: "/signup", label: "Add Pharmacist" },
-      { href: "/signup", label: "Front Desk" },
+      { href: "/signup?role=doctor", label: "Add Doctor" },
+      { href: "/signup?role=nurse", label: "Add Nurse" },
+      { href: "/signup?role=pharmacist", label: "Add Pharmacist" },
+      { href: "/signup?role=frontdesk", label: "Add Front Desk" },
     ],
-  }
+  };
 
-  const currentNavItems = navItems[role as keyof typeof navItems] || []
+  const currentNavItems = navItems[role as keyof typeof navItems] || [];
 
   return (
     <nav className="bg-white shadow-md">
@@ -97,12 +97,15 @@ const Navbar = () => {
                   {/* <ShieldPlus className="h-8 w-8 text-emerald-500" />
                   <span className="ml-2 text-xl font-semibold text-gray-900">Ibrahim Medical</span> */}
                   <Image src={logo} alt="logo" width={50} height={50} />
-
                 </div>
                 <Separator className="mb-6" />
                 <div className="flex flex-col space-y-4">
                   {currentNavItems.map((item) => (
-                    <NavLink key={item.href} href={item.href} currentPath={pathname}>
+                    <NavLink
+                      key={item.href}
+                      href={item.href}
+                      currentPath={pathname}
+                    >
                       {item.label}
                     </NavLink>
                   ))}
@@ -119,10 +122,18 @@ const Navbar = () => {
         </div>
       </div>
     </nav>
-  )
-}
+  );
+};
 
-const NavLink = ({ href, currentPath, children }: { href: string; currentPath: string; children: React.ReactNode }) => (
+const NavLink = ({
+  href,
+  currentPath,
+  children,
+}: {
+  href: string;
+  currentPath: string;
+  children: React.ReactNode;
+}) => (
   <Link
     href={href}
     className={`px-3 py-2 rounded-md text-sm font-medium ${
@@ -133,6 +144,6 @@ const NavLink = ({ href, currentPath, children }: { href: string; currentPath: s
   >
     {children}
   </Link>
-)
+);
 
-export default Navbar
+export default Navbar;
