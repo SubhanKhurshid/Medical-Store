@@ -56,6 +56,8 @@ const Signin = () => {
           case "doctor":
             router.push("/doctor");
             break;
+          case "pharmacist":
+            router.push("/pharmacist")
           default:
             console.log("Unhandled role:", result.role);
         }

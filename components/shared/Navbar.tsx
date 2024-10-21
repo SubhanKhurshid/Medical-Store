@@ -43,6 +43,11 @@ const Navbar = () => {
       { href: "/signup?role=pharmacist", label: "Add Pharmacist" },
       { href: "/signup?role=frontdesk", label: "Add Front Desk" },
     ],
+    pharmacist: [
+      {href: "/pharmacist", label: "Dashboard"},
+      {href: "/pharmacist/inventory-management", label: "Add Medicine"},
+      {href: "/pharmacist/inventory-view", label: "View Inventory"}
+    ]
   };
 
   const currentNavItems = navItems[role as keyof typeof navItems] || [];
