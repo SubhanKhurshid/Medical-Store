@@ -1,3 +1,6 @@
 {
-    "workbench.colorTheme": "Dark Palenight"
+    "workbench.colorTheme": "Default Dark Modern",
+    "editor.formatOnSave": true,
+    "notebook.formatOnSave.enabled": true,
+    "files.autoSaveWhenNoErrors": true
 }
