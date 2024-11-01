@@ -8,7 +8,9 @@ export default function AuthLayout({
   children: React.ReactNode;
 }) {
   return (
-    <AuthProvider> {/* Wrap only the Auth pages in AuthProvider */}
+    <AuthProvider>
+      {" "}
+      {/* Wrap only the Auth pages in AuthProvider */}
       <Toaster richColors /> {/* Add Toaster component here */}
       <div className="min-h-screen flex items-center justify-center">
         {children}

@@ -1,86 +1,127 @@
-"use client"
+"use client";
 
-import React, { useState } from 'react'
-import { motion } from 'framer-motion'
-import { Input } from "@/components/ui/input"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Search } from 'lucide-react'
+import { useState, useEffect } from "react";
+import { DataTable } from "@/components/shared/DataTable";
+import { useInventory } from "@/app/context/InventoryContext";
+import { inventoryColumns } from "@/components/shared/columns";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { motion } from "framer-motion";
+import { Search, Filter } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { InventoryItem } from "@/app/context/InventoryContext"; // Adjust import as necessary
 
-// Mock data for demonstration
-const initialInventory = [
-  { id: 1, name: 'Aspirin', quantity: 100, price: 5.99, image: '/placeholder.svg?height=50&width=50' },
-  { id: 2, name: 'Ibuprofen', quantity: 75, price: 7.99, image: '/placeholder.svg?height=50&width=50' },
-  { id: 3, name: 'Amoxicillin', quantity: 50, price: 12.99, image: '/placeholder.svg?height=50&width=50' },
-  { id: 4, name: 'Lisinopril', quantity: 60, price: 9.99, image: '/placeholder.svg?height=50&width=50' },
-  { id: 5, name: 'Metformin', quantity: 80, price: 6.99, image: '/placeholder.svg?height=50&width=50' },
-]
+const Inventory = () => {
+  const {
+    state: { items },
+    getLowStockItems,
+    getExpiringItems,
+  } = useInventory();
 
-export default function InventoryView() {
-  const [searchTerm, setSearchTerm] = useState('')
-  const [inventory, setInventory] = useState(initialInventory)
+  const [search, setSearch] = useState("");
+  const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [lowStockItems, setLowStockItems] = useState<InventoryItem[]>([]);
+  const [expiringItems, setExpiringItems] = useState<InventoryItem[]>([]);
 
-  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const term = e.target.value.toLowerCase()
-    setSearchTerm(term)
-    const filteredInventory = initialInventory.filter(item => 
-      item.name.toLowerCase().includes(term)
-    )
-    setInventory(filteredInventory)
-  }
+  useEffect(() => {
+    const fetchData = async () => {
+      const lowStock = await getLowStockItems();
+      const expiring = await getExpiringItems();
+      setLowStockItems(lowStock);
+      setExpiringItems(expiring);
+    };
+    fetchData();
+  }, []);
+
+  const filteredItems = items.filter((item) => {
+    const matchesSearch = item.name.toLowerCase().includes(search.toLowerCase());
+    const matchesType = typeFilter === "all" || item.type === typeFilter;
+    return matchesSearch && matchesType;
+  });
 
   return (
-    <div className="p-8 max-w-4xl mx-auto min-h-screen">
-      <motion.h1 
-        className="text-4xl font-bold text-emerald-800 mb-8 text-center"
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-      >
-        Inventory View
-      </motion.h1>
-
-      <Card className="backdrop-blur-lg bg-white bg-opacity-60">
-        <CardHeader>
-          <CardTitle className="text-2xl text-emerald-700">Current Inventory</CardTitle>
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+      className="p-6 md:p-8 max-w-[1400px] mx-auto"
+    >
+      <Card className="bg-white/50 backdrop-blur-lg shadow-lg border-0">
+        <CardHeader className="pb-4">
+          <CardTitle className="text-2xl md:text-3xl font-bold text-[#059669]">
+            Inventory Management
+          </CardTitle>
+          <p className="text-sm text-gray-500 mt-1">
+            Manage and track your medical inventory
+          </p>
         </CardHeader>
         <CardContent>
-          <div className="relative mb-6">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-emerald-500" />
-            <Input 
-              placeholder="Search medicines..." 
-              value={searchTerm} 
-              onChange={handleSearch}
-              className="pl-10 bg-white bg-opacity-50 border-emerald-300 focus:border-emerald-500 focus:ring focus:ring-emerald-200 focus:ring-opacity-50"
-            />
-          </div>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="text-emerald-700">Image</TableHead>
-                  <TableHead className="text-emerald-700">Name</TableHead>
-                  <TableHead className="text-emerald-700">Quantity</TableHead>
-                  <TableHead className="text-emerald-700">Price</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {inventory.map((item) => (
-                  <TableRow key={item.id} className="hover:bg-emerald-100 transition-colors duration-200">
-                    <TableCell>
-                      <img src={item.image} alt={item.name} className="w-12 h-12 rounded-full object-cover" />
-                    </TableCell>
-                    <TableCell className="font-medium">{item.name}</TableCell>
-                    <TableCell>{item.quantity}</TableCell>
-                    
-                    <TableCell>${item.price.toFixed(2)}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <Input
+                  placeholder="Search items..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-10 bg-white border-gray-200 hover:border-[#059669] focus:border-[#059669] focus:ring-[#059669] transition-colors"
+                />
+              </div>
+              <div className="relative">
+                <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <Select onValueChange={(value) => setTypeFilter(value)} value={typeFilter}>
+                  <SelectTrigger className="pl-10 bg-white border-gray-200 hover:border-[#059669] focus:border-[#059669] focus:ring-[#059669]">
+                    <SelectValue placeholder="Filter by type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Types</SelectItem>
+                    <SelectItem value="MEDICINE">Medicine</SelectItem>
+                    <SelectItem value="SURGERY">Surgery</SelectItem>
+                    <SelectItem value="INJECTION">Injection</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="sm:col-span-2 lg:col-span-2 flex items-center justify-end space-x-2">
+                <div className="text-sm text-gray-500">
+                  Showing {filteredItems.length} items
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-lg border border-gray-200 bg-white overflow-hidden">
+              <div className="rounded-lg border border-gray-200 bg-white overflow-hidden [&_th]:bg-gray-50 [&_th]:text-[#059669] [&_th]:font-medium [&_tr:hover]:bg-emerald-50/50">
+                <DataTable columns={inventoryColumns} data={filteredItems} />
+              </div>
+              {filteredItems.length === 0 && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="flex flex-col items-center justify-center py-12 px-4"
+                >
+                  <div className="h-20 w-20 rounded-full bg-emerald-50 flex items-center justify-center mb-4">
+                    <Search className="h-10 w-10 text-[#059669]" />
+                  </div>
+                  <h3 className="text-lg font-medium text-gray-900 mb-1">
+                    No items found
+                  </h3>
+                  <p className="text-sm text-gray-500">
+                    Try adjusting your search or filter to find what you're
+                    looking for.
+                  </p>
+                </motion.div>
+              )}
+            </div>
           </div>
         </CardContent>
       </Card>
-    </div>
-  )
-}
+    </motion.div>
+  );
+};
+
+export default Inventory;
