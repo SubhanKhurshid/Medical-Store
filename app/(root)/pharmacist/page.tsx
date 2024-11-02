@@ -85,46 +85,29 @@ const PharmacistPage = () => {
   ];
 
   return (
-    <div className="p-8 max-w-7xl mx-auto  min-h-screen">
-      <motion.h1
-        className="text-4xl font-bold text-emerald-800 mb-8 text-center"
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-      >
+    <div className="p-4 sm:p-8 max-w-7xl mx-auto min-h-screen">
+      <motion.h1 className="text-3xl sm:text-4xl font-bold text-emerald-800 mb-4 text-center">
         Pharmacy Dashboard
       </motion.h1>
 
-      <motion.div
-        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12"
-        variants={{
-          animate: {
-            transition: {
-              staggerChildren: 0.1,
-            },
-          },
-        }}
-        initial="initial"
-        animate="animate"
-      >
+      <motion.div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
         {stats.map((stat, index) => (
           <motion.div key={index}>
-            <Card className="overflow-hidden transform hover:scale-105 transition-transform duration-300">
-              <CardContent className="p-6">
-                <div className={`absolute inset-0 opacity-10 rounded-lg`}></div>
-                <div className="relative z-10 flex items-center justify-between">
+            <Card className="overflow-hidden transform transition-transform duration-300">
+              <CardContent className="p-4 sm:p-6">
+                <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-emerald-600">
                       {stat.title}
                     </p>
-                    <h3 className="text-3xl font-bold text-emerald-900">
+                    <h3 className="text-2xl sm:text-3xl font-bold text-emerald-900">
                       {stat.value}
                     </h3>
                   </div>
                   <div
-                    className={`p-3 rounded-full bg-gradient-to-br ${stat.color}`}
+                    className={`p-2 rounded-full bg-gradient-to-br ${stat.color}`}
                   >
-                    <stat.icon className="h-8 w-8 text-white" />
+                    <stat.icon className="h-6 w-6 text-white" />
                   </div>
                 </div>
               </CardContent>
@@ -133,12 +116,11 @@ const PharmacistPage = () => {
         ))}
       </motion.div>
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card className="p-4">
           <h2 className="text-lg font-semibold mb-4">Low Stock Items</h2>
           <DataTable columns={inventoryColumns} data={lowStockItems} />
         </Card>
-
         <Card className="p-4">
           <h2 className="text-lg font-semibold mb-4">Expiring Soon</h2>
           <DataTable columns={inventoryColumns} data={expiringItems} />
