@@ -40,7 +40,9 @@ const Inventory = () => {
   }, []);
 
   const filteredItems = items.filter((item) => {
-    const matchesSearch = item.name.toLowerCase().includes(search.toLowerCase());
+    const matchesSearch = item.name
+      .toLowerCase()
+      .includes(search.toLowerCase());
     const matchesType = typeFilter === "all" || item.type === typeFilter;
     return matchesSearch && matchesType;
   });
@@ -75,7 +77,10 @@ const Inventory = () => {
               </div>
               <div className="relative">
                 <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                <Select onValueChange={(value) => setTypeFilter(value)} value={typeFilter}>
+                <Select
+                  onValueChange={(value) => setTypeFilter(value)}
+                  value={typeFilter}
+                >
                   <SelectTrigger className="pl-10 bg-white border-gray-200 hover:border-[#059669] focus:border-[#059669] focus:ring-[#059669]">
                     <SelectValue placeholder="Filter by type" />
                   </SelectTrigger>
