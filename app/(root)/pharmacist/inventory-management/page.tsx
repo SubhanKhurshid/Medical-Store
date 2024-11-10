@@ -53,7 +53,7 @@ type FormValues = z.infer<typeof medicineSchema> &
   z.infer<typeof surgeryItemSchema>;
 
 export default function InventoryManagement() {
-  const { addItem } = useInventory(); // Use addItem from context
+  const { addItem } = useInventory(); // Use addItem and items from context
   const [image, setImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [itemType, setItemType] = useState<ItemType>(ItemType.MEDICINE);

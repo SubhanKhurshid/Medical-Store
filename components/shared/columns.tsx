@@ -1,24 +1,24 @@
-import { ColumnDef } from '@tanstack/react-table';
-import { InventoryItem } from '@/app/context/InventoryContext';
-import { Badge } from '@/components/ui/badge';
+import { ColumnDef } from "@tanstack/react-table";
+import { InventoryItem } from "@/app/context/InventoryContext";
+import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Button } from '@/components/ui/button';
-import { MoreHorizontal } from 'lucide-react';
-import { useInventory } from '@/app/context/InventoryContext';
-import { toast } from 'sonner'; // Import toast
+} from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
+import { MoreHorizontal } from "lucide-react";
+import { useInventory } from "@/app/context/InventoryContext";
+import { toast } from "sonner"; // Import toast
 
 export const inventoryColumns: ColumnDef<InventoryItem>[] = [
   {
-    accessorKey: 'image',
-    header: 'Image',
+    accessorKey: "image",
+    header: "Image",
     cell: ({ row }) => {
-      const imageUrl = row.getValue('image') as string;
+      const imageUrl = row.getValue("image") as string;
       return (
         <img
           src={imageUrl}
@@ -29,15 +29,20 @@ export const inventoryColumns: ColumnDef<InventoryItem>[] = [
     },
   },
   {
-    accessorKey: 'name',
-    header: 'Name',
+    accessorKey: "name",
+    header: "Name",
   },
   {
-    accessorKey: 'type',
-    header: 'Type',
+    accessorKey: "type",
+    header: "Type",
     cell: ({ row }) => {
-      const type = row.getValue('type') as string;
-      const badgeVariant = type === 'MEDICINE' ? 'default' : type === 'SURGERY' ? 'secondary' : 'destructive';
+      const type = row.getValue("type") as string;
+      const badgeVariant =
+        type === "MEDICINE"
+          ? "default"
+          : type === "SURGERY"
+          ? "secondary"
+          : "destructive";
 
       return (
         <Badge variant={badgeVariant} className="capitalize">
@@ -47,41 +52,43 @@ export const inventoryColumns: ColumnDef<InventoryItem>[] = [
     },
   },
   {
-    accessorKey: 'quantity',
-    header: 'Quantity',
+    accessorKey: "quantity",
+    header: "Quantity",
   },
   {
-    accessorKey: 'batchNumber',
-    header: 'Batch No.',
+    accessorKey: "batchNumber",
+    header: "Batch No.",
   },
   {
-    accessorKey: 'expiryDate',
-    header: 'Expiry Date',
+    accessorKey: "expiryDate",
+    header: "Expiry Date",
     cell: ({ row }) => {
-      const date = new Date(row.getValue('expiryDate'));
+      const date = new Date(row.getValue("expiryDate"));
       return date.toLocaleDateString();
     },
   },
   {
-    accessorKey: 'price',
-    header: 'Price',
+    accessorKey: "price",
+    header: "Price",
     cell: ({ row }) => {
-      const amount = parseFloat(row.getValue('price'));
-      return new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: 'USD',
+      const amount = parseFloat(row.getValue("price"));
+      return new Intl.NumberFormat("en-US", {
+        style: "currency",
+        currency: "PKR",
       }).format(amount);
     },
   },
   {
-    id: 'actions',
+    id: "actions",
     cell: ({ row }) => {
       const item = row.original;
       const { deleteItem } = useInventory();
 
       const handleDelete = () => {
         deleteItem(item.id);
-        toast.success(`${item.name} has been successfully deleted from inventory.`);
+        toast.success(
+          `${item.name} has been successfully deleted from inventory.`
+        );
       };
 
       return (
