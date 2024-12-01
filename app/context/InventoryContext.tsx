@@ -18,6 +18,7 @@ export interface InventoryItem {
   expiryDate: string;
   manufacturer: string;
   price: number;
+  productCode: string;
   minimumStock: number;
   description?: string;
   createdAt: string;
@@ -97,11 +98,14 @@ export const InventoryProvider = ({
 
   useEffect(() => {
     const loadInventory = async () => {
-      const response = await axios.get("https://annual-johna-uni2234-7798c123.koyeb.app/pharmacist", {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      });
+      const response = await axios.get(
+        "https://annual-johna-uni2234-7798c123.koyeb.app/pharmacist",
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
       dispatch({ type: "SET_ITEMS", payload: response.data });
     };
     loadInventory();
@@ -139,11 +143,14 @@ export const InventoryProvider = ({
   };
 
   const deleteItem = async (id: string) => {
-    await axios.delete(`https://annual-johna-uni2234-7798c123.koyeb.app/pharmacist/${id}`, {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    });
+    await axios.delete(
+      `https://annual-johna-uni2234-7798c123.koyeb.app/pharmacist/${id}`,
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      }
+    );
     dispatch({ type: "DELETE_ITEM", payload: id });
   };
 
