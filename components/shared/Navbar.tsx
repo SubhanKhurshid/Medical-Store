@@ -6,7 +6,6 @@ import React, { useState } from "react";
 import Image from "next/image";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
-import { ShieldPlus } from "lucide-react";
 import { useAuth } from "@/app/providers/AuthProvider";
 import { Button } from "@/components/ui/button";
 import logo from "@/public/logo.jpg";
@@ -47,6 +46,7 @@ const Navbar = () => {
       { href: "/pharmacist", label: "Dashboard" },
       { href: "/pharmacist/inventory-management", label: "Add Medicine" },
       { href: "/pharmacist/inventory-view", label: "View Inventory" },
+      { href: "/pharmacist/sales", label: "Sales" }, // New Sales page added here
     ],
   };
 
@@ -58,8 +58,6 @@ const Navbar = () => {
         <div className="flex justify-between h-16">
           <div className="flex">
             <Link href={`/${role}`} className="flex-shrink-0 flex items-center">
-              {/* <ShieldPlus className="h-8 w-8 text-emerald-500" />
-              <span className="ml-2 text-xl font-semibold text-gray-900">Ibrahim Medical</span> */}
               <Image src={logo} alt="logo" width={50} height={50} />
             </Link>
           </div>
@@ -99,8 +97,6 @@ const Navbar = () => {
               </SheetTrigger>
               <SheetContent className="w-[300px] sm:w-[400px]">
                 <div className="flex items-center mb-6">
-                  {/* <ShieldPlus className="h-8 w-8 text-emerald-500" />
-                  <span className="ml-2 text-xl font-semibold text-gray-900">Ibrahim Medical</span> */}
                   <Image src={logo} alt="logo" width={50} height={50} />
                 </div>
                 <Separator className="mb-6" />

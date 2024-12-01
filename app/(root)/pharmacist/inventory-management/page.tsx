@@ -31,6 +31,7 @@ const baseSchema = z.object({
   price: z.number().min(0, "Price must be positive"),
   minimumStock: z.number().min(0, "Minimum stock must be positive"),
   description: z.string().optional(),
+  productCode: z.string().min(1, "Product Code is required"),
 });
 
 const medicineSchema = baseSchema.extend({
@@ -77,6 +78,7 @@ export default function InventoryManagement() {
       description: "",
       dosage: "",
       activeIngredient: "",
+
       volume: 0,
       route: "Intramuscular",
       sterilizationMethod: "",
@@ -205,6 +207,7 @@ export default function InventoryManagement() {
                   {...form.register("batchNumber")}
                 />
               </div>
+
               <div>
                 <Label htmlFor="expiryDate">Expiry Date</Label>
                 <Input
