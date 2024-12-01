@@ -73,7 +73,7 @@ const SalesPage = () => {
     const fetchProducts = async () => {
       try {
         const response = await axios.get(
-          "https://annual-johna-uni2234-7798c123.koyeb.app/pharmacist/",
+          "https://annual-johna-uni2234-7798c123.koyeb.app/pharmacist",
           {
             headers: {
               Authorization: `Bearer ${accessToken}`,
