@@ -99,7 +99,7 @@ export const InventoryProvider = ({
   useEffect(() => {
     const loadInventory = async () => {
       const response = await axios.get(
-        "https://annual-johna-uni2234-7798c123.koyeb.app/pharmacist",
+        'https://annual-johna-uni2234-7798c123.koyeb.app/pharmacist', 
         {
           headers: {
             Authorization: `Bearer ${accessToken}`,
@@ -115,7 +115,7 @@ export const InventoryProvider = ({
     item: Omit<InventoryItem, "id" | "createdAt" | "updatedAt">
   ) => {
     const response = await axios.post(
-      "https://annual-johna-uni2234-7798c123.koyeb.app/pharmacist",
+      'https://annual-johna-uni2234-7798c123.koyeb.app/pharmacist',
       item,
       {
         headers: {
