@@ -9,6 +9,7 @@ interface AuthState {
     email: string;
     role: string;
     access_token: string;
+    image: string;
   } | null;
   login: (
     email: string,
@@ -22,7 +23,6 @@ interface AuthState {
   logout: () => void;
 }
 
-// ... existing code ...
 
 export const createAuthStore = () => {
   return createStore<AuthState>()(

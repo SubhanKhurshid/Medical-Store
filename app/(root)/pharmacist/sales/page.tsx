@@ -12,14 +12,21 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Plus, Minus, Printer, Barcode, Search, ShoppingCart } from 'lucide-react';
+import {
+  Plus,
+  Minus,
+  Printer,
+  Barcode,
+  Search,
+  ShoppingCart,
+} from "lucide-react";
 import { toast } from "sonner";
 import axios from "axios";
 import { useAuth } from "@/app/providers/AuthProvider";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface Product {
-  id: number;
+  id: string; // Changed from number to string to match backend
   name: string;
   price: number;
   quantity: number;
@@ -38,33 +45,38 @@ const SalesPage = () => {
   const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
   const [discount, setDiscount] = useState<string>("");
   const [barcodeInput, setBarcodeInput] = useState("");
+  const [isStockErrorOpen, setIsStockErrorOpen] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
   const { user } = useAuth();
   const accessToken = user?.access_token;
+  const [isProcessing, setIsProcessing] = useState(false); // New state for processing
+
+  // Move fetchProducts outside of useEffect to reuse it later
+  const fetchProducts = async () => {
+    try {
+      const response = await axios.get(
+        "https://annual-johna-uni2234-7798c123.koyeb.app/pharmacist",
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+      const fetchedProducts = response.data.map((product: any) => ({
+        ...product,
+        quantity: product.quantity || 0,
+      }));
+      setProducts(fetchedProducts);
+    } catch (error) {
+      console.error("Failed to fetch products", error);
+      toast.error("Failed to fetch products");
+    }
+  };
 
   useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        const response = await axios.get(
-          "https://annual-johna-uni2234-7798c123.koyeb.app/pharmacist",
-          {
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-            },
-          }
-        );
-        const fetchedProducts = response.data.map((product: any) => ({
-          ...product,
-          quantity: product.quantity || 0,
-        }));
-        setProducts(fetchedProducts);
-      } catch (error) {
-        console.error("Failed to fetch products", error);
-        toast.error("Failed to fetch products");
-      }
-    };
-
-    fetchProducts();
+    if (accessToken) {
+      fetchProducts();
+    }
   }, [accessToken]);
 
   useEffect(() => {
@@ -80,9 +92,21 @@ const SalesPage = () => {
   }, [searchTerm, products]);
 
   const addToCart = (product: Product, quantity: number = 1) => {
+    const availableQuantity = products.find((p) => p.id === product.id)?.quantity ?? 0;
+    if (availableQuantity && quantity > availableQuantity) {
+      toast.error("Cannot add more items than are in stock.");
+      setIsStockErrorOpen(true);
+      return;
+    }
+
     setCart((prevCart) => {
       const existingItem = prevCart.find((item) => item.id === product.id);
       if (existingItem) {
+        if (existingItem.quantity + quantity > availableQuantity) {
+          toast.error("Cannot add more items than are in stock.");
+          setIsStockErrorOpen(true);
+          return prevCart;
+        }
         return prevCart.map((item) =>
           item.id === product.id
             ? { ...item, quantity: item.quantity + quantity }
@@ -93,7 +117,7 @@ const SalesPage = () => {
     });
   };
 
-  const removeFromCart = (productId: number) => {
+  const removeFromCart = (productId: string) => { // Changed from number to string
     setCart((prevCart) => {
       const existingItem = prevCart.find((item) => item.id === productId);
       if (existingItem && existingItem.quantity > 1) {
@@ -107,7 +131,13 @@ const SalesPage = () => {
     });
   };
 
-  const updateCartItemQuantity = (productId: number, newQuantity: number) => {
+  const updateCartItemQuantity = (productId: string, newQuantity: number) => { // Changed from number to string
+    const availableQuantity = products.find((p) => p.id === productId)?.quantity ?? 0;
+    if (newQuantity > availableQuantity) {
+      toast.error("Cannot add more items than are in stock.");
+      setIsStockErrorOpen(true);
+      return;
+    }
     setCart((prevCart) =>
       prevCart.map((item) =>
         item.id === productId
@@ -124,6 +154,10 @@ const SalesPage = () => {
   const discountedTotal = totalBill - (parseFloat(discount) || 0);
 
   const handleCheckout = () => {
+    if (cart.length === 0) {
+      toast.error("Your cart is empty.");
+      return;
+    }
     setIsDiscountPromptOpen(true);
   };
 
@@ -137,27 +171,87 @@ const SalesPage = () => {
   };
 
   const handleDiscountSubmit = () => {
+    if (isNaN(parseFloat(discount)) || parseFloat(discount) < 0) {
+      toast.error("Please enter a valid discount amount.");
+      return;
+    }
     setIsDiscountInputOpen(false);
     setIsReceiptModalOpen(true);
   };
 
   const handlePrint = async () => {
-    toast.success(`Total Amount: Rs ${discountedTotal.toFixed(2)}`);
-    // Existing functionality remains unchanged
+    setIsProcessing(true);
+    try {
+      // Prepare sale data
+      const saleData = {
+        customerName: "", // Optionally, prompt the user to enter these details
+        customerPhone: "",
+        saleItems: cart.map((item) => ({
+          inventoryItemId: item.id,
+          quantity: item.quantity,
+          salePrice: item.price,
+        })),
+        discount: parseFloat(discount) || 0,
+      };
+
+      // Send POST request to create sale
+      const response = await axios.post(
+        "http://localhost:3001/pharmacist/sales", // Replace with your actual API endpoint
+        saleData,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+
+      if (response.status === 201 || response.status === 200) {
+        toast.success("Sale recorded successfully!");
+
+        // Reset the cart
+        setCart([]);
+        setDiscount("");
+
+        // Close the receipt modal
+        setIsReceiptModalOpen(false);
+
+        // Fetch updated products to reflect new quantities
+        await fetchProducts();
+
+        // Proceed to print the receipt
+        window.print();
+      } else {
+        toast.error("Failed to record sale.");
+      }
+    } catch (error: any) {
+      console.error("Failed to record sale", error);
+      if (error.response && error.response.data && error.response.data.message) {
+        toast.error(`Error: ${error.response.data.message}`);
+      } else {
+        toast.error("Failed to record sale.");
+      }
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900">
       <div className="container mx-auto p-6">
-        <h1 className="text-4xl font-bold mb-8 text-[#059769]">Sales Dashboard</h1>
+        <h1 className="text-4xl font-bold mb-8 text-red-700 tracking-tighter">
+          Sales Dashboard
+        </h1>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Product Search Section */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
             className="bg-white p-6 rounded-lg shadow-lg"
           >
-            <h2 className="text-2xl font-semibold mb-6 text-[#059769]">Product Search</h2>
+            <h2 className="text-2xl font-semibold mb-6 text-red-700 tracking-tighter">
+              Product Search
+            </h2>
             <div className="flex gap-4 mb-6">
               <div className="relative flex-grow">
                 <Input
@@ -165,9 +259,9 @@ const SalesPage = () => {
                   placeholder="Search product by name or code"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 border-[#059769] focus:ring-[#059769]"
+                  className="pl-10 border-red-800 focus:ring-red-800"
                 />
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#059769]" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-red-800" />
               </div>
               <div className="relative">
                 <Input
@@ -175,9 +269,9 @@ const SalesPage = () => {
                   placeholder="Scan barcode"
                   value={barcodeInput}
                   onChange={(e) => setBarcodeInput(e.target.value)}
-                  className="pl-10 border-[#059769] focus:ring-[#059769]"
+                  className="pl-10 border-red-800 focus:ring-red-800"
                 />
-                <Barcode className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#059769]" />
+                <Barcode className="absolute left-3 top-1/2 transform -translate-y-1/2 text-red-800" />
               </div>
             </div>
             <div className="space-y-4 max-h-[calc(100vh-300px)] overflow-y-auto">
@@ -193,11 +287,20 @@ const SalesPage = () => {
                     <Card className="hover:shadow-lg transition-shadow duration-200">
                       <CardContent className="flex justify-between items-center p-4">
                         <div>
-                          <h3 className="font-semibold text-gray-800">{product.name}</h3>
-                          <p className="text-sm text-gray-600">Price: Rs {product.price}</p>
-                          <p className="text-sm text-gray-600">Quantity: {product.quantity}</p>
+                          <h3 className="font-semibold text-gray-800">
+                            {product.name}
+                          </h3>
+                          <p className="text-sm text-gray-600">
+                            Price: Rs {product.price}
+                          </p>
+                          <p className="text-sm text-gray-600">
+                            Quantity: {product.quantity}
+                          </p>
                         </div>
-                        <Button onClick={() => addToCart(product)} className="bg-[#059769] hover:bg-[#048257] transition-colors duration-200">
+                        <Button
+                          onClick={() => addToCart(product)}
+                          className="bg-red-800 hover:bg-red-800/80 transition-colors duration-200"
+                        >
                           <Plus className="h-4 w-4" />
                         </Button>
                       </CardContent>
@@ -207,13 +310,15 @@ const SalesPage = () => {
               </AnimatePresence>
             </div>
           </motion.div>
+
+          {/* Cart Section */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
             className="bg-white p-6 rounded-lg shadow-lg"
           >
-            <h2 className="text-2xl font-semibold mb-6 text-[#059769] flex items-center">
+            <h2 className="text-2xl font-semibold mb-6 text-red-700 flex items-center">
               <ShoppingCart className="mr-2" /> Cart
             </h2>
             <div className="space-y-4 max-h-[calc(100vh-400px)] overflow-y-auto mb-4">
@@ -229,22 +334,41 @@ const SalesPage = () => {
                     <Card className="hover:shadow-lg transition-shadow duration-200">
                       <CardContent className="flex justify-between items-center p-4">
                         <div>
-                          <h3 className="font-semibold text-gray-800">{item.name}</h3>
-                          <p className="text-sm text-gray-600">Price: Rs {item.price} each</p>
-                          <p className="text-sm text-gray-600">Total: Rs {(item.price * item.quantity).toFixed(2)}</p>
+                          <h3 className="font-semibold text-gray-800">
+                            {item.name}
+                          </h3>
+                          <p className="text-sm text-gray-600">
+                            Price: Rs {item.price} each
+                          </p>
+                          <p className="text-sm text-gray-600">
+                            Total: Rs {(item.price * item.quantity).toFixed(2)}
+                          </p>
                         </div>
                         <div className="flex items-center space-x-2">
-                          <Button size="icon" onClick={() => removeFromCart(item.id)} className="bg-red-500 hover:bg-red-600 transition-colors duration-200">
+                          <Button
+                            size="icon"
+                            onClick={() => removeFromCart(item.id)}
+                            className="bg-red-500 hover:bg-red-600 transition-colors duration-200"
+                          >
                             <Minus className="h-4 w-4" />
                           </Button>
                           <Input
                             type="number"
                             value={item.quantity}
-                            onChange={(e) => updateCartItemQuantity(item.id, parseInt(e.target.value))}
-                            className="w-16 text-center border-[#059769] focus:ring-[#059769]"
+                            onChange={(e) =>
+                              updateCartItemQuantity(
+                                item.id,
+                                parseInt(e.target.value)
+                              )
+                            }
+                            className="w-16 text-center border-red-800 focus:ring-red-800"
                             min="1"
                           />
-                          <Button size="icon" onClick={() => addToCart(item)} className="bg-[#059769] hover:bg-[#048257] transition-colors duration-200">
+                          <Button
+                            size="icon"
+                            onClick={() => addToCart(item)}
+                            className="bg-red-800 hover:bg-red-800/80 transition-colors duration-200"
+                          >
                             <Plus className="h-4 w-4" />
                           </Button>
                         </div>
@@ -260,8 +384,13 @@ const SalesPage = () => {
               transition={{ duration: 0.5, delay: 0.4 }}
               className="mt-6 bg-gray-100 p-4 rounded-lg"
             >
-              <p className="text-xl font-semibold text-[#059769]">Total: Rs {totalBill.toFixed(2)}</p>
-              <Button onClick={handleCheckout} className="mt-4 w-full bg-[#059769] hover:bg-[#048257] transition-colors duration-200">
+              <p className="text-xl font-semibold text-red-800">
+                Total: Rs {totalBill.toFixed(2)}
+              </p>
+              <Button
+                onClick={handleCheckout}
+                className="mt-4 w-full bg-red-800 hover:bg-red-800/80 transition-colors duration-200"
+              >
                 Proceed to Checkout
               </Button>
             </motion.div>
@@ -269,25 +398,67 @@ const SalesPage = () => {
         </div>
       </div>
 
-      <Dialog open={isDiscountPromptOpen} onOpenChange={setIsDiscountPromptOpen}>
+      {/* Stock Error Dialog */}
+      <Dialog open={isStockErrorOpen} onOpenChange={setIsStockErrorOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle className="text-[#059769]">Apply Discount?</DialogTitle>
+            <DialogTitle className="text-red-800">
+              Stock Limit Exceeded
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p>You cannot add more items than are available in stock.</p>
+          </div>
+          <DialogFooter>
+            <Button
+              onClick={() => setIsStockErrorOpen(false)}
+              className="bg-red-800 hover:bg-red-800/80"
+            >
+              OK
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Discount Prompt Dialog */}
+      <Dialog
+        open={isDiscountPromptOpen}
+        onOpenChange={setIsDiscountPromptOpen}
+      >
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle className="text-red-800">Apply Discount?</DialogTitle>
           </DialogHeader>
           <div className="py-4">
             <p>Would you like to apply a discount to this purchase?</p>
           </div>
           <DialogFooter>
-            <Button onClick={() => handleDiscountPromptResponse(false)} variant="outline">No Discount</Button>
-            <Button onClick={() => handleDiscountPromptResponse(true)} className="bg-[#059769] hover:bg-[#048257]">Apply Discount</Button>
+            <Button
+              onClick={() => handleDiscountPromptResponse(false)}
+              variant="outline"
+            >
+              No Discount
+            </Button>
+            <Button
+              onClick={() => handleDiscountPromptResponse(true)}
+              className="bg-red-800 hover:bg-red-800/80"
+            >
+              Apply Discount
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      <Dialog open={isDiscountInputOpen} onOpenChange={setIsDiscountInputOpen}>
+      {/* Discount Input Dialog */}
+      <Dialog
+        open={isDiscountInputOpen}
+        onOpenChange={setIsDiscountInputOpen}
+      >
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle className="text-[#059769]">Enter Discount Amount</DialogTitle>
+            <DialogTitle className="text-red-800">
+              Enter Discount Amount
+            </DialogTitle>
           </DialogHeader>
           <div className="py-4">
             <Label htmlFor="discount">Discount Amount (Rs)</Label>
@@ -297,27 +468,42 @@ const SalesPage = () => {
               value={discount}
               onChange={(e) => setDiscount(e.target.value)}
               placeholder="Enter discount amount"
-              className="border-[#059769] focus:ring-[#059769]"
+              className="border-red-800 focus:ring-red-800"
+              min="0"
             />
           </div>
           <DialogFooter>
-            <Button onClick={handleDiscountSubmit} className="bg-[#059769] hover:bg-[#048257]">Apply Discount</Button>
+            <Button
+              onClick={handleDiscountSubmit}
+              className="bg-red-800 hover:bg-red-800/80"
+            >
+              Apply Discount
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      <Dialog open={isReceiptModalOpen} onOpenChange={setIsReceiptModalOpen}>
+      {/* Receipt Modal Dialog */}
+      <Dialog
+        open={isReceiptModalOpen}
+        onOpenChange={setIsReceiptModalOpen}
+      >
         <DialogContent className="sm:max-w-[550px]">
           <DialogHeader>
-            <DialogTitle className="text-[#059769]">Receipt</DialogTitle>
+            <DialogTitle className="text-red-800">Receipt</DialogTitle>
           </DialogHeader>
           <div className="py-4">
             <div className="space-y-4">
               {cart.map((item) => (
-                <div key={item.id} className="flex justify-between items-center">
+                <div
+                  key={item.id}
+                  className="flex justify-between items-center"
+                >
                   <div>
                     <p className="font-semibold">{item.name}</p>
-                    <p className="text-sm text-gray-500">{item.quantity} x Rs {item.price.toFixed(2)}</p>
+                    <p className="text-sm text-gray-500">
+                      {item.quantity} x Rs {item.price.toFixed(2)}
+                    </p>
                   </div>
                   <p>Rs {(item.price * item.quantity).toFixed(2)}</p>
                 </div>
@@ -328,7 +514,7 @@ const SalesPage = () => {
                   <p>Rs {totalBill.toFixed(2)}</p>
                 </div>
                 {parseFloat(discount) > 0 && (
-                  <div className="flex justify-between text-[#059769]">
+                  <div className="flex justify-between text-red-800">
                     <p>Discount:</p>
                     <p>-Rs {parseFloat(discount).toFixed(2)}</p>
                   </div>
@@ -341,9 +527,19 @@ const SalesPage = () => {
             </div>
           </div>
           <DialogFooter>
-            <Button onClick={() => setIsReceiptModalOpen(false)} variant="outline">Close</Button>
-            <Button onClick={handlePrint} className="bg-[#059769] hover:bg-[#048257] transition-colors duration-200">
-              <Printer className="mr-2 h-4 w-4" /> Print Bill
+            <Button
+              onClick={() => setIsReceiptModalOpen(false)}
+              variant="outline"
+            >
+              Close
+            </Button>
+            <Button
+              onClick={handlePrint}
+              className="bg-red-800 hover:bg-red-800/80 transition-colors duration-200"
+              disabled={isProcessing} // Disable button while processing
+            >
+              <Printer className="mr-2 h-4 w-4" /> 
+              {isProcessing ? "Processing..." : "Print Bill"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -353,4 +549,3 @@ const SalesPage = () => {
 };
 
 export default SalesPage;
-

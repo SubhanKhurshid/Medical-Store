@@ -141,18 +141,18 @@ export default function InventoryManagement() {
 
   return (
     <div className="p-4 md:p-8 max-w-4xl mx-auto min-h-screen">
-      <motion.h1
-        className="text-3xl md:text-4xl font-bold text-[#059669] mb-6 md:mb-8 text-center"
+      {/* <motion.h1
+        className="text-3xl md:text-4xl font-bold text-red-800 mb-6 md:mb-8 text-center"
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
         Inventory Management
-      </motion.h1>
+      </motion.h1> */}
 
       <Card className="backdrop-blur-lg bg-card/50">
         <CardHeader>
-          <CardTitle className="text-2xl text-[#059669]">
+          <CardTitle className="text-2xl text-red-800">
             Add New Item
           </CardTitle>
         </CardHeader>
@@ -364,7 +364,7 @@ export default function InventoryManagement() {
                   <div className="flex text-sm text-muted-foreground">
                     <label
                       htmlFor="image"
-                      className="relative cursor-pointer rounded-md font-medium text-[#059669] hover:text-[#059669]/80"
+                      className="relative cursor-pointer rounded-md font-medium text-red-800 hover:text-red-800/80"
                     >
                       <span>Upload a file</span>
                       <Input
@@ -387,7 +387,7 @@ export default function InventoryManagement() {
 
             <Button
               type="submit"
-              className="w-full bg-[#059669] hover:bg-[#059669] hover:opacity-80"
+              className="w-full bg-red-800 hover:bg-red-800/80"
             >
               Add{" "}
               {itemType === "MEDICINE"

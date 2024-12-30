@@ -29,7 +29,7 @@ const Footer = () => {
   return (
     <div className="mt-10">
       <motion.footer
-        className="w-full py-8 bg-emerald-800 text-white"
+        className="w-full py-8 bg-red-800 text-white"
         variants={containerVariants}
       >
         <div className="container px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center">
