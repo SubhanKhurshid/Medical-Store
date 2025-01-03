@@ -69,14 +69,14 @@ const PatientDetailsSearch = () => {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="min-h-screen  py-12"
+      className="min-h-screen py-12"
     >
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <motion.h1
           initial={{ y: -50, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.5 }}
-          className="text-4xl font-bold text-center text-emerald-700 mb-8"
+          className="text-4xl font-bold text-center text-red-700 mb-8"
         >
           Search Patients
         </motion.h1>
@@ -90,11 +90,11 @@ const PatientDetailsSearch = () => {
             placeholder="Enter CNIC to search"
             value={searchTerm}
             onChange={handleSearchChange}
-            className="w-full rounded-md border-emerald-200 focus:border-emerald-500 focus:ring-emerald-500 text-lg pl-10"
+            className="w-full rounded-md border-red-200 focus:border-red-500 focus:ring-red-500 text-lg pl-10"
           />
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-emerald-500" />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-red-500" />
         </motion.div>
-
+  
         <AnimatePresence>
           {loading && (
             <motion.div
@@ -104,7 +104,7 @@ const PatientDetailsSearch = () => {
               className="flex justify-center mb-8"
             >
               <svg
-                className="animate-spin h-10 w-10 text-emerald-500"
+                className="animate-spin h-10 w-10 text-red-500"
                 xmlns="http://www.w3.org/2000/svg"
                 fill="none"
                 viewBox="0 0 24 24"
@@ -118,7 +118,7 @@ const PatientDetailsSearch = () => {
               </svg>
             </motion.div>
           )}
-
+  
           {!loading && results.length > 0 && (
             <motion.ul
               initial={{ opacity: 0 }}
@@ -145,7 +145,7 @@ const PatientDetailsSearch = () => {
                       <p className="mt-1 max-w-2xl text-sm text-gray-500">
                         Age: {patient.age}
                       </p>
-
+  
                     </div>
                     <div className="flex flex-col items-center justify-center gap-3 md:flex-row md:gap-4">
                       <Button onClick={() => handleRecords(patient.id)} className="w-full md:w-auto px-6 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200">
@@ -153,18 +153,18 @@ const PatientDetailsSearch = () => {
                       </Button>
                       <button
                         onClick={() => handleEditPatient(patient.id)}
-                        className="w-full md:w-auto px-6 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-all duration-200"
+                        className="w-full md:w-auto px-6 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-all duration-200"
                       >
                         Edit
                       </button>
                     </div>
-
+  
                   </div>
                 </motion.li>
               ))}
             </motion.ul>
           )}
-
+  
           {!loading && results.length === 0 && searchTerm && (
             <motion.div
               initial={{ opacity: 0 }}
@@ -179,6 +179,7 @@ const PatientDetailsSearch = () => {
       </div>
     </motion.div>
   )
+  
 }
 
 export default PatientDetailsSearch

@@ -24,6 +24,7 @@ import { toast } from "sonner";
 import axios from "axios";
 import { useAuth } from "@/app/providers/AuthProvider";
 import { motion, AnimatePresence } from "framer-motion";
+import { Receipt } from "@/components/Receipt";
 
 interface Product {
   id: string; // Changed from number to string to match backend
@@ -92,7 +93,8 @@ const SalesPage = () => {
   }, [searchTerm, products]);
 
   const addToCart = (product: Product, quantity: number = 1) => {
-    const availableQuantity = products.find((p) => p.id === product.id)?.quantity ?? 0;
+    const availableQuantity =
+      products.find((p) => p.id === product.id)?.quantity ?? 0;
     if (availableQuantity && quantity > availableQuantity) {
       toast.error("Cannot add more items than are in stock.");
       setIsStockErrorOpen(true);
@@ -117,7 +119,8 @@ const SalesPage = () => {
     });
   };
 
-  const removeFromCart = (productId: string) => { // Changed from number to string
+  const removeFromCart = (productId: string) => {
+    // Changed from number to string
     setCart((prevCart) => {
       const existingItem = prevCart.find((item) => item.id === productId);
       if (existingItem && existingItem.quantity > 1) {
@@ -131,8 +134,10 @@ const SalesPage = () => {
     });
   };
 
-  const updateCartItemQuantity = (productId: string, newQuantity: number) => { // Changed from number to string
-    const availableQuantity = products.find((p) => p.id === productId)?.quantity ?? 0;
+  const updateCartItemQuantity = (productId: string, newQuantity: number) => {
+    // Changed from number to string
+    const availableQuantity =
+      products.find((p) => p.id === productId)?.quantity ?? 0;
     if (newQuantity > availableQuantity) {
       toast.error("Cannot add more items than are in stock.");
       setIsStockErrorOpen(true);
@@ -178,13 +183,37 @@ const SalesPage = () => {
     setIsDiscountInputOpen(false);
     setIsReceiptModalOpen(true);
   };
+  <style jsx global>{`
+    @media print {
+      @page {
+        size: 80mm 297mm;
+        margin: 0;
+      }
+      body * {
+        visibility: hidden !important;
+      }
+      .receipt,
+      .receipt * {
+        visibility: visible !important;
+      }
+      .receipt {
+        position: absolute !important;
+        left: 0 !important;
+        top: 0 !important;
+        width: 100% !important;
+      }
+      .print\\:hidden {
+        display: none !important;
+      }
+    }
+  `}</style>;
 
   const handlePrint = async () => {
     setIsProcessing(true);
     try {
       // Prepare sale data
       const saleData = {
-        customerName: "", // Optionally, prompt the user to enter these details
+        customerName: "",
         customerPhone: "",
         saleItems: cart.map((item) => ({
           inventoryItemId: item.id,
@@ -196,7 +225,7 @@ const SalesPage = () => {
 
       // Send POST request to create sale
       const response = await axios.post(
-        "http://localhost:3001/pharmacist/sales", // Replace with your actual API endpoint
+        "http://localhost:3001/pharmacist/sales",
         saleData,
         {
           headers: {
@@ -208,24 +237,22 @@ const SalesPage = () => {
       if (response.status === 201 || response.status === 200) {
         toast.success("Sale recorded successfully!");
 
-        // Reset the cart
-        setCart([]);
-        setDiscount("");
+        // Use setTimeout to ensure the receipt is rendered before printing
+        setTimeout(() => {
+          window.print();
 
-        // Close the receipt modal
-        setIsReceiptModalOpen(false);
-
-        // Fetch updated products to reflect new quantities
-        await fetchProducts();
-
-        // Proceed to print the receipt
-        window.print();
+          // Reset the cart and close modal after printing
+          setCart([]);
+          setDiscount("");
+          setIsReceiptModalOpen(false);
+          fetchProducts(); // Refresh product list
+        }, 100);
       } else {
         toast.error("Failed to record sale.");
       }
     } catch (error: any) {
       console.error("Failed to record sale", error);
-      if (error.response && error.response.data && error.response.data.message) {
+      if (error.response?.data?.message) {
         toast.error(`Error: ${error.response.data.message}`);
       } else {
         toast.error("Failed to record sale.");
@@ -234,13 +261,21 @@ const SalesPage = () => {
       setIsProcessing(false);
     }
   };
-
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-900">
+    <div className="min-h-screen bg-gray-50 text-gray-900 print-receipt">
       <div className="container mx-auto p-6">
-        <h1 className="text-4xl font-bold mb-8 text-red-700 tracking-tighter">
-          Sales Dashboard
-        </h1>
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-4xl font-bold text-red-700 tracking-tighter">
+            Sales Dashboard
+          </h1>
+          <Button
+            onClick={() => setIsReceiptModalOpen(true)}
+            className="bg-red-800 hover:bg-red-800/80"
+          >
+            <Printer className="mr-2 h-4 w-4" />
+            Print Receipt
+          </Button>
+        </div>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Product Search Section */}
           <motion.div
@@ -450,10 +485,7 @@ const SalesPage = () => {
       </Dialog>
 
       {/* Discount Input Dialog */}
-      <Dialog
-        open={isDiscountInputOpen}
-        onOpenChange={setIsDiscountInputOpen}
-      >
+      <Dialog open={isDiscountInputOpen} onOpenChange={setIsDiscountInputOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle className="text-red-800">
@@ -484,49 +516,20 @@ const SalesPage = () => {
       </Dialog>
 
       {/* Receipt Modal Dialog */}
-      <Dialog
-        open={isReceiptModalOpen}
-        onOpenChange={setIsReceiptModalOpen}
-      >
-        <DialogContent className="sm:max-w-[550px]">
-          <DialogHeader>
+      <Dialog open={isReceiptModalOpen} onOpenChange={setIsReceiptModalOpen}>
+        <DialogContent className="sm:max-w-[350px] p-0">
+          <DialogHeader className="px-6 pt-6 print:hidden">
             <DialogTitle className="text-red-800">Receipt</DialogTitle>
           </DialogHeader>
-          <div className="py-4">
-            <div className="space-y-4">
-              {cart.map((item) => (
-                <div
-                  key={item.id}
-                  className="flex justify-between items-center"
-                >
-                  <div>
-                    <p className="font-semibold">{item.name}</p>
-                    <p className="text-sm text-gray-500">
-                      {item.quantity} x Rs {item.price.toFixed(2)}
-                    </p>
-                  </div>
-                  <p>Rs {(item.price * item.quantity).toFixed(2)}</p>
-                </div>
-              ))}
-              <div className="border-t pt-2">
-                <div className="flex justify-between">
-                  <p>Subtotal:</p>
-                  <p>Rs {totalBill.toFixed(2)}</p>
-                </div>
-                {parseFloat(discount) > 0 && (
-                  <div className="flex justify-between text-red-800">
-                    <p>Discount:</p>
-                    <p>-Rs {parseFloat(discount).toFixed(2)}</p>
-                  </div>
-                )}
-                <div className="flex justify-between font-bold text-lg mt-2">
-                  <p>Total:</p>
-                  <p>Rs {discountedTotal.toFixed(2)}</p>
-                </div>
-              </div>
-            </div>
+          <div className="p-6 print:p-0 print-content">
+            <Receipt
+              cart={cart}
+              discount={discount}
+              totalBill={totalBill}
+              discountedTotal={discountedTotal}
+            />
           </div>
-          <DialogFooter>
+          <DialogFooter className="px-6 pb-6 print:hidden">
             <Button
               onClick={() => setIsReceiptModalOpen(false)}
               variant="outline"
@@ -535,17 +538,78 @@ const SalesPage = () => {
             </Button>
             <Button
               onClick={handlePrint}
-              className="bg-red-800 hover:bg-red-800/80 transition-colors duration-200"
-              disabled={isProcessing} // Disable button while processing
+              className="bg-red-800 hover:bg-red-800/80"
+              disabled={isProcessing}
             >
-              <Printer className="mr-2 h-4 w-4" /> 
+              <Printer className="mr-2 h-4 w-4" />
               {isProcessing ? "Processing..." : "Print Bill"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <style jsx global>{`
+        @media print {
+          @page {
+            size: 80mm auto;
+            margin: 0;
+          }
+
+          /* Hide everything initially */
+          body > *:not(.print-content) {
+            display: none !important;
+          }
+
+          /* Show and position the receipt content */
+          .print-content {
+            display: block !important;
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 80mm !important;
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+
+          /* Hide dialog elements */
+          .print\\:hidden {
+            display: none !important;
+          }
+
+          /* Reset background colors */
+          * {
+            background-color: white !important;
+            -webkit-print-color-adjust: exact !important;
+            color-adjust: exact !important;
+          }
+
+          /* Dialog specific print styles */
+          [role="dialog"] {
+            position: absolute !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            border: 0 !important;
+            background: none !important;
+            box-shadow: none !important;
+          }
+        }
+      `}</style>
     </div>
   );
 };
 
 export default SalesPage;
+
+<style jsx>{`
+  @media print {
+    body > *:not(.print-receipt) {
+      display: none;
+    }
+    .print-receipt {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+    }
+  }
+`}</style>;

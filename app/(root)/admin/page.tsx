@@ -43,7 +43,7 @@ const AdminPage = () => {
       initial="hidden"
       animate="visible"
       variants={containerVariants}
-      className="min-h-screen bg-gradient-to-b from-emerald-50 to-white py-12 px-4 sm:px-6 lg:px-8"
+      className="min-h-screen  py-12 px-4 sm:px-6 lg:px-8"
     >
       <div className="max-w-4xl mx-auto">
         <motion.div
@@ -51,7 +51,7 @@ const AdminPage = () => {
           variants={itemVariants}
         >
           <motion.h1
-            className="text-4xl sm:text-5xl md:text-6xl font-bold text-emerald-700 mb-4"
+            className="text-4xl sm:text-5xl md:text-6xl font-bold text-red-700 mb-4"
             initial={{ opacity: 0, y: -50 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
@@ -59,20 +59,20 @@ const AdminPage = () => {
             Welcome to N.S Ibrahim Medical
           </motion.h1>
           <motion.p
-            className="text-xl text-emerald-600 mb-12"
+            className="text-xl text-red-600 mb-12"
             variants={itemVariants}
           >
             Select the operation you want to perform
           </motion.p>
         </motion.div>
-
+  
         <motion.div
           className="grid grid-cols-1 sm:grid-cols-2 gap-6"
           variants={containerVariants}
         >
           <motion.div variants={itemVariants}>
             <Link href="/admin/add-operations" passHref>
-              <Button className="w-full h-40 text-xl font-semibold bg-emerald-600 hover:bg-emerald-700 text-white transition-all duration-300 ease-in-out transform hover:scale-105 hover:shadow-lg rounded-xl flex flex-col items-center justify-center space-y-4">
+              <Button className="w-full h-40 text-xl font-semibold bg-red-600 hover:bg-red-700 text-white transition-all duration-300 ease-in-out transform hover:scale-105 hover:shadow-lg rounded-xl flex flex-col items-center justify-center space-y-4">
                 <PlusCircle className="h-12 w-12" />
                 <span>Add Operations</span>
               </Button>
@@ -80,7 +80,7 @@ const AdminPage = () => {
           </motion.div>
           <motion.div variants={itemVariants}>
             <Link href="/admin/view-operations" passHref>
-              <Button className="w-full h-40 text-xl font-semibold bg-emerald-600 hover:bg-emerald-700 text-white transition-all duration-300 ease-in-out transform hover:scale-105 hover:shadow-lg rounded-xl flex flex-col items-center justify-center space-y-4">
+              <Button className="w-full h-40 text-xl font-semibold bg-red-600 hover:bg-red-700 text-white transition-all duration-300 ease-in-out transform hover:scale-105 hover:shadow-lg rounded-xl flex flex-col items-center justify-center space-y-4">
                 <Eye className="h-12 w-12" />
                 <span>View Operations</span>
               </Button>
@@ -90,6 +90,7 @@ const AdminPage = () => {
       </div>
     </motion.div>
   );
+  
 };
 
 export default AdminPage;

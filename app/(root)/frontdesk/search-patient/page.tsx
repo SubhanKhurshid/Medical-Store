@@ -93,7 +93,7 @@ const SearchPage = () => {
           initial={{ y: -50, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.5 }}
-          className="text-4xl font-bold text-center text-emerald-700 mb-8"
+          className="text-4xl font-bold text-center text-red-700 mb-8"
         >
           Search Patients
         </motion.h1>
@@ -107,9 +107,9 @@ const SearchPage = () => {
             placeholder="Enter CNIC to search"
             value={searchTerm}
             onChange={handleSearchChange}
-            className="w-full rounded-md border-emerald-200 focus:border-emerald-500 focus:ring-emerald-500 text-lg pl-10"
+            className="w-full rounded-md border-red-200 focus:border-red-500 focus:ring-red-500 text-lg pl-10"
           />
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-emerald-500" />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-red-500" />
         </motion.div>
         <AnimatePresence>
           {loading && (
@@ -120,7 +120,7 @@ const SearchPage = () => {
               className="flex justify-center mb-8"
             >
               <svg
-                className="animate-spin h-10 w-10 text-emerald-500"
+                className="animate-spin h-10 w-10 text-red-500"
                 xmlns="http://www.w3.org/2000/svg"
                 fill="none"
                 viewBox="0 0 24 24"
@@ -155,7 +155,7 @@ const SearchPage = () => {
                     <CardContent className="p-6">
                       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                         <div>
-                          <h2 className="text-xl font-semibold text-emerald-700">{patient.name}</h2>
+                          <h2 className="text-xl font-semibold text-red-700">{patient.name}</h2>
                           <p className="text-sm text-gray-500">
                             CNIC: {patient.cnic || (patient.relation.length > 0 ? patient.relation[0].relationCNIC : "No CNIC available")}
                           </p>
@@ -165,7 +165,7 @@ const SearchPage = () => {
                         </div>
                         <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                           <Button
-                            className="bg-emerald-500 hover:bg-emerald-600 text-white transition-colors duration-300"
+                            className="bg-red-500 hover:bg-red-600 text-white transition-colors duration-300"
                             onClick={() => handleViewPatient(patient.id)}
                           >
                             <Eye className="mr-2 h-4 w-4" /> View
@@ -194,6 +194,7 @@ const SearchPage = () => {
       </div>
     </motion.div>
   )
+  
 }
 
 export default SearchPage

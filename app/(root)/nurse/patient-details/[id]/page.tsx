@@ -87,11 +87,11 @@ const NurseEditingPage = () => {
   return (
     <Card className="w-full max-w-4xl mx-auto mt-10 bg-white shadow-xl rounded-xl">
       <CardHeader>
-        <CardTitle className="text-3xl font-bold text-center text-emerald-600">
+        <CardTitle className="text-3xl font-bold text-center text-red-600">
           Enter Patient's Additional Details
         </CardTitle>
       </CardHeader>
-
+  
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -108,14 +108,14 @@ const NurseEditingPage = () => {
                         type="number"
                         placeholder="Weight"
                         {...field}
-                        className="rounded-md border-emerald-200 focus:border-emerald-500 focus:ring-emerald-500"
+                        className="rounded-md border-red-200 focus:border-red-500 focus:ring-red-500"
                       />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-
+  
               {/* Sugar Level Input */}
               <FormField
                 control={form.control}
@@ -128,7 +128,7 @@ const NurseEditingPage = () => {
                         type="number"
                         placeholder="Sugar Level"
                         {...field}
-                        className="rounded-md border-emerald-200 focus:border-emerald-500 focus:ring-emerald-500"
+                        className="rounded-md border-red-200 focus:border-red-500 focus:ring-red-500"
                       />
                     </FormControl>
                     <FormMessage />
@@ -136,7 +136,7 @@ const NurseEditingPage = () => {
                 )}
               />
             </div>
-
+  
             {/* Temperature and Height Inputs */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <FormField
@@ -150,14 +150,14 @@ const NurseEditingPage = () => {
                         type="number"
                         placeholder="Temperature"
                         {...field}
-                        className="rounded-md border-emerald-200 focus:border-emerald-500 focus:ring-emerald-500"
+                        className="rounded-md border-red-200 focus:border-red-500 focus:ring-red-500"
                       />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-
+  
               <FormField
                 control={form.control}
                 name="height"
@@ -169,7 +169,7 @@ const NurseEditingPage = () => {
                         type="number"
                         placeholder="Height"
                         {...field}
-                        className="rounded-md border-emerald-200 focus:border-emerald-500 focus:ring-emerald-500"
+                        className="rounded-md border-red-200 focus:border-red-500 focus:ring-red-500"
                       />
                     </FormControl>
                     <FormMessage />
@@ -177,7 +177,7 @@ const NurseEditingPage = () => {
                 )}
               />
             </div>
-
+  
             {/* Blood Pressure Input */}
             <FormField
               control={form.control}
@@ -190,14 +190,14 @@ const NurseEditingPage = () => {
                       type="text"
                       placeholder="Blood Pressure"
                       {...field}
-                      className="rounded-md border-emerald-200 focus:border-emerald-500 focus:ring-emerald-500"
+                      className="rounded-md border-red-200 focus:border-red-500 focus:ring-red-500"
                     />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-
+  
             {/* Injection Input */}
             <FormField
               control={form.control}
@@ -210,14 +210,14 @@ const NurseEditingPage = () => {
                       type="text"
                       placeholder="Injection"
                       {...field}
-                      className="rounded-md border-emerald-200 focus:border-emerald-500 focus:ring-emerald-500"
+                      className="rounded-md border-red-200 focus:border-red-500 focus:ring-red-500"
                     />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-
+  
             {/* Time of Injection Input */}
             <FormField
               control={form.control}
@@ -229,14 +229,14 @@ const NurseEditingPage = () => {
                     <Input
                       type="time"
                       {...field}
-                      className="rounded-md border-emerald-200 focus:border-emerald-500 focus:ring-emerald-500"
+                      className="rounded-md border-red-200 focus:border-red-500 focus:ring-red-500"
                     />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-
+  
             {/* Bed Number Input */}
             <FormField
               control={form.control}
@@ -249,14 +249,14 @@ const NurseEditingPage = () => {
                       type="text"
                       placeholder="Bed Number"
                       {...field}
-                      className="rounded-md border-emerald-200 focus:border-emerald-500 focus:ring-emerald-500"
+                      className="rounded-md border-red-200 focus:border-red-500 focus:ring-red-500"
                     />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-
+  
             {/* Medicine Input */}
             <FormField
               control={form.control}
@@ -269,14 +269,14 @@ const NurseEditingPage = () => {
                       type="text"
                       placeholder="Medicine"
                       {...field}
-                      className="rounded-md border-emerald-200 focus:border-emerald-500 focus:ring-emerald-500"
+                      className="rounded-md border-red-200 focus:border-red-500 focus:ring-red-500"
                     />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-
+  
             {/* Time of Medicine Input */}
             <FormField
               control={form.control}
@@ -288,14 +288,14 @@ const NurseEditingPage = () => {
                     <Input
                       type="time"
                       {...field}
-                      className="rounded-md border-emerald-200 focus:border-emerald-500 focus:ring-emerald-500"
+                      className="rounded-md border-red-200 focus:border-red-500 focus:ring-red-500"
                     />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-
+  
             {/* Drip Input */}
             <FormField
               control={form.control}
@@ -308,14 +308,14 @@ const NurseEditingPage = () => {
                       type="text"
                       placeholder="Drip"
                       {...field}
-                      className="rounded-md border-emerald-200 focus:border-emerald-500 focus:ring-emerald-500"
+                      className="rounded-md border-red-200 focus:border-red-500 focus:ring-red-500"
                     />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-
+  
             {/* Expiry of Drip Input */}
             <FormField
               control={form.control}
@@ -327,25 +327,25 @@ const NurseEditingPage = () => {
                     <Input
                       type="date"
                       {...field}
-                      className="rounded-md border-emerald-200 focus:border-emerald-500 focus:ring-emerald-500"
+                      className="rounded-md border-red-200 focus:border-red-500 focus:ring-red-500"
                     />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
+  
             <CardFooter>
-              <Button type="submit" className="w-full bg-emerald-600 text-white">
+              <Button type="submit" className="w-full bg-red-600 text-white">
                 Submit
               </Button>
             </CardFooter>
           </form>
         </Form>
       </CardContent>
-
-
     </Card>
   );
+  
 };
 
 export default NurseEditingPage;  

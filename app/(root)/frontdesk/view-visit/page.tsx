@@ -171,11 +171,11 @@ const ViewVisitPage = () => {
           initial={{ y: -50, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.5 }}
-          className="text-4xl font-bold text-center text-emerald-700 mb-8"
+          className="text-4xl font-bold text-center text-red-700 mb-8"
         >
           Visit Details
         </motion.h1>
-
+  
         {/* Date Picker */}
         <motion.div
           initial={{ y: 50, opacity: 0 }}
@@ -186,7 +186,7 @@ const ViewVisitPage = () => {
           <Popover>
             <PopoverTrigger asChild>
               <button
-                className="flex items-center gap-2 px-4 py-2 border border-emerald-300 rounded-md shadow-sm text-emerald-700 bg-white hover:bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500"
+                className="flex items-center gap-2 px-4 py-2 border border-red-300 rounded-md shadow-sm text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
                 aria-label="Select a date"
               >
                 <CalendarIcon className="w-5 h-5" />
@@ -207,7 +207,7 @@ const ViewVisitPage = () => {
             </PopoverContent>
           </Popover>
         </motion.div>
-
+  
         {/* Search Input */}
         <motion.div
           initial={{ y: 50, opacity: 0 }}
@@ -219,11 +219,11 @@ const ViewVisitPage = () => {
             placeholder="Search by CNIC"
             value={searchTerm}
             onChange={handleSearchChange}
-            className="w-full max-w-md mx-auto rounded-md border-emerald-200 focus:border-emerald-500 focus:ring-emerald-500 text-lg pl-10"
+            className="w-full max-w-md mx-auto rounded-md border-red-200 focus:border-red-500 focus:ring-red-500 text-lg pl-10"
           />
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-emerald-500" />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-red-500" />
         </motion.div>
-
+  
         <AnimatePresence>
           {loading ? (
             <motion.div
@@ -235,7 +235,7 @@ const ViewVisitPage = () => {
             >
               {/* Loader SVG */}
               <svg
-                className="animate-spin h-10 w-10 text-emerald-500"
+                className="animate-spin h-10 w-10 text-red-500"
                 xmlns="http://www.w3.org/2000/svg"
                 fill="none"
                 viewBox="0 0 24 24"
@@ -281,7 +281,7 @@ const ViewVisitPage = () => {
                     ].map((header, index) => (
                       <TableHead
                         key={index}
-                        className="bg-emerald-600 text-white"
+                        className="bg-red-600 text-white"
                       >
                         {header}
                       </TableHead>
@@ -295,9 +295,9 @@ const ViewVisitPage = () => {
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: index * 0.1 }}
-                      className="hover:bg-emerald-50 transition-colors duration-200"
+                      className="hover:bg-red-50 transition-colors duration-200"
                     >
-                      <TableCell className="capitalize font-bold text-emerald-700">
+                      <TableCell className="capitalize font-bold text-red-700">
                         {item.patient?.name || "Not Available"}
                       </TableCell>
                       <TableCell className="capitalize">
@@ -360,7 +360,8 @@ const ViewVisitPage = () => {
         </AnimatePresence>
       </div>
     </motion.div>
-  );
+  )
+  
 };
 
 export default ViewVisitPage;

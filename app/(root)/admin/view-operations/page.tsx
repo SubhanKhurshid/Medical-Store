@@ -73,10 +73,10 @@ const RoleTable = () => {
   );
 
   return (
-    <div className="bg-gray-100 py-12 px-4 sm:px-6 lg:px-8 flex items-center justify-center">
+    <div className=" py-12 px-4 sm:px-6 lg:px-8 flex items-center justify-center">
       <Card className="w-full max-w-5xl bg-white rounded-xl shadow-lg overflow-hidden">
         <div className="p-6">
-          <h1 className="text-2xl font-bold text-emerald-600 mb-4">Staff Directory</h1>
+          <h1 className="text-2xl font-bold text-red-600 mb-4">Staff Directory</h1>
           <Select
             options={rolesOptions}
             onChange={handleRoleChange}
@@ -85,7 +85,7 @@ const RoleTable = () => {
           />
           <table className="min-w-full bg-white border border-gray-200">
             <thead>
-              <tr className="bg-emerald-600 text-white">
+              <tr className="bg-red-600 text-white">
                 {roleFields[selectedRole].map((field: string) => (
                   <th key={field} className="py-2 px-4 border-b border-gray-200 text-left">
                     {field}
@@ -125,6 +125,7 @@ const RoleTable = () => {
       </Card>
     </div>
   );
+  
 };
 
 export default RoleTable;

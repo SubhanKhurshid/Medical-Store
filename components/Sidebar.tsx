@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import logo from "@/public/Ibrahim Clinic.png";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { LogOut, Menu } from 'lucide-react';
+import { LogOut, Menu } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -54,6 +54,7 @@ const Sidebar = () => {
       { href: "/pharmacist/inventory-management", label: "Add Medicine" },
       { href: "/pharmacist/inventory-view", label: "View Inventory" },
       { href: "/pharmacist/sales", label: "Sales" },
+      { href: "/pharmacist/sales-history", label: "Sales History" },
     ],
   };
 
@@ -63,7 +64,13 @@ const Sidebar = () => {
     <div className="flex flex-col h-full">
       <div className="flex items-center justify-center p-6 bg-white shadow-md">
         <Link href={`/${role}`}>
-          <Image src={logo} alt="logo" width={200} height={200} className="object-contain" />
+          <Image
+            src={logo}
+            alt="logo"
+            width={200}
+            height={200}
+            className="object-contain"
+          />
         </Link>
       </div>
       <div className="flex-grow bg-gradient-to-b from-red-600 to-red-800 text-white pt-6">
@@ -98,13 +105,16 @@ const Sidebar = () => {
       <div className="lg:hidden">
         <Sheet>
           <SheetTrigger asChild>
-            <Button variant="outline" size="icon" className="fixed top-4 left-4 z-40 bg-white text-red-600 border-red-600 hover:bg-red-100">
+            <Button
+              variant="outline"
+              size="icon"
+              className="fixed top-4 left-4 z-40 bg-white text-red-600 border-red-600 hover:bg-red-100"
+            >
               <Menu className="h-6 w-6" />
             </Button>
           </SheetTrigger>
           <SheetContent side="left" className="w-64 p-0">
-            <SheetHeader className="px-6 py-4 bg-white">
-            </SheetHeader>
+            <SheetHeader className="px-6 py-4 bg-white"></SheetHeader>
             <SidebarContent />
           </SheetContent>
         </Sheet>
@@ -135,4 +145,3 @@ const NavLink = ({
 );
 
 export default Sidebar;
-

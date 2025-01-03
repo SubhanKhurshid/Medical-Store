@@ -43,7 +43,7 @@ const AddOperationsPage = () => {
       initial="hidden"
       animate="visible"
       variants={containerVariants}
-      className="min-h-screen bg-gradient-to-b from-emerald-50 to-white py-12 px-4 sm:px-6 lg:px-8"
+      className="min-h-screen  py-12 px-4 sm:px-6 lg:px-8"
     >
       <div className="max-w-4xl mx-auto">
         <motion.div
@@ -51,7 +51,7 @@ const AddOperationsPage = () => {
           variants={itemVariants}
         >
           <motion.h1
-            className="text-4xl sm:text-5xl md:text-6xl font-bold text-emerald-700 mb-4"
+            className="text-4xl sm:text-5xl md:text-6xl font-bold text-red-700 mb-4"
             initial={{ opacity: 0, y: -50 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
@@ -59,13 +59,13 @@ const AddOperationsPage = () => {
             Perform Your Add Operations
           </motion.h1>
           <motion.p
-            className="text-xl text-emerald-600"
+            className="text-xl text-red-600"
             variants={itemVariants}
           >
             Select the operation you want to perform
           </motion.p>
         </motion.div>
-
+  
         <motion.div
           className="grid grid-cols-1 sm:grid-cols-2 gap-6"
           variants={containerVariants}
@@ -74,7 +74,7 @@ const AddOperationsPage = () => {
             <motion.div key={op.role} variants={itemVariants}>
               <Link href={{ pathname: "/signup", query: { role: op.role } }} passHref>
                 <Button
-                  className="w-full h-32 text-xl font-semibold bg-emerald-600 hover:bg-emerald-700 text-white transition-all duration-300 ease-in-out transform hover:scale-105 hover:shadow-lg rounded-xl flex items-center justify-center space-x-4"
+                  className="w-full h-32 text-xl font-semibold bg-red-600 hover:bg-red-700 text-white transition-all duration-300 ease-in-out transform hover:scale-105 hover:shadow-lg rounded-xl flex items-center justify-center space-x-4"
                   onClick={() => setRole(op.role)}
                 >
                   <op.icon className="h-8 w-8" />
@@ -87,6 +87,7 @@ const AddOperationsPage = () => {
       </div>
     </motion.div>
   );
+  
 };
 
 export default AddOperationsPage;

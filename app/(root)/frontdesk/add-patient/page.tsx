@@ -204,7 +204,7 @@ const AddPatientPage = () => {
   return (
     <Card className="w-full max-w-4xl mx-auto mt-10 bg-white shadow-xl rounded-xl">
       <CardHeader>
-        <CardTitle className="text-3xl font-bold text-center text-emerald-600">
+        <CardTitle className="text-3xl font-bold text-center text-red-800">
           {formType === "ADD_PATIENT"
             ? "Register a New Patient"
             : "Register a New Patient and Visit"}
@@ -228,7 +228,7 @@ const AddPatientPage = () => {
                 defaultValue={formType}
               >
                 <FormControl>
-                  <SelectTrigger className="rounded-md border-emerald-200 focus:border-emerald-500 focus:ring-emerald-500">
+                  <SelectTrigger className="rounded-md border-red-800 focus:border-red-500 focus:ring-red-500">
                     <SelectValue placeholder="Select Form Type" />
                   </SelectTrigger>
                 </FormControl>
@@ -253,7 +253,7 @@ const AddPatientPage = () => {
                       <Input
                         placeholder="John Doe"
                         {...field}
-                        className="rounded-md border-emerald-200 focus:border-emerald-500 focus:ring-emerald-500"
+                        className="rounded-md border-red-200 focus:border-red-500 focus:ring-red-500"
                       />
                     </FormControl>
                     <FormMessage />
@@ -270,7 +270,7 @@ const AddPatientPage = () => {
                       <Input
                         placeholder="Father's Name"
                         {...field}
-                        className="rounded-md border-emerald-200 focus:border-emerald-500 focus:ring-emerald-500"
+                        className="rounded-md border-red-200 focus:border-red-500 focus:ring-red-500"
                       />
                     </FormControl>
                     <FormMessage />
@@ -290,7 +290,7 @@ const AddPatientPage = () => {
                     <Input
                       placeholder="Email"
                       {...field}
-                      className="rounded-md border-emerald-200 focus:border-emerald-500 focus:ring-emerald-500"
+                      className="rounded-md border-red-200 focus:border-red-500 focus:ring-red-500"
                     />
                   </FormControl>
                   <FormMessage />
@@ -346,7 +346,7 @@ const AddPatientPage = () => {
                       defaultValue={field.value}
                     >
                       <FormControl>
-                        <SelectTrigger className="rounded-md border-emerald-200 focus:border-emerald-500 focus:ring-emerald-500">
+                        <SelectTrigger className="rounded-md border-red-200 focus:border-red-500 focus:ring-red-500">
                           <SelectValue placeholder="Select relationship" />
                         </SelectTrigger>
                       </FormControl>
@@ -379,7 +379,7 @@ const AddPatientPage = () => {
                         <Input
                           placeholder="Relation's Name"
                           {...field}
-                          className="rounded-md border-emerald-200 focus:border-emerald-500 focus:ring-emerald-500"
+                          className="rounded-md border-red-200 focus:border-red-500 focus:ring-red-500"
                         />
                       </FormControl>
                       <FormMessage />
@@ -396,7 +396,7 @@ const AddPatientPage = () => {
                         <Input
                           placeholder="Relation's CNIC"
                           {...field}
-                          className="rounded-md border-emerald-200 focus:border-emerald-500 focus:ring-emerald-500"
+                          className="rounded-md border-red-200 focus:border-red-500 focus:ring-red-500"
                         />
                       </FormControl>
                       <FormMessage />
@@ -415,7 +415,7 @@ const AddPatientPage = () => {
                       <Input
                         placeholder="CNIC"
                         {...field}
-                        className="rounded-md border-emerald-200 focus:border-emerald-500 focus:ring-emerald-500"
+                        className="rounded-md border-red-200 focus:border-red-500 focus:ring-red-500"
                       />
                     </FormControl>
                     <FormMessage />
@@ -437,7 +437,7 @@ const AddPatientPage = () => {
                     <Input
                       placeholder="Education"
                       {...field}
-                      className="rounded-md border-emerald-200 focus:border-emerald-500 focus:ring-emerald-500"
+                      className="rounded-md border-red-200 focus:border-red-500 focus:ring-red-500"
                     />
                   </FormControl>
                   <FormMessage />
@@ -459,7 +459,7 @@ const AddPatientPage = () => {
                       <Input
                         placeholder="Occupation"
                         {...field}
-                        className="rounded-md border-emerald-200 focus:border-emerald-500 focus:ring-emerald-500"
+                        className="rounded-md border-red-200 focus:border-red-500 focus:ring-red-500"
                       />
                     </FormControl>
                     <FormMessage />
@@ -478,7 +478,7 @@ const AddPatientPage = () => {
                       <Input
                         placeholder="Contact Number"
                         {...field}
-                        className="rounded-md border-emerald-200 focus:border-emerald-500 focus:ring-emerald-500"
+                        className="rounded-md border-red-200 focus:border-red-500 focus:ring-red-500"
                       />
                     </FormControl>
                     <FormMessage />
@@ -499,7 +499,7 @@ const AddPatientPage = () => {
                       <Input
                         placeholder="Age"
                         {...field}
-                        className="rounded-md border-emerald-200 focus:border-emerald-500 focus:ring-emerald-500"
+                        className="rounded-md border-red-200 focus:border-red-500 focus:ring-red-500"
                       />
                     </FormControl>
                     <FormMessage />
@@ -518,7 +518,7 @@ const AddPatientPage = () => {
                       <Input
                         placeholder="Years Married"
                         {...field}
-                        className="rounded-md border-emerald-200 focus:border-emerald-500 focus:ring-emerald-500"
+                        className="rounded-md border-red-200 focus:border-red-500 focus:ring-red-500"
                       />
                     </FormControl>
                     <FormMessage />
@@ -540,7 +540,7 @@ const AddPatientPage = () => {
                     <Input
                       placeholder="Address"
                       {...field}
-                      className="rounded-md border-emerald-200 focus:border-emerald-500 focus:ring-emerald-500"
+                      className="rounded-md border-red-200 focus:border-red-500 focus:ring-red-500"
                     />
                   </FormControl>
                   <FormMessage />
@@ -561,7 +561,7 @@ const AddPatientPage = () => {
                       defaultValue={field.value}
                     >
                       <FormControl>
-                        <SelectTrigger className="rounded-md border-emerald-200 focus:border-emerald-500 focus:ring-emerald-500">
+                        <SelectTrigger className="rounded-md border-red-200 focus:border-red-500 focus:ring-red-500">
                           <SelectValue placeholder="Select CRC" />
                         </SelectTrigger>
                       </FormControl>
@@ -584,7 +584,7 @@ const AddPatientPage = () => {
                       <Input
                         placeholder="CRC Number"
                         {...field}
-                        className="rounded-md border-emerald-200 focus:border-emerald-500 focus:ring-emerald-500"
+                        className="rounded-md border-red-200 focus:border-red-500 focus:ring-red-500"
                       />
                     </FormControl>
                     <FormMessage />
@@ -605,7 +605,7 @@ const AddPatientPage = () => {
                     defaultValue={field.value}
                   >
                     <FormControl>
-                      <SelectTrigger className="rounded-md border-emerald-200 focus:border-emerald-500 focus:ring-emerald-500">
+                      <SelectTrigger className="rounded-md border-red-200 focus:border-red-500 focus:ring-red-500">
                         <SelectValue placeholder="Select Catchment Area" />
                       </SelectTrigger>
                     </FormControl>
@@ -635,7 +635,7 @@ const AddPatientPage = () => {
                           type="number"
                           placeholder="Amount Paid"
                           {...field}
-                          className="rounded-md border-emerald-200 focus:border-emerald-500 focus:ring-emerald-500"
+                          className="rounded-md border-red-200 focus:border-red-500 focus:ring-red-500"
                         />
                       </FormControl>
                       <FormMessage />
@@ -655,7 +655,7 @@ const AddPatientPage = () => {
                         defaultValue={field.value}
                       >
                         <FormControl>
-                          <SelectTrigger className="rounded-md border-emerald-200 focus:border-emerald-500 focus:ring-emerald-500">
+                          <SelectTrigger className="rounded-md border-red-200 focus:border-red-500 focus:ring-red-500">
                             <SelectValue placeholder="Select a Doctor" />
                           </SelectTrigger>
                         </FormControl>

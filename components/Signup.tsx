@@ -87,7 +87,7 @@ const Signup = () => {
       <div className="w-full max-w-4xl flex flex-col lg:flex-row bg-white rounded-3xl shadow-lg overflow-hidden">
         {/* Left side - Welcome */}
         <motion.div
-          className="lg:w-1/2 bg-emerald-600 p-12 text-white flex flex-col justify-center"
+          className="lg:w-1/2 bg-red-600 p-12 text-white flex flex-col justify-center"
           initial={{ x: -100, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
           transition={{ duration: 0.7 }}
@@ -99,7 +99,7 @@ const Signup = () => {
             Join us in delivering quality healthcare. Sign up to get started!
           </p>
         </motion.div>
-
+  
         {/* Right side - Form */}
         <motion.div
           className="lg:w-1/2 p-12"
@@ -109,7 +109,7 @@ const Signup = () => {
         >
           <Card className="w-full border-none shadow-none">
             <CardHeader className="space-y-2">
-              <CardTitle className="text-3xl font-bold text-emerald-700">
+              <CardTitle className="text-3xl font-bold text-red-700">
                 Create Your Account
               </CardTitle>
               <CardDescription className="text-sm text-gray-500">
@@ -125,15 +125,15 @@ const Signup = () => {
                     placeholder="John Doe"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="rounded-lg border-emerald-300 focus:border-emerald-500 focus:ring-emerald-500"
+                    className="rounded-lg border-red-300 focus:border-red-500 focus:ring-red-500"
                   />
                 </div>
-
+  
                 <div className="space-y-1">
                   <Label htmlFor="image">Profile Picture</Label>
                   <FileUploader onFileSelect={(file) => setImage(file)} />
                 </div>
-
+  
                 <div className="space-y-1">
                   <Label htmlFor="email">Username</Label>
                   <Input
@@ -142,10 +142,10 @@ const Signup = () => {
                     type="text"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="rounded-lg border-emerald-300 focus:border-emerald-500 focus:ring-emerald-500"
+                    className="rounded-lg border-red-300 focus:border-red-500 focus:ring-red-500"
                   />
                 </div>
-
+  
                 <div className="space-y-1">
                   <Label htmlFor="password">Password</Label>
                   <Input
@@ -154,10 +154,10 @@ const Signup = () => {
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="rounded-lg border-emerald-300 focus:border-emerald-500 focus:ring-emerald-500"
+                    className="rounded-lg border-red-300 focus:border-red-500 focus:ring-red-500"
                   />
                 </div>
-
+  
                 {role === "doctor" && (
                   <>
                     <div className="space-y-1">
@@ -167,10 +167,10 @@ const Signup = () => {
                         placeholder="Cardiology"
                         value={specialization}
                         onChange={(e) => setSpecialization(e.target.value)}
-                        className="rounded-lg border-emerald-300 focus:border-emerald-500 focus:ring-emerald-500"
+                        className="rounded-lg border-red-300 focus:border-red-500 focus:ring-red-500"
                       />
                     </div>
-
+  
                     <div className="space-y-1">
                       <Label htmlFor="license">License Number</Label>
                       <Input
@@ -178,12 +178,12 @@ const Signup = () => {
                         placeholder="12345678"
                         value={license}
                         onChange={(e) => setLicense(e.target.value)}
-                        className="rounded-lg border-emerald-300 focus:border-emerald-500 focus:ring-emerald-500"
+                        className="rounded-lg border-red-300 focus:border-red-500 focus:ring-red-500"
                       />
                     </div>
                   </>
                 )}
-
+  
                 <div className="space-y-1">
                   <Label htmlFor="qualification">Qualification</Label>
                   <Input
@@ -191,10 +191,10 @@ const Signup = () => {
                     placeholder="MBBS"
                     value={qualification}
                     onChange={(e) => setQualification(e.target.value)}
-                    className="rounded-lg border-emerald-300 focus:border-emerald-500 focus:ring-emerald-500"
+                    className="rounded-lg border-red-300 focus:border-red-500 focus:ring-red-500"
                   />
                 </div>
-
+  
                 <div className="space-y-1">
                   <Label htmlFor="age">Age</Label>
                   <Input
@@ -202,26 +202,26 @@ const Signup = () => {
                     placeholder="22"
                     value={age}
                     onChange={(e) => setAge(e.target.value)}
-                    className="rounded-lg border-emerald-300 focus:border-emerald-500 focus:ring-emerald-500"
+                    className="rounded-lg border-red-300 focus:border-red-500 focus:ring-red-500"
                   />
                 </div>
-
+  
                 {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
-
+  
                 <Button
                   type="submit"
-                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2 px-4 rounded-lg transition duration-300"
+                  className="w-full bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded-lg transition duration-300"
                   disabled={loading}
                 >
                   {loading ? "Signing Up..." : "Sign Up"}
                 </Button>
               </form>
             </CardContent>
-
+  
             <CardFooter className="text-center mt-4">
               <Link
                 href="/login"
-                className="text-emerald-600 hover:underline text-sm"
+                className="text-red-600 hover:underline text-sm"
               >
                 Already have an account? Login
               </Link>
@@ -231,6 +231,7 @@ const Signup = () => {
       </div>
     </motion.div>
   );
+  
 };
 
 export default Signup;
