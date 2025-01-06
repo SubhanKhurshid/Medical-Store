@@ -1,44 +1,29 @@
-"use client";
-
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from 'react';
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-} from "@/components/ui/chart";
-import {
-  ResponsiveContainer,
   LineChart,
   Line,
   XAxis,
   YAxis,
   Tooltip,
-} from "recharts";
+  ResponsiveContainer,
+} from 'recharts';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { useMediaQuery } from 'react-responsive';
 
-interface WeekSales {
-  week: string;
-  totalSales: number;
-}
-
-interface SalesData {
-  month: string;
-  weekSales: WeekSales[];
-}
-
-interface WeeklySalesData {
+type WeeklySalesData = {
   day: string;
   totalSales: number;
-}
+};
 
-type ChartData = SalesData[] | WeeklySalesData[];
+type MonthlySalesData = {
+  month: string;
+  weekSales: { week: string; totalSales: number }[] | undefined;
+};
+
+type SalesData = WeeklySalesData | MonthlySalesData;
+
+type ChartData = (WeeklySalesData | MonthlySalesData)[];
 
 interface SalesChartProps {
   data: ChartData;
@@ -46,131 +31,160 @@ interface SalesChartProps {
 }
 
 const isSalesData = (data: any): data is SalesData => {
-  return data && typeof data.month === 'string' && Array.isArray(data.weekSales);
+  return data && (data.day || data.month);
 };
 
 function SalesChart({ data, period }: SalesChartProps) {
-  const [chartDimensions, setChartDimensions] = useState({ width: 0, height: 0 });
+  const isMobile = useMediaQuery({ maxWidth: 640 });
+  const isTablet = useMediaQuery({ maxWidth: 1024 });
 
-  useEffect(() => {
-    const updateDimensions = () => {
-      const width = window.innerWidth;
-      const height = window.innerHeight;
-      setChartDimensions({
-        width: width < 768 ? width * 0.9 : width * 0.75,
-        height: width < 768 ? 250 : 400,
-      });
-    };
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-white/95 border border-gray-200 p-2 sm:p-4 rounded-lg shadow-lg backdrop-blur-sm max-w-[200px] sm:max-w-none">
+          <p className="font-semibold text-gray-900 mb-1 sm:mb-2 text-xs sm:text-sm">{label}</p>
+          {payload.map((entry: any, index: number) => (
+            <p
+              key={index}
+              className="text-xs sm:text-sm flex items-center gap-1 sm:gap-2"
+              style={{ color: entry.color }}
+            >
+              <span className="w-2 h-2 sm:w-3 sm:h-3 rounded-full" style={{ backgroundColor: entry.color }}></span>
+              {entry.name}: Rs {entry.value.toLocaleString()}
+            </p>
+          ))}
+        </div>
+      );
+    }
+    return null;
+  };
 
-    updateDimensions();
-    window.addEventListener('resize', updateDimensions);
-
-    return () => window.removeEventListener('resize', updateDimensions);
-  }, []);
-
-  const getXAxisProps = () => {
-    const isSmallScreen = window.innerWidth < 768;
+  const getAxisConfig = () => {
+    const baseFontSize = isMobile ? 10 : isTablet ? 11 : 12;
     return {
-      dataKey: period === "weekly" ? "day" : "month",
-      axisLine: false,
-      tickLine: false,
-      padding: { left: 20, right: 20 },
-      tick: { fontSize: isSmallScreen ? 10 : 12 },
-      interval: 0,
-      angle: isSmallScreen ? -30 : 0,
-      textAnchor: isSmallScreen ? "end" : "middle",
-      height: isSmallScreen ? 50 : 60,
+      xAxis: {
+        height: isMobile ? 40 : 60,
+        tick: {
+          fontSize: baseFontSize,
+          fill: 'hsl(var(--muted-foreground))',
+        },
+        angle: isMobile ? -45 : 0,
+        textAnchor: isMobile ? 'end' : 'middle',
+        dy: isMobile ? 10 : 0,
+      },
+      yAxis: {
+        width: isMobile ? 45 : 60,
+        tick: {
+          fontSize: baseFontSize,
+          fill: 'hsl(var(--muted-foreground))',
+        },
+      },
     };
   };
 
-  const getYAxisProps = () => {
-    const isSmallScreen = window.innerWidth < 768;
-    return {
-      axisLine: false,
-      tickLine: false,
-      width: isSmallScreen ? 40 : 50,
-      tick: { fontSize: isSmallScreen ? 10 : 12 },
-    };
-  };
-
-  const renderWeeklyChart = () => (
-    <LineChart
-      data={data as WeeklySalesData[]}
-      margin={{
-        top: chartDimensions.height * 0.05,
-        right: chartDimensions.width * 0.05,
-        left: chartDimensions.width * 0.02,
-        bottom: chartDimensions.height * 0.1,
-      }}
-    >
-      <XAxis {...getXAxisProps()} />
-      <YAxis {...getYAxisProps()} />
-      <ChartTooltip content={<ChartTooltipContent />} />
-      <Line
-        type="monotone"
-        dataKey="totalSales"
-        stroke="hsl(var(--primary))"
-        strokeWidth={2}
-        dot={false}
-      />
-    </LineChart>
-  );
-
-  const renderMonthlyChart = () => (
-    <LineChart
-      data={data.filter(isSalesData)}
-      margin={{
-        top: chartDimensions.height * 0.05,
-        right: chartDimensions.width * 0.05,
-        left: chartDimensions.width * 0.02,
-        bottom: chartDimensions.height * 0.1,
-      }}
-    >
-      <XAxis {...getXAxisProps()} />
-      <YAxis {...getYAxisProps()} />
-      <ChartTooltip content={<ChartTooltipContent />} />
-      {['Week 1', 'Week 2', 'Week 3', 'Week 4'].map((week, index) => (
-        <Line
-          key={week}
-          type="monotone"
-          dataKey={(d: SalesData) => {
-            if (!d || !Array.isArray(d.weekSales)) return 0;
-            const weekData = d.weekSales[index];
-            return weekData && typeof weekData.totalSales === 'number' ? weekData.totalSales : 0;
-          }}
-          name={week}
-          stroke={`hsl(${index * 60}, 70%, 50%)`}
-          strokeWidth={2}
-          dot={false}
+  const renderWeeklyChart = () => {
+    const { xAxis, yAxis } = getAxisConfig();
+    return (
+      <LineChart
+        data={data as WeeklySalesData[]}
+        margin={{
+          top: 20,
+          right: isMobile ? 10 : 30,
+          left: isMobile ? 0 : 20,
+          bottom: isMobile ? 20 : 30,
+        }}
+      >
+        <XAxis
+          dataKey="day"
+          axisLine={false}
+          tickLine={false}
+          padding={{ left: 20, right: 20 }}
+          {...xAxis}
         />
-      ))}
-    </LineChart>
-  );
+        <YAxis
+          axisLine={false}
+          tickLine={false}
+          tickFormatter={(value) => `Rs ${value}`}
+          {...yAxis}
+        />
+        <Tooltip content={<CustomTooltip />} />
+        <Line
+          type="monotone"
+          dataKey="totalSales"
+          stroke="#22C55E"
+          strokeWidth={isMobile ? 2 : 3}
+          dot={{ fill: "#22C55E", strokeWidth: isMobile ? 1 : 2, r: isMobile ? 3 : 4 }}
+          activeDot={{ r: isMobile ? 6 : 8, fill: "#22C55E" }}
+        />
+      </LineChart>
+    );
+  };
+
+  const renderMonthlyChart = () => {
+    const { xAxis, yAxis } = getAxisConfig();
+    return (
+      <LineChart
+        data={data.filter(isSalesData) as MonthlySalesData[]}
+        margin={{
+          top: 20,
+          right: isMobile ? 10 : 30,
+          left: isMobile ? 0 : 20,
+          bottom: isMobile ? 20 : 30,
+        }}
+      >
+        <XAxis
+          dataKey="month"
+          axisLine={false}
+          tickLine={false}
+          padding={{ left: 20, right: 20 }}
+          {...xAxis}
+        />
+        <YAxis
+          axisLine={false}
+          tickLine={false}
+          tickFormatter={(value) => `Rs ${value}`}
+          {...yAxis}
+        />
+        <Tooltip content={<CustomTooltip />} />
+        {['Week 1', 'Week 2', 'Week 3', 'Week 4'].map((week, index) => (
+          <Line
+            key={week}
+            type="monotone"
+            dataKey={(d: MonthlySalesData) => {
+              if (d && d.weekSales && Array.isArray(d.weekSales) && d.weekSales[index]) {
+                return d.weekSales[index].totalSales;
+              }
+              return 0;
+            }}
+            name={week}
+            stroke={`hsl(${index * 30 + 142}, 76%, 36%)`}
+            strokeWidth={isMobile ? 2 : 3}
+            dot={{
+              fill: `hsl(${index * 30 + 142}, 76%, 36%)`,
+              strokeWidth: isMobile ? 1 : 2,
+              r: isMobile ? 3 : 4
+            }}
+            activeDot={{ r: isMobile ? 6 : 8 }}
+          />
+        ))}
+      </LineChart>
+    );
+  };
 
   return (
-    <Card className="h-full">
-      <CardHeader>
-        <CardTitle>
+    <Card className="w-full h-full">
+      <CardHeader className="space-y-1 sm:space-y-2 p-4 sm:p-6">
+        <CardTitle className="text-lg sm:text-2xl font-bold">
           {period === "weekly" ? "Weekly Sales" : "Monthly Sales"}
         </CardTitle>
-        <CardDescription>
+        <CardDescription className="text-sm sm:text-base">
           Overview of sales for the past {period === "weekly" ? "week" : "year"}
         </CardDescription>
       </CardHeader>
-      <CardContent className="flex flex-col justify-center items-center h-full">
-        <ChartContainer
-          config={{
-            sales: {
-              label: "Sales",
-              color: "hsl(var(--primary))",
-            },
-          }}
-          className="w-full h-full"
-        >
-          <ResponsiveContainer width="100%" height="100%">
-            {period === "weekly" ? renderWeeklyChart() : renderMonthlyChart()}
-          </ResponsiveContainer>
-        </ChartContainer>
+      <CardContent className="h-[250px] sm:h-[300px] md:h-[400px] p-2 sm:p-4 md:p-6">
+        <ResponsiveContainer width="100%" height="100%">
+          {period === "weekly" ? renderWeeklyChart() : renderMonthlyChart()}
+        </ResponsiveContainer>
       </CardContent>
     </Card>
   );
@@ -180,14 +194,14 @@ export default function SalesHistory() {
   const [tab, setTab] = useState("weekly");
   const [salesData, setSalesData] = useState<ChartData>([]);
 
-  const formatMonthlyData = (data: any[]): SalesData[] => {
+  const formatMonthlyData = (data: any[]): MonthlySalesData[] => {
     const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
     return months.map(month => {
       const monthData = data.find(item => item.month === month) || { month, weekSales: [] };
       const filledWeekSales = Array.from({ length: 4 }, (_, i) => {
         const weekNumber = i + 1;
         const existingWeek = monthData.weekSales && Array.isArray(monthData.weekSales)
-          ? monthData.weekSales.find((w: WeekSales) => w.week === `Week ${weekNumber}`)
+          ? monthData.weekSales.find((w: { week: string; totalSales: number }) => w.week === `Week ${weekNumber}`)
           : null;
         return existingWeek && typeof existingWeek.totalSales === 'number'
           ? existingWeek
@@ -229,24 +243,24 @@ export default function SalesHistory() {
   }, [tab]);
 
   return (
-    <div className="flex flex-col min-h-screen">
-      <div className="flex-1 p-4 md:p-8">
-        <h2 className="text-2xl md:text-3xl font-bold tracking-tight mb-6">
+    <div className="flex flex-col h-full bg-background">
+      <div className="flex-1 p-2 sm:p-4 md:p-8">
+        <h2 className="text-xl sm:text-2xl font-bold tracking-tight mb-4 sm:mb-6">
           Sales History
         </h2>
         <Tabs
           defaultValue="weekly"
-          className="h-[calc(100vh-12rem)]"
+          className="space-y-2 sm:space-y-4"
           onValueChange={setTab}
         >
-          <TabsList>
-            <TabsTrigger value="weekly">Weekly</TabsTrigger>
-            <TabsTrigger value="monthly">Monthly</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-2 max-w-[300px] sm:max-w-[400px]">
+            <TabsTrigger value="weekly" className="text-sm sm:text-base">Weekly</TabsTrigger>
+            <TabsTrigger value="monthly" className="text-sm sm:text-base">Monthly</TabsTrigger>
           </TabsList>
-          <TabsContent value="weekly" className="h-full">
+          <TabsContent value="weekly" className="mt-0">
             <SalesChart data={salesData} period="weekly" />
           </TabsContent>
-          <TabsContent value="monthly" className="h-full">
+          <TabsContent value="monthly" className="mt-0">
             <SalesChart data={salesData} period="monthly" />
           </TabsContent>
         </Tabs>

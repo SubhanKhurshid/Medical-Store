@@ -65,14 +65,12 @@ export function Receipt({
         >
           <div>Order #:</div>
           <div style={{ textAlign: "right" }}>{orderNumber}</div>
-          <div>Sold To:</div>
-          <div style={{ textAlign: "right" }}>Walk-In</div>
+
           <div>Order Date:</div>
           <div style={{ textAlign: "right" }}>{format(now, "MM/dd/yy")}</div>
           <div>Order Time:</div>
           <div style={{ textAlign: "right" }}>{format(now, "hh:mm:ss a")}</div>
-          <div>Sales Person:</div>
-          <div style={{ textAlign: "right" }}>Admin Admin</div>
+
           <div>Register:</div>
           <div style={{ textAlign: "right" }}>1</div>
           <div>Order type:</div>
