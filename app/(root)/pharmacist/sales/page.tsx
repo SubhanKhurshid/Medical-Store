@@ -225,7 +225,7 @@ const SalesPage = () => {
 
       // Send POST request to create sale
       const response = await axios.post(
-        "http://localhost:3001/pharmacist/sales",
+        "http://localhost:3000/pharmacist/sales",
         saleData,
         {
           headers: {
