@@ -1,7 +1,12 @@
 import { format } from "date-fns";
-import { CartItem } from "@/types/sales";
+// import { CartItem } from "@/types/sales";
 import Barcode from "react-barcode";
-
+interface CartItem {
+  id: string;
+  name: string;
+  price: number;
+  quantity: number;
+}
 interface ReceiptProps {
   cart: CartItem[];
   discount: string;
