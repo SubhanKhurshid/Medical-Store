@@ -225,7 +225,7 @@ const SalesPage = () => {
 
       // Send POST request to create sale
       const response = await axios.post(
-        "http://localhost:3000/pharmacist/sales",
+        "https://annual-johna-uni2234-7798c123.koyeb.app/pharmacist/sales",
         saleData,
         {
           headers: {

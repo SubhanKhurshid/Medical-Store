@@ -214,7 +214,7 @@ export default function SalesHistory() {
   const fetchAndFormatSalesData = async (tab: string) => {
     try {
       const salesResponse = await fetch(
-        `http://localhost:3000/pharmacist/sales-graph?type=${tab}`
+        `https://annual-johna-uni2234-7798c123.koyeb.app/pharmacist/sales-graph?type=${tab}`
       );
       const salesResult = await salesResponse.json();
 
