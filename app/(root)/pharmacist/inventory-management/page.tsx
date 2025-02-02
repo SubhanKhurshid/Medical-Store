@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
+import type React from "react";
+import { useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { motion } from "framer-motion";
 import { z } from "zod";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,8 +18,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ItemType, useInventory } from "@/app/context/InventoryContext"; // Import the context
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ItemType, useInventory } from "@/app/context/InventoryContext";
 import { toast } from "sonner";
 
 const baseSchema = z.object({
@@ -49,23 +49,31 @@ const surgeryItemSchema = baseSchema.extend({
   size: z.string().min(1, "Size is required"),
 });
 
+const generalItemSchema = baseSchema.extend({
+  category: z.string().min(1, "Category is required"),
+  unit: z.string().min(1, "Unit is required"),
+});
+
 type FormValues = z.infer<typeof medicineSchema> &
   z.infer<typeof injectionSchema> &
-  z.infer<typeof surgeryItemSchema>;
+  z.infer<typeof surgeryItemSchema> &
+  z.infer<typeof generalItemSchema>;
 
 export default function InventoryManagement() {
-  const { addItem } = useInventory(); // Use addItem and items from context
+  const { addItem } = useInventory();
   const [image, setImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [itemType, setItemType] = useState<ItemType>(ItemType.MEDICINE);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(
-      itemType === "MEDICINE"
+      itemType === ItemType.MEDICINE
         ? medicineSchema
-        : itemType === "INJECTION"
+        : itemType === ItemType.INJECTION
         ? injectionSchema
-        : surgeryItemSchema
+        : itemType === ItemType.SURGERY
+        ? surgeryItemSchema
+        : generalItemSchema
     ),
     defaultValues: {
       name: "",
@@ -78,11 +86,12 @@ export default function InventoryManagement() {
       description: "",
       dosage: "",
       activeIngredient: "",
-
       volume: 0,
       route: "Intramuscular",
       sterilizationMethod: "",
       size: "",
+      category: "",
+      unit: "",
     },
   });
 
@@ -101,8 +110,8 @@ export default function InventoryManagement() {
   const onSubmit = async (data: FormValues) => {
     const formattedData = {
       ...data,
-      expiryDate: new Date(data.expiryDate).toISOString(), // Convert expiryDate to ISO string
-      type: itemType as ItemType,
+      expiryDate: new Date(data.expiryDate).toISOString(),
+      type: itemType,
       ...(itemType === ItemType.MEDICINE && {
         dosage: data.dosage,
         activeIngredient: data.activeIngredient,
@@ -115,16 +124,20 @@ export default function InventoryManagement() {
         sterilizationMethod: data.sterilizationMethod,
         size: data.size,
       }),
+      ...(itemType === ItemType.GENERAL && {
+        category: data.category,
+        unit: data.unit,
+      }),
     };
 
-    console.log("Formatted data:", formattedData); // Check the format in the console
+    console.log("Formatted data:", formattedData);
 
     if (image) {
       const reader = new FileReader();
       reader.onloadend = async () => {
         const base64Image = reader.result as string;
         await addItem({ ...formattedData, image: base64Image });
-        toast.success(`${itemType} has been addded successfully`);
+        toast.success(`${itemType} has been added successfully`);
         form.reset();
         setImage(null);
         setImagePreview(null);
@@ -141,24 +154,13 @@ export default function InventoryManagement() {
 
   return (
     <div className="p-4 md:p-8 max-w-4xl mx-auto min-h-screen">
-      {/* <motion.h1
-        className="text-3xl md:text-4xl font-bold text-red-800 mb-6 md:mb-8 text-center"
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-      >
-        Inventory Management
-      </motion.h1> */}
-
       <Card className="backdrop-blur-lg bg-card/50">
         <CardHeader>
-          <CardTitle className="text-2xl text-red-800">
-            Add New Item
-          </CardTitle>
+          <CardTitle className="text-2xl text-red-800">Add New Item</CardTitle>
         </CardHeader>
         <CardContent>
           <Tabs
-            value={itemType.toLowerCase()} // Convert enum to lowercase for Tabs value
+            value={itemType.toLowerCase()}
             onValueChange={(value) => {
               switch (value) {
                 case "medicine":
@@ -170,15 +172,19 @@ export default function InventoryManagement() {
                 case "surgery":
                   setItemType(ItemType.SURGERY);
                   break;
+                case "general":
+                  setItemType(ItemType.GENERAL);
+                  break;
                 default:
                   break;
               }
             }}
           >
-            <TabsList className="grid w-full grid-cols-3 mb-6">
+            <TabsList className="grid w-full grid-cols-4 mb-6">
               <TabsTrigger value="medicine">Medicine</TabsTrigger>
               <TabsTrigger value="injection">Injection</TabsTrigger>
               <TabsTrigger value="surgery">Surgery Item</TabsTrigger>
+              <TabsTrigger value="general">General Item</TabsTrigger>
             </TabsList>
           </Tabs>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -200,6 +206,14 @@ export default function InventoryManagement() {
                 />
               </div>
               <div>
+                <Label htmlFor="productCode">Product Code</Label>
+                <Input
+                  id="productCode"
+                  placeholder="Product code"
+                  {...form.register("productCode")}
+                />
+              </div>
+              <div>
                 <Label htmlFor="batchNumber">Batch Number</Label>
                 <Input
                   id="batchNumber"
@@ -207,7 +221,6 @@ export default function InventoryManagement() {
                   {...form.register("batchNumber")}
                 />
               </div>
-
               <div>
                 <Label htmlFor="expiryDate">Expiry Date</Label>
                 <Input
@@ -241,7 +254,7 @@ export default function InventoryManagement() {
                 />
               </div>
 
-              {itemType === "MEDICINE" && (
+              {itemType === ItemType.MEDICINE && (
                 <>
                   <div>
                     <Label htmlFor="dosage">Dosage</Label>
@@ -262,7 +275,7 @@ export default function InventoryManagement() {
                 </>
               )}
 
-              {itemType === "INJECTION" && (
+              {itemType === ItemType.INJECTION && (
                 <>
                   <div>
                     <Label htmlFor="volume">Volume (ml)</Label>
@@ -303,7 +316,7 @@ export default function InventoryManagement() {
                 </>
               )}
 
-              {itemType === "SURGERY" && (
+              {itemType === ItemType.SURGERY && (
                 <>
                   <div>
                     <Label htmlFor="sterilizationMethod">
@@ -321,6 +334,27 @@ export default function InventoryManagement() {
                       id="size"
                       placeholder="Size"
                       {...form.register("size")}
+                    />
+                  </div>
+                </>
+              )}
+
+              {itemType === ItemType.GENERAL && (
+                <>
+                  <div>
+                    <Label htmlFor="category">Category</Label>
+                    <Input
+                      id="category"
+                      placeholder="Category"
+                      {...form.register("category")}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="unit">Unit</Label>
+                    <Input
+                      id="unit"
+                      placeholder="Unit"
+                      {...form.register("unit")}
                     />
                   </div>
                 </>
@@ -343,7 +377,7 @@ export default function InventoryManagement() {
                   {imagePreview ? (
                     <div className="relative">
                       <img
-                        src={imagePreview}
+                        src={imagePreview || "/placeholder.svg"}
                         alt="Item preview"
                         className="mx-auto h-32 w-32 object-cover rounded-md"
                       />
@@ -390,11 +424,9 @@ export default function InventoryManagement() {
               className="w-full bg-red-800 hover:bg-red-800/80"
             >
               Add{" "}
-              {itemType === "MEDICINE"
-                ? "Medicine"
-                : itemType === "INJECTION"
-                ? "Injection"
-                : "Surgery Item"}
+              {itemType.charAt(0).toUpperCase() +
+                itemType.slice(1).toLowerCase()}{" "}
+              Item
             </Button>
           </form>
         </CardContent>
