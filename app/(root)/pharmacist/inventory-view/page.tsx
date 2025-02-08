@@ -56,15 +56,15 @@ const Inventory = () => {
       className="p-6 md:p-8 max-w-9xl mx-auto min-h-screen bg-gray-50"
     >
       <Card className="bg-white/90 backdrop-blur-md shadow-lg border-0 rounded-lg">
-        <CardHeader>
-          <CardTitle className="text-2xl md:text-3xl font-bold text-red-700">
+        <CardHeader className="border-b-2 border-red-700 p-6">
+          <CardTitle className="text-2xl md:text-3xl font-bold text-red-800 tracking-tighter">
             Inventory Management
           </CardTitle>
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="text-lg text-gray-500 mt-1 tracking-tighter">
             Manage and track your medical inventory
           </p>
         </CardHeader>
-        <CardContent>
+        <CardContent className="mt-5">
           <div className="space-y-6">
             {loading ? (
               <div className="flex justify-center items-center">

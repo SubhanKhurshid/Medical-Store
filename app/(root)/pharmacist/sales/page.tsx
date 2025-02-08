@@ -31,6 +31,7 @@ interface Product {
   name: string;
   price: number;
   quantity: number;
+  imageUrl: string; // Added imageUrl to Product type
 }
 
 interface CartItem extends Product {
@@ -52,7 +53,6 @@ const SalesPage = () => {
   const accessToken = user?.access_token;
   const [isProcessing, setIsProcessing] = useState(false); // New state for processing
 
-  // Move fetchProducts outside of useEffect to reuse it later
   const fetchProducts = async () => {
     try {
       const response = await axios.get(
@@ -66,6 +66,7 @@ const SalesPage = () => {
       const fetchedProducts = response.data.map((product: any) => ({
         ...product,
         quantity: product.quantity || 0,
+        imageUrl: product.imageUrl || "", // Ensure each product has an imageUrl
       }));
       setProducts(fetchedProducts);
     } catch (error) {
@@ -88,7 +89,7 @@ const SalesPage = () => {
       });
       setSearchResults(results);
     } else {
-      setSearchResults([]);
+      setSearchResults(products.slice(0, 10)); // Show 10 items initially
     }
   }, [searchTerm, products]);
 
@@ -120,7 +121,6 @@ const SalesPage = () => {
   };
 
   const removeFromCart = (productId: string) => {
-    // Changed from number to string
     setCart((prevCart) => {
       const existingItem = prevCart.find((item) => item.id === productId);
       if (existingItem && existingItem.quantity > 1) {
@@ -135,7 +135,6 @@ const SalesPage = () => {
   };
 
   const updateCartItemQuantity = (productId: string, newQuantity: number) => {
-    // Changed from number to string
     const availableQuantity =
       products.find((p) => p.id === productId)?.quantity ?? 0;
     if (newQuantity > availableQuantity) {
@@ -183,35 +182,10 @@ const SalesPage = () => {
     setIsDiscountInputOpen(false);
     setIsReceiptModalOpen(true);
   };
-  <style jsx global>{`
-    @media print {
-      @page {
-        size: 80mm 297mm;
-        margin: 0;
-      }
-      body * {
-        visibility: hidden !important;
-      }
-      .receipt,
-      .receipt * {
-        visibility: visible !important;
-      }
-      .receipt {
-        position: absolute !important;
-        left: 0 !important;
-        top: 0 !important;
-        width: 100% !important;
-      }
-      .print\\:hidden {
-        display: none !important;
-      }
-    }
-  `}</style>;
 
   const handlePrint = async () => {
     setIsProcessing(true);
     try {
-      // Prepare sale data
       const saleData = {
         customerName: "",
         customerPhone: "",
@@ -223,7 +197,6 @@ const SalesPage = () => {
         discount: parseFloat(discount) || 0,
       };
 
-      // Send POST request to create sale
       const response = await axios.post(
         "https://annual-johna-uni2234-7798c123.koyeb.app/pharmacist/sales",
         saleData,
@@ -236,16 +209,12 @@ const SalesPage = () => {
 
       if (response.status === 201 || response.status === 200) {
         toast.success("Sale recorded successfully!");
-
-        // Use setTimeout to ensure the receipt is rendered before printing
         setTimeout(() => {
           window.print();
-
-          // Reset the cart and close modal after printing
           setCart([]);
           setDiscount("");
           setIsReceiptModalOpen(false);
-          fetchProducts(); // Refresh product list
+          fetchProducts(); 
         }, 100);
       } else {
         toast.error("Failed to record sale.");
@@ -261,20 +230,21 @@ const SalesPage = () => {
       setIsProcessing(false);
     }
   };
+
   return (
     <div className="min-h-screen text-gray-900 print-receipt">
       <div className="container mx-auto p-6">
         <div className="flex justify-between items-center mb-8">
           <div className="flex flex-col gap-2">
             <motion.h1
-              className="text-3xl sm:text-4xl font-medium text-red-800 tracking-tighter"
+              className="text-2xl sm:text-3xl font-bold text-red-800 tracking-tighter"
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
             >
-            Sales Dashboard
+              Sales Dashboard
             </motion.h1>
-            <motion.p className="tracking-tighter text-lg">Generate sales by adding entries in below</motion.p>
+            <motion.p className="tracking-tighter text-lg text-gray-500">Generate sales by adding entries in below</motion.p>
           </div>
           <Button
             onClick={() => setIsReceiptModalOpen(true)}
@@ -285,7 +255,6 @@ const SalesPage = () => {
           </Button>
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Product Search Section */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -319,37 +288,62 @@ const SalesPage = () => {
             </div>
             <div className="space-y-4 max-h-[calc(100vh-300px)] overflow-y-auto">
               <AnimatePresence>
-                {searchResults.map((product) => (
+                {searchResults.length === 0 ? (
                   <motion.div
-                    key={product.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    transition={{ duration: 0.3 }}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="flex flex-col items-center justify-center py-12 px-4"
                   >
-                    <Card className="hover:shadow-lg transition-shadow duration-200">
-                      <CardContent className="flex justify-between items-center p-4">
-                        <div>
-                          <h3 className="font-semibold text-gray-800">
-                            {product.name}
-                          </h3>
-                          <p className="text-sm text-gray-600">
-                            Price: Rs {product.price}
-                          </p>
-                          <p className="text-sm text-gray-600">
-                            Quantity: {product.quantity}
-                          </p>
-                        </div>
-                        <Button
-                          onClick={() => addToCart(product)}
-                          className="bg-red-800 hover:bg-red-800/80 transition-colors duration-200"
-                        >
-                          <Plus className="h-4 w-4" />
-                        </Button>
-                      </CardContent>
-                    </Card>
+                    <div className="h-20 w-20 rounded-full bg-red-50 flex items-center justify-center mb-4">
+                      <Search className="h-10 w-10 text-red-700" />
+                    </div>
+                    <h3 className="text-lg font-medium text-gray-900 mb-1">
+                      No items found
+                    </h3>
+                    <p className="text-sm text-gray-500">
+                      Try adjusting your search or filter to find what you're looking for.
+                    </p>
                   </motion.div>
-                ))}
+                ) : (
+                  searchResults.map((product) => (
+                    <motion.div
+                      key={product.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -20 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <Card className="hover:shadow-lg transition-shadow duration-200">
+                        <CardContent className="flex justify-between items-center p-4">
+                          <div className="flex gap-4">
+                            <img
+                              src={product.imageUrl}
+                              alt={product.name}
+                              className="w-16 h-16 object-cover rounded-md"
+                            />
+                            <div>
+                              <h3 className="font-semibold text-gray-800">
+                                {product.name}
+                              </h3>
+                              <p className="text-sm text-gray-600">
+                                Price: Rs {product.price}
+                              </p>
+                              <p className="text-sm text-gray-600">
+                                Quantity: {product.quantity}
+                              </p>
+                            </div>
+                          </div>
+                          <Button
+                            onClick={() => addToCart(product)}
+                            className="bg-red-800 hover:bg-red-800/80 transition-colors duration-200"
+                          >
+                            <Plus className="h-4 w-4" />
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    </motion.div>
+                  ))
+                )}
               </AnimatePresence>
             </div>
           </motion.div>
@@ -557,67 +551,62 @@ const SalesPage = () => {
       </Dialog>
 
       <style jsx global>{`
-        @media print {
-          @page {
-            size: 80mm auto;
-            margin: 0;
-          }
+  @media print {
+    @page {
+      size: 80mm auto;
+      margin: 0;
+    }
 
-          /* Hide everything initially */
-          body > *:not(.print-content) {
-            display: none !important;
-          }
+    body > *:not(.print-content) {
+      display: none !important;
+    }
 
-          /* Show and position the receipt content */
-          .print-content {
-            display: block !important;
-            position: absolute !important;
-            left: 0 !important;
-            top: 0 !important;
-            width: 80mm !important;
-            margin: 0 !important;
-            padding: 0 !important;
-          }
+    .print-content {
+      display: block !important;
+      position: absolute !important;
+      left: 0 !important;
+      top: 0 !important;
+      width: 80mm !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      font-size: 16px !important; /* Increase the font size */
+    }
 
-          /* Hide dialog elements */
-          .print\\:hidden {
-            display: none !important;
-          }
+    .print\\:hidden {
+      display: none !important;
+    }
 
-          /* Reset background colors */
-          * {
-            background-color: white !important;
-            -webkit-print-color-adjust: exact !important;
-            color-adjust: exact !important;
-          }
+    * {
+      background-color: white !important;
+      -webkit-print-color-adjust: exact !important;
+      color-adjust: exact !important;
+    }
 
-          /* Dialog specific print styles */
-          [role="dialog"] {
-            position: absolute !important;
-            padding: 0 !important;
-            margin: 0 !important;
-            border: 0 !important;
-            background: none !important;
-            box-shadow: none !important;
-          }
-        }
-      `}</style>
+    [role="dialog"] {
+      position: absolute !important;
+      padding: 0 !important;
+      margin: 0 !important;
+      border: 0 !important;
+      background: none !important;
+      box-shadow: none !important;
+    }
+
+    /* Customize specific elements in the receipt */
+    .print-content h1,
+    .print-content h2,
+    .print-content p {
+      font-size: 18px !important; /* You can customize specific headings here */
+    }
+
+    .print-content .receipt-item {
+      font-size: 16px !important; /* Customize font size for receipt items */
+    }
+  }
+`}</style>
+
     </div>
   );
 };
 
 export default SalesPage;
 
-<style jsx>{`
-  @media print {
-    body > *:not(.print-receipt) {
-      display: none;
-    }
-    .print-receipt {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-    }
-  }
-`}</style>;

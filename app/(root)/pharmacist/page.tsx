@@ -81,14 +81,14 @@ const PharmacistPage = () => {
   return (
     <div className="p-4 sm:p-8 max-w-9xl mx-auto min-h-screen bg-gray-50">
       <motion.h1 
-        className="text-3xl sm:text-4xl font-medium text-red-800 tracking-tighter"
+        className="font-bold text-2xl sm:text-3xl text-red-800 tracking-tighter"
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
         Pharmacy Dashboard
       </motion.h1>
-      <motion.p className="mt-2 mb-6 tracking-tighter text-lg">Welcome to the Dashboard of Pharmacist</motion.p>
+      <motion.p className="mt-2 mb-6 tracking-tighter text-lg text-gray-500">Welcome to the Dashboard of Pharmacist</motion.p>
 {/* 
       <motion.div 
         className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8"
