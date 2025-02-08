@@ -32,8 +32,8 @@ const baseSchema = z.object({
   manufacturer: z.string().min(1, "Manufacturer is required"),
   price: z.number().min(0, "Price must be positive"),
   minimumStock: z.number().min(0, "Minimum stock must be positive"),
-  description: z.string().optional(),
-  productCode: z.string().min(1, "Product Code is required").optional(),
+  description: z.string().optional()
+  // productCode: z.string().min(1, "Product Code is required"),
 });
 
 const medicineSchema = baseSchema.extend({

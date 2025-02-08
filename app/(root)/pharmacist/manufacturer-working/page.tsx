@@ -60,9 +60,9 @@ const Manufacturer = () => {
       <span className="font-medium">{row.original.balance}</span>
     )},
     { id: "status", header: "Status", cell: ({ row }: any) => (
-      <Badge variant={row.original.status === "Active" ? "success" : "secondary"}>
-        {row.original.status}
-      </Badge>
+        <Badge variant={row.original.status === "Active" ? "secondary" : "secondary"}>
+            {row.original.status}
+        </Badge>
     )},
   ]
 

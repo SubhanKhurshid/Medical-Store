@@ -19,7 +19,7 @@ export interface InventoryItem {
   expiryDate: string;
   manufacturer: string;
   price: number;
-  productCode: string;
+  // productCode: string;
   minimumStock: number;
   description?: string;
   createdAt: string;
