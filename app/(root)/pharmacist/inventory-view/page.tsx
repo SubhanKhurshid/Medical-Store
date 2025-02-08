@@ -53,7 +53,7 @@ const Inventory = () => {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      className="p-6 md:p-8 max-w-[1400px] mx-auto min-h-screen bg-gray-50"
+      className="p-6 md:p-8 max-w-9xl mx-auto min-h-screen bg-gray-50"
     >
       <Card className="bg-white/90 backdrop-blur-md shadow-lg border-0 rounded-lg">
         <CardHeader>

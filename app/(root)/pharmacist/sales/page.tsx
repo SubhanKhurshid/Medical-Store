@@ -262,12 +262,20 @@ const SalesPage = () => {
     }
   };
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-900 print-receipt">
+    <div className="min-h-screen text-gray-900 print-receipt">
       <div className="container mx-auto p-6">
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-4xl font-bold text-red-700 tracking-tighter">
+          <div className="flex flex-col gap-2">
+            <motion.h1
+              className="text-3xl sm:text-4xl font-medium text-red-800 tracking-tighter"
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+            >
             Sales Dashboard
-          </h1>
+            </motion.h1>
+            <motion.p className="tracking-tighter text-lg">Generate sales by adding entries in below</motion.p>
+          </div>
           <Button
             onClick={() => setIsReceiptModalOpen(true)}
             className="bg-red-800 hover:bg-red-800/80"
@@ -284,7 +292,7 @@ const SalesPage = () => {
             transition={{ duration: 0.5 }}
             className="bg-white p-6 rounded-lg shadow-lg"
           >
-            <h2 className="text-2xl font-semibold mb-6 text-red-700 tracking-tighter">
+            <h2 className="text-2xl font-semibold mb-6 text-red-800 tracking-tighter">
               Product Search
             </h2>
             <div className="flex gap-4 mb-6">
@@ -353,7 +361,7 @@ const SalesPage = () => {
             transition={{ duration: 0.5, delay: 0.2 }}
             className="bg-white p-6 rounded-lg shadow-lg"
           >
-            <h2 className="text-2xl font-semibold mb-6 text-red-700 flex items-center">
+            <h2 className="text-2xl font-semibold mb-6 text-red-800 flex items-center">
               <ShoppingCart className="mr-2" /> Cart
             </h2>
             <div className="space-y-4 max-h-[calc(100vh-400px)] overflow-y-auto mb-4">

@@ -9,7 +9,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal } from "lucide-react";
+import { MoreHorizontal, Pill, Syringe, Scissors } from "lucide-react";
 import { useInventory } from "@/app/context/InventoryContext";
 import { toast } from "sonner"; // Import toast
 
@@ -19,12 +19,24 @@ export const inventoryColumns: ColumnDef<InventoryItem>[] = [
     header: "Image",
     cell: ({ row }) => {
       const imageUrl = row.getValue("image") as string;
-      return (
+      const type = row.getValue("type") as string;
+
+      const IconComponent =
+        type === "MEDICINE" ? Pill :
+        type === "INJECTION" ? Syringe :
+        type === "SURGERY" ? Scissors :
+        Pill;
+
+      return imageUrl ? (
         <img
           src={imageUrl}
           alt="Inventory Item"
           className="w-16 h-16 object-cover rounded-full border border-gray-300 p-1 shadow-sm"
         />
+      ) : (
+        <div className="w-16 h-16 flex items-center justify-center border border-gray-300 p-1 shadow-sm rounded-full bg-gray-100">
+          <IconComponent className="h-8 w-8 text-gray-500" />
+        </div>
       );
     },
   },

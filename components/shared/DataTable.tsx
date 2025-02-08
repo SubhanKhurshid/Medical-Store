@@ -26,7 +26,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Package2, AlertCircle, X } from "lucide-react";
+import { Calendar, Package2, AlertCircle, X, Pill } from "lucide-react";
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
@@ -45,9 +45,14 @@ export function DataTable<TData extends Record<string, any>, TValue>({
     columns,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
-    getSortedRowModel: getSortedRowModel(),
     onSortingChange: setSorting,
     state: { sorting },
+    // Limit rows per page to 4
+    initialState: {
+      pagination: {
+        pageSize: 4,
+      },
+    },
   });
 
   const handleRowClick = (row: TData) => {
@@ -69,7 +74,7 @@ export function DataTable<TData extends Record<string, any>, TValue>({
   return (
     <div className="w-full">
       <div className="rounded-md border-none">
-        <Table>
+        <Table className="min-h-[400px]"> {/* Ensuring consistent table height */}
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
@@ -137,7 +142,7 @@ export function DataTable<TData extends Record<string, any>, TValue>({
             onClick={() => table.nextPage()}
             disabled={!table.getCanNextPage()}
           >
-            Next
+            Next  
           </Button>
         </div>
       </div>
@@ -155,10 +160,11 @@ export function DataTable<TData extends Record<string, any>, TValue>({
                 />
               ) : (
                 <div className="absolute inset-0 flex items-center justify-center bg-muted">
-                  <Package2 className="h-20 w-20 text-muted-foreground/20" />
+                    <Pill className="h-20 w-20 text-muted-foreground/20" />
                 </div>
               )}
             </div>
+
 
             {/* Content Section */}
             <div className="p-6 md:w-1/2 overflow-y-auto max-h-[calc(100vh-2rem)]">
@@ -259,13 +265,6 @@ export function DataTable<TData extends Record<string, any>, TValue>({
               </div>
             </div>
           </div>
-          {/* <Button
-            className="absolute right-4 top-4 rounded-full w-8 h-8 p-0"
-            onClick={closeModal}
-          >
-            <X className="h-4 w-4" />
-            <span className="sr-only">Close</span>
-          </Button> */}
         </DialogContent>
       </Dialog>
     </div>

@@ -82,14 +82,15 @@ const Signin: React.FC = () => {
   };
 
   return (
-    <div className="flex min-h-screen items-centers  justify-center px-4 py-12 sm:px-6 lg:px-8">
-      <div className="flex w-full max-w-7xl gap-8">
+    <div className="flex min-h-screen items-center justify-center px-4 py-12 sm:px-6 lg:px-8">
+      <div className="flex w-full max-w-7xl gap-8 items-stretch">
         {/* Left Side - Welcome Message with Animation */}
         <motion.div
           initial={{ opacity: 0, x: -50 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.8, ease: "easeOut" }}
           className="hidden lg:flex w-1/2 flex-col items-center justify-center p-12 rounded-l-3xl bg-gradient-to-tr from-red-600 to-red-800 text-white"
+          style={{ minHeight: "100%" }}
         >
           <div className="text-center space-y-8">
             <motion.h1
@@ -148,12 +149,11 @@ const Signin: React.FC = () => {
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.8, ease: "easeOut" }}
           className="w-full lg:w-1/2 flex items-center justify-center"
+          style={{ minHeight: "100%" }}
         >
           <Card className="w-full max-w-md shadow-2xl border-0 rounded-3xl overflow-hidden">
             <CardHeader className="space-y-1 text-center bg-gradient-to-r from-red-600 to-red-800 text-white p-8">
-              <CardTitle className="text-3xl font-bold">
-                Welcome Back!
-              </CardTitle>
+              <CardTitle className="text-3xl font-bold">Welcome Back!</CardTitle>
               <CardDescription className="text-red-100">
                 Sign in to your account
               </CardDescription>
@@ -181,10 +181,7 @@ const Signin: React.FC = () => {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label
-                    htmlFor="password"
-                    className="text-gray-700 font-medium"
-                  >
+                  <Label htmlFor="password" className="text-gray-700 font-medium">
                     Password
                   </Label>
                   <div className="relative">
@@ -251,11 +248,12 @@ const Signin: React.FC = () => {
         </motion.div>
       </div>
       <style jsx>{`
-        .form-input:focus {
-          box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2);
-        }
-      `}</style>
+    .form-input:focus {
+      box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2);
+    }
+  `}</style>
     </div>
+
   );
 };
 

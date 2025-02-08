@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Upload, X } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
+import { motion } from "framer-motion";
 import {
   Select,
   SelectContent,
@@ -21,6 +22,7 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ItemType, useInventory } from "@/app/context/InventoryContext";
 import { toast } from "sonner";
+import { Separator } from "@/components/ui/separator";
 
 const baseSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -70,10 +72,10 @@ export default function InventoryManagement() {
       itemType === ItemType.MEDICINE
         ? medicineSchema
         : itemType === ItemType.INJECTION
-        ? injectionSchema
-        : itemType === ItemType.SURGERY
-        ? surgeryItemSchema
-        : generalItemSchema
+          ? injectionSchema
+          : itemType === ItemType.SURGERY
+            ? surgeryItemSchema
+            : generalItemSchema
     ),
     defaultValues: {
       name: "",
@@ -153,12 +155,21 @@ export default function InventoryManagement() {
   };
 
   return (
-    <div className="p-4 md:p-8 max-w-4xl mx-auto min-h-screen">
+    <div className="p-4 md:p-8 max-w-9xl mx-auto min-h-screen">
+      <div className="flex flex-col gap-2 mb-6">
+        <motion.h1
+          className="text-3xl sm:text-4xl font-medium text-red-800 tracking-tighter"
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          Add Item Here
+        </motion.h1>
+        <motion.p className="tracking-tighter text-lg">You can add item by filling these fields</motion.p>
+      </div>
       <Card className="backdrop-blur-lg bg-card/50">
-        <CardHeader>
-          <CardTitle className="text-2xl text-red-800">Add New Item</CardTitle>
-        </CardHeader>
-        <CardContent>
+        <Separator />
+        <CardContent className="mt-10">
           <Tabs
             value={itemType.toLowerCase()}
             onValueChange={(value) => {
@@ -188,8 +199,8 @@ export default function InventoryManagement() {
             </TabsList>
           </Tabs>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="flex flex-col gap-2">
                 <Label htmlFor="name">Item Name</Label>
                 <Input
                   id="name"
@@ -197,7 +208,7 @@ export default function InventoryManagement() {
                   {...form.register("name")}
                 />
               </div>
-              <div>
+              <div className="flex flex-col gap-2">
                 <Label htmlFor="quantity">Quantity</Label>
                 <Input
                   id="quantity"
@@ -205,7 +216,7 @@ export default function InventoryManagement() {
                   {...form.register("quantity", { valueAsNumber: true })}
                 />
               </div>
-              <div>
+              <div className="flex flex-col gap-2">
                 <Label htmlFor="productCode">Product Code</Label>
                 <Input
                   id="productCode"
@@ -213,7 +224,7 @@ export default function InventoryManagement() {
                   {...form.register("productCode")}
                 />
               </div>
-              <div>
+              <div className="flex flex-col gap-2">
                 <Label htmlFor="batchNumber">Batch Number</Label>
                 <Input
                   id="batchNumber"
@@ -221,7 +232,7 @@ export default function InventoryManagement() {
                   {...form.register("batchNumber")}
                 />
               </div>
-              <div>
+              <div className="flex flex-col gap-2">
                 <Label htmlFor="expiryDate">Expiry Date</Label>
                 <Input
                   id="expiryDate"
@@ -229,7 +240,7 @@ export default function InventoryManagement() {
                   {...form.register("expiryDate")}
                 />
               </div>
-              <div>
+              <div className="flex flex-col gap-2">
                 <Label htmlFor="manufacturer">Manufacturer</Label>
                 <Input
                   id="manufacturer"
@@ -237,7 +248,7 @@ export default function InventoryManagement() {
                   {...form.register("manufacturer")}
                 />
               </div>
-              <div>
+              <div className="flex flex-col gap-2">
                 <Label htmlFor="price">Price</Label>
                 <Input
                   id="price"
@@ -245,7 +256,7 @@ export default function InventoryManagement() {
                   {...form.register("price", { valueAsNumber: true })}
                 />
               </div>
-              <div>
+              <div className="flex flex-col gap-2">
                 <Label htmlFor="minimumStock">Minimum Stock</Label>
                 <Input
                   id="minimumStock"
@@ -256,7 +267,7 @@ export default function InventoryManagement() {
 
               {itemType === ItemType.MEDICINE && (
                 <>
-                  <div>
+                  <div className="flex flex-col gap-2">
                     <Label htmlFor="dosage">Dosage</Label>
                     <Input
                       id="dosage"
@@ -264,7 +275,7 @@ export default function InventoryManagement() {
                       {...form.register("dosage")}
                     />
                   </div>
-                  <div>
+                  <div className="flex flex-col gap-2">
                     <Label htmlFor="activeIngredient">Active Ingredient</Label>
                     <Input
                       id="activeIngredient"
@@ -277,7 +288,7 @@ export default function InventoryManagement() {
 
               {itemType === ItemType.INJECTION && (
                 <>
-                  <div>
+                  <div className="flex flex-col gap-2">
                     <Label htmlFor="volume">Volume (ml)</Label>
                     <Input
                       id="volume"
@@ -285,7 +296,7 @@ export default function InventoryManagement() {
                       {...form.register("volume", { valueAsNumber: true })}
                     />
                   </div>
-                  <div>
+                  <div className="flex flex-col gap-2">
                     <Label htmlFor="route">Route of Administration</Label>
                     <Controller
                       name="route"
@@ -318,7 +329,7 @@ export default function InventoryManagement() {
 
               {itemType === ItemType.SURGERY && (
                 <>
-                  <div>
+                  <div className="flex flex-col gap-2">
                     <Label htmlFor="sterilizationMethod">
                       Sterilization Method
                     </Label>
@@ -328,7 +339,7 @@ export default function InventoryManagement() {
                       {...form.register("sterilizationMethod")}
                     />
                   </div>
-                  <div>
+                  <div className="flex flex-col gap-2">
                     <Label htmlFor="size">Size</Label>
                     <Input
                       id="size"
@@ -341,7 +352,7 @@ export default function InventoryManagement() {
 
               {itemType === ItemType.GENERAL && (
                 <>
-                  <div>
+                  <div className="flex flex-col gap-2">
                     <Label htmlFor="category">Category</Label>
                     <Input
                       id="category"
@@ -349,7 +360,7 @@ export default function InventoryManagement() {
                       {...form.register("category")}
                     />
                   </div>
-                  <div>
+                  <div className="flex flex-col gap-2">
                     <Label htmlFor="unit">Unit</Label>
                     <Input
                       id="unit"
@@ -361,7 +372,7 @@ export default function InventoryManagement() {
               )}
             </div>
 
-            <div>
+            <div className="flex flex-col gap-2">
               <Label htmlFor="description">Description</Label>
               <Textarea
                 id="description"
