@@ -1,0 +1,190 @@
+"use client"
+
+import { useState } from "react"
+import { motion, AnimatePresence } from "framer-motion"
+import { X, Building2, Mail, Phone, MapPin, DollarSign, Activity } from 'lucide-react'
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+
+interface ManufacturerModalProps {
+  isOpen: boolean
+  onClose: () => void
+  onSave: (data: any) => void
+}
+
+const ManufacturerModal = ({ isOpen, onClose, onSave }: ManufacturerModalProps) => {
+  const [formData, setFormData] = useState({
+    company: "",
+    email: "",
+    phone: "",
+    balance: "",
+    country: "",
+    city: "",
+    state: "",
+    status: "Active",
+  })
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    onSave({
+      id: `#M-${Math.floor(Math.random() * 100)}`,
+      ...formData,
+      balance: `${parseFloat(formData.balance).toLocaleString()} USD`,
+    })
+    onClose()
+  }
+
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+        >
+          <motion.div
+            initial={{ y: 50, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 50, opacity: 0 }}
+            className="bg-white rounded-xl w-full max-w-md shadow-2xl overflow-hidden"
+          >
+            <div className="flex justify-between items-center p-6 border-b-2 border-red-700">
+              <h3 className="text-xl font-semibold text-red-800 tracking-tighter font-bold">Add New Manufacturer</h3>
+              <button onClick={onClose} className="text-white hover:text-red-200 transition-colors">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            
+            <form onSubmit={handleSubmit} className="p-6 space-y-4">
+              <div className="space-y-4">
+                <div className="relative">
+                  <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                  <Input
+                    required
+                    placeholder="Company Name"
+                    value={formData.company}
+                    onChange={(e) => setFormData({...formData, company: e.target.value})}
+                    className="pl-10 focus:ring-red-500 focus:border-red-500"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                    <Input
+                      type="email"
+                      required
+                      placeholder="Email"
+                      value={formData.email}
+                      onChange={(e) => setFormData({...formData, email: e.target.value})}
+                      className="pl-10 focus:ring-red-500 focus:border-red-500"
+                    />
+                  </div>
+                  <div className="relative">
+                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                    <Input
+                      required
+                      placeholder="Phone"
+                      value={formData.phone}
+                      onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                      className="pl-10 focus:ring-red-500 focus:border-red-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="relative">
+                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                    <Input
+                      required
+                      placeholder="Country"
+                      value={formData.country}
+                      onChange={(e) => setFormData({...formData, country: e.target.value})}
+                      className="pl-10 focus:ring-red-500 focus:border-red-500"
+                    />
+                  </div>
+                  <div className="relative">
+                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                    <Input
+                      required
+                      placeholder="City"
+                      value={formData.city}
+                      onChange={(e) => setFormData({...formData, city: e.target.value})}
+                      className="pl-10 focus:ring-red-500 focus:border-red-500"
+                    />
+                  </div>
+                  <div className="relative">
+                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                    <Input
+                      required
+                      placeholder="State"
+                      value={formData.state}
+                      onChange={(e) => setFormData({...formData, state: e.target.value})}
+                      className="pl-10 focus:ring-red-500 focus:border-red-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="relative">
+                    <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                    <Input
+                      type="number"
+                      required
+                      placeholder="Balance"
+                      value={formData.balance}
+                      onChange={(e) => setFormData({...formData, balance: e.target.value})}
+                      className="pl-10 focus:ring-red-500 focus:border-red-500"
+                    />
+                  </div>
+                  <div className="relative">
+                    <Activity className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                    <Select
+                      value={formData.status}
+                      onValueChange={(value) => setFormData({...formData, status: value})}
+                    >
+                      <SelectTrigger className="pl-10 focus:ring-red-500 focus:border-red-500">
+                        <SelectValue placeholder="Status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Active">Active</SelectItem>
+                        <SelectItem value="Inactive">Inactive</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-6">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={onClose}
+                  className="border-gray-300 hover:bg-gray-50 text-gray-700"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  className="bg-red-800 hover:bg-red-900 text-white"
+                >
+                  Save Manufacturer
+                </Button>
+              </div>
+            </form>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  )
+}
+
+export default ManufacturerModal

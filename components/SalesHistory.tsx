@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useMediaQuery } from "react-responsive";
+import { motion } from "framer-motion";
 
 type WeeklySalesData = {
   day: string;
@@ -362,9 +363,17 @@ export default function SalesHistory() {
   return (
     <div className="flex flex-col h-full bg-background">
       <div className="flex-1 p-2 sm:p-4 md:p-8">
-        <h2 className="text-xl sm:text-2xl font-bold tracking-tight mb-4 sm:mb-6">
-          Sales History
-        </h2>
+        <div className="flex flex-col gap-2 mb-10">
+          <motion.h1
+            className="text-2xl sm:text-3xl font-bold text-red-800 tracking-tighter"
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            Sales History
+          </motion.h1>
+          <motion.p className="tracking-tighter text-lg text-gray-500">Your sales stats are shown in graph below</motion.p>
+        </div>
         <Tabs
           defaultValue="weekly"
           className="space-y-2 sm:space-y-4"

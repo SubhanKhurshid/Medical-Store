@@ -99,7 +99,7 @@ const Signin: React.FC = () => {
               transition={{ duration: 0.8, delay: 0.5 }}
               className="text-4xl font-extrabold"
             >
-              Welcome to NHS Ibrahim
+              Welcome to NS Ibrahim
             </motion.h1>
             <motion.h1
               initial={{ opacity: 0, x: 100 }}
@@ -107,7 +107,7 @@ const Signin: React.FC = () => {
               transition={{ duration: 0.8, delay: 0.5 }}
               className={`text-4xl font-extrabold leading-relaxed ${urduFont.className}`}
             >
-              این ایچ ایس ابراہیم میں <br className="block mb-4" />
+              این ایس ابراہیم میں <br className="block mb-4" />
               خوش آمدید
             </motion.h1>
             <p className="text-lg text-center">

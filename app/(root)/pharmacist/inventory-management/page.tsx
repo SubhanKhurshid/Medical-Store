@@ -33,7 +33,7 @@ const baseSchema = z.object({
   price: z.number().min(0, "Price must be positive"),
   minimumStock: z.number().min(0, "Minimum stock must be positive"),
   description: z.string().optional(),
-  productCode: z.string().min(1, "Product Code is required"),
+  productCode: z.string().min(1, "Product Code is required").optional(),
 });
 
 const medicineSchema = baseSchema.extend({
@@ -158,14 +158,14 @@ export default function InventoryManagement() {
     <div className="p-4 md:p-8 max-w-9xl mx-auto min-h-screen">
       <div className="flex flex-col gap-2 mb-6">
         <motion.h1
-          className="text-3xl sm:text-4xl font-medium text-red-800 tracking-tighter"
+          className="text-2xl sm:text-3xl font-bold text-red-800 tracking-tighter"
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
         >
           Add Item Here
         </motion.h1>
-        <motion.p className="tracking-tighter text-lg">You can add item by filling these fields</motion.p>
+        <motion.p className="tracking-tighter text-lg text-gray-500">You can add item by filling these fields</motion.p>
       </div>
       <Card className="backdrop-blur-lg bg-card/50">
         <Separator />
@@ -216,14 +216,14 @@ export default function InventoryManagement() {
                   {...form.register("quantity", { valueAsNumber: true })}
                 />
               </div>
-              <div className="flex flex-col gap-2">
+              {/* <div className="flex flex-col gap-2">
                 <Label htmlFor="productCode">Product Code</Label>
                 <Input
                   id="productCode"
                   placeholder="Product code"
                   {...form.register("productCode")}
                 />
-              </div>
+              </div> */}
               <div className="flex flex-col gap-2">
                 <Label htmlFor="batchNumber">Batch Number</Label>
                 <Input
