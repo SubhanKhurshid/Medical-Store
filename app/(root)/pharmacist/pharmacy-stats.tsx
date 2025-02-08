@@ -1,5 +1,3 @@
-"use client"
-
 import { Package, TrendingDown, AlertTriangle, BarChart } from 'lucide-react'
 import { Card } from "@/components/ui/card"
 import { Area, AreaChart, ResponsiveContainer } from "recharts"
@@ -7,7 +5,7 @@ import type React from "react"
 
 const generateSparklineData = (points: number, trend: "up" | "down") => {
   return Array.from({ length: points }, (_, i) => ({
-    value: trend === "up" 
+    value: trend === "up"
       ? 50 + Math.sin(i / 2) * 30 + (i / points) * 40
       : 90 - Math.sin(i / 2) * 30 - (i / points) * 40
   }))
@@ -93,7 +91,13 @@ export default function PharmacyStats({
   lowStockCount: number
   expiringCount: number
 }) {
-  const stats = [
+  const stats: {
+    title: string
+    value: string | number
+    change: { value: number; trend: "up" | "down" }
+    icon: React.ElementType
+    color: { light: string; medium: string; dark: string }
+  }[] = [
     {
       title: "Total Items",
       value: items.length,
