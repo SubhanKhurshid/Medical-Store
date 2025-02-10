@@ -1,7 +1,7 @@
 "use client";
 
 import type React from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -32,7 +32,7 @@ const baseSchema = z.object({
   manufacturer: z.string().min(1, "Manufacturer is required"),
   price: z.number().min(0, "Price must be positive"),
   minimumStock: z.number().min(0, "Minimum stock must be positive"),
-  description: z.string().optional()
+  description: z.string().optional(),
   // productCode: z.string().min(1, "Product Code is required"),
 });
 
@@ -66,16 +66,19 @@ export default function InventoryManagement() {
   const [image, setImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [itemType, setItemType] = useState<ItemType>(ItemType.MEDICINE);
+  const [manufacturers, setManufacturers] = useState<
+    { id: string; companyName: string }[]
+  >([]); // State to store manufacturers
 
   const form = useForm<FormValues>({
     resolver: zodResolver(
       itemType === ItemType.MEDICINE
         ? medicineSchema
         : itemType === ItemType.INJECTION
-          ? injectionSchema
-          : itemType === ItemType.SURGERY
-            ? surgeryItemSchema
-            : generalItemSchema
+        ? injectionSchema
+        : itemType === ItemType.SURGERY
+        ? surgeryItemSchema
+        : generalItemSchema
     ),
     defaultValues: {
       name: "",
@@ -97,6 +100,27 @@ export default function InventoryManagement() {
     },
   });
 
+  useEffect(() => {
+    const fetchManufacturers = async () => {
+      try {
+        const response = await fetch(
+          "http://localhost:3000/pharmacist/manufacturer"
+        );
+        if (!response.ok) throw new Error("Failed to fetch manufacturers");
+
+        const data = await response.json();
+
+        // Ensure data is in an array
+        const manufacturersArray = Array.isArray(data) ? data : [data];
+
+        setManufacturers(manufacturersArray);
+      } catch (error) {
+        console.error("Error fetching manufacturers:", error);
+      }
+    };
+
+    fetchManufacturers();
+  }, []);
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -108,10 +132,10 @@ export default function InventoryManagement() {
       reader.readAsDataURL(file);
     }
   };
-
   const onSubmit = async (data: FormValues) => {
     const formattedData = {
       ...data,
+      manufacturerId: data.manufacturer, // This will now be the selected manufacturer ID
       expiryDate: new Date(data.expiryDate).toISOString(),
       type: itemType,
       ...(itemType === ItemType.MEDICINE && {
@@ -165,7 +189,9 @@ export default function InventoryManagement() {
         >
           Add Item Here
         </motion.h1>
-        <motion.p className="tracking-tighter text-lg text-gray-500">You can add item by filling these fields</motion.p>
+        <motion.p className="tracking-tighter text-lg text-gray-500">
+          You can add item by filling these fields
+        </motion.p>
       </div>
       <Card className="backdrop-blur-lg bg-card/50">
         <Separator />
@@ -242,12 +268,35 @@ export default function InventoryManagement() {
               </div>
               <div className="flex flex-col gap-2">
                 <Label htmlFor="manufacturer">Manufacturer</Label>
-                <Input
-                  id="manufacturer"
-                  placeholder="Manufacturer"
-                  {...form.register("manufacturer")}
+                <Controller
+                  name="manufacturer"
+                  control={form.control}
+                  render={({ field }) => (
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <SelectTrigger>
+                        <SelectValue
+                          placeholder="Select Manufacturer"
+                          defaultValue={
+                            manufacturers.find((m) => m.id === field.value)
+                              ?.companyName
+                          }
+                        />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {manufacturers.map((manufacturer) => (
+                          <SelectItem
+                            key={manufacturer.id}
+                            value={manufacturer.id}
+                          >
+                            {manufacturer.companyName}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
                 />
               </div>
+
               <div className="flex flex-col gap-2">
                 <Label htmlFor="price">Price</Label>
                 <Input

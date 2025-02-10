@@ -74,7 +74,9 @@ export function DataTable<TData extends Record<string, any>, TValue>({
   return (
     <div className="w-full">
       <div className="rounded-md border-none">
-        <Table className="min-h-[400px]"> {/* Ensuring consistent table height */}
+        <Table className="min-h-[400px]">
+          {" "}
+          {/* Ensuring consistent table height */}
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
@@ -142,7 +144,7 @@ export function DataTable<TData extends Record<string, any>, TValue>({
             onClick={() => table.nextPage()}
             disabled={!table.getCanNextPage()}
           >
-            Next  
+            Next
           </Button>
         </div>
       </div>
@@ -160,11 +162,10 @@ export function DataTable<TData extends Record<string, any>, TValue>({
                 />
               ) : (
                 <div className="absolute inset-0 flex items-center justify-center bg-muted">
-                    <Pill className="h-20 w-20 text-muted-foreground/20" />
+                  <Pill className="h-20 w-20 text-muted-foreground/20" />
                 </div>
               )}
             </div>
-
 
             {/* Content Section */}
             <div className="p-6 md:w-1/2 overflow-y-auto max-h-[calc(100vh-2rem)]">
@@ -228,7 +229,7 @@ export function DataTable<TData extends Record<string, any>, TValue>({
                       <h4 className="text-sm font-medium text-muted-foreground mb-1">
                         Manufacturer
                       </h4>
-                      <p className="text-sm">{selectedRow?.manufacturer}</p>
+                      {selectedRow?.manufacturer?.companyName || "N/A"}
                     </div>
                   </div>
                 </div>
