@@ -59,7 +59,7 @@ const ManufacturerModal = ({
     try {
       // API call to save the manufacturer in the backend
       const response = await fetch(
-        "http://localhost:3000/pharmacist/manufacturer",
+        "https://annual-johna-uni2234-7798c123.koyeb.app/pharmacist/manufacturer",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },

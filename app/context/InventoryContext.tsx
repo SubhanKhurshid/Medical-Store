@@ -99,7 +99,7 @@ export const InventoryProvider = ({
 
   useEffect(() => {
     const loadInventory = async () => {
-      const response = await axios.get("http://localhost:3000/pharmacist", {
+      const response = await axios.get("https://annual-johna-uni2234-7798c123.koyeb.app/pharmacist", {
         headers: {
           Authorization: `Bearer ${accessToken}`,
         },
@@ -114,7 +114,7 @@ export const InventoryProvider = ({
     item: Omit<InventoryItem, "id" | "createdAt" | "updatedAt">
   ) => {
     const response = await axios.post(
-      "http://localhost:3000/pharmacist",
+      "https://annual-johna-uni2234-7798c123.koyeb.app/pharmacist",
       item,
       {
         headers: {
@@ -130,7 +130,7 @@ export const InventoryProvider = ({
     item: Omit<InventoryItem, "id" | "createdAt" | "updatedAt">
   ) => {
     const response = await axios.patch(
-      `http://localhost:3000/pharmacist/${id}`,
+      `https://annual-johna-uni2234-7798c123.koyeb.app/pharmacist/${id}`,
       item,
       {
         headers: {
@@ -155,7 +155,7 @@ export const InventoryProvider = ({
 
   const getLowStockItems = async (): Promise<InventoryItem[]> => {
     const response = await axios.get(
-      "http://localhost:3000/pharmacist/low-stock",
+      "https://annual-johna-uni2234-7798c123.koyeb.app/pharmacist/low-stock",
       {
         headers: {
           Authorization: `Bearer ${accessToken}`,
@@ -167,7 +167,7 @@ export const InventoryProvider = ({
 
   const getExpiringItems = async (): Promise<InventoryItem[]> => {
     const response = await axios.get(
-      "http://localhost:3000/pharmacist/expiring",
+      "https://annual-johna-uni2234-7798c123.koyeb.app/pharmacist/expiring",
       {
         headers: {
           Authorization: `Bearer ${accessToken}`,
