@@ -343,7 +343,7 @@ const SalesPage = () => {
                       transition={{ duration: 0.3 }}
                     >
                       <Card key={product.id}>
-                        <CardContent className="flex items-center gap-24 p-4">
+                        <CardContent className="flex items-center justify-center gap-52 p-4">
                           {product.imageUrl ? (
                             <img
                               src={product.imageUrl}
