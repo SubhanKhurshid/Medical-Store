@@ -104,7 +104,7 @@ export default function InventoryManagement() {
     const fetchManufacturers = async () => {
       try {
         const response = await fetch(
-          "http://localhost:3000/pharmacist/manufacturer"
+          "https://annual-johna-uni2234-7798c123.koyeb.app/pharmacist/manufacturer"
         );
         if (!response.ok) throw new Error("Failed to fetch manufacturers");
 

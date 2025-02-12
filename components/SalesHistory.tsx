@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   LineChart,
   Line,
@@ -28,13 +28,19 @@ type MonthlySalesData = {
   weekSales: { week: string; totalSales: number }[] | undefined;
 };
 
-type SalesData = WeeklySalesData | MonthlySalesData;
+type DailySalesData = {
+  time: string;
+  totalSales: number;
+};
+
+type SalesData = WeeklySalesData | MonthlySalesData | DailySalesData;
 
 type ChartData = (
   | WeeklySalesData
   | MonthlySalesData
   | { hour: string; totalSales: number }
   | { month: string; totalSales: number }
+  | DailySalesData
 )[];
 
 interface SalesChartProps {
@@ -43,7 +49,7 @@ interface SalesChartProps {
 }
 
 const isSalesData = (data: any): data is SalesData => {
-  return data && (data.day || data.month);
+  return data && (data.day || data.month || data.time);
 };
 
 function SalesChart({ data, period }: SalesChartProps) {
@@ -55,7 +61,7 @@ function SalesChart({ data, period }: SalesChartProps) {
       return (
         <div className="bg-white/95 border border-gray-200 p-2 sm:p-4 rounded-lg shadow-lg backdrop-blur-sm max-w-[200px] sm:max-w-none">
           <p className="font-semibold text-gray-900 mb-1 sm:mb-2 text-xs sm:text-sm">
-            {label}
+            {period === "daily" ? `Time: ${label}` : label}
           </p>
           {payload.map((entry: any, index: number) => (
             <p
@@ -105,7 +111,7 @@ function SalesChart({ data, period }: SalesChartProps) {
     const getChartData = () => {
       switch (period) {
         case "daily":
-          return data as { hour: string; totalSales: number }[];
+          return data as DailySalesData[];
         case "weekly":
           return data as WeeklySalesData[];
         case "monthly":
@@ -120,7 +126,7 @@ function SalesChart({ data, period }: SalesChartProps) {
     const getXAxisDataKey = () => {
       switch (period) {
         case "daily":
-          return "hour";
+          return "time";
         case "weekly":
           return "day";
         case "monthly":
@@ -161,6 +167,12 @@ function SalesChart({ data, period }: SalesChartProps) {
           tickLine={false}
           padding={{ left: 20, right: 20 }}
           {...xAxis}
+          angle={-45}
+          textAnchor="end"
+          height={60}
+          tickFormatter={(value) =>
+            period === "daily" ? value.split(" - ")[0] : value
+          }
         />
         <YAxis
           axisLine={false}
@@ -296,10 +308,25 @@ export default function SalesHistory() {
 
       switch (tab) {
         case "daily":
-          return salesResult.map((item: any) => ({
-            hour: item.hour,
-            totalSales: item.totalSales || 0,
-          }));
+          // Group the data into 6-hour intervals with 12-hour format
+          const intervals = [
+            { range: "12:00AM - 5:59AM", start: 0, end: 6 },
+            { range: "6:00AM - 11:59AM", start: 6, end: 12 },
+            { range: "12:00PM - 5:59PM", start: 12, end: 18 },
+            { range: "6:00PM - 11:59PM", start: 18, end: 24 },
+          ];
+          return intervals.map((interval) => {
+            const salesInInterval = salesResult.filter((item: any) => {
+              const [hours] = item.time.split(":");
+              const hour = Number.parseInt(hours, 10);
+              return hour >= interval.start && hour < interval.end;
+            });
+            const totalSales = salesInInterval.reduce(
+              (sum: number, item: any) => sum + item.totalSales,
+              0
+            );
+            return { time: interval.range, totalSales };
+          });
         case "weekly":
           const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
           return days.map((day) => ({
@@ -349,15 +376,14 @@ export default function SalesHistory() {
     }
   };
 
+  const fetchData = useCallback(async () => {
+    const formattedSales = await fetchAndFormatSalesData(tab);
+    setSalesData(formattedSales);
+  }, [tab]); // Only re-run when `tab` changes
+
   useEffect(() => {
-    const fetchData = async () => {
-      const formattedSales = await fetchAndFormatSalesData(tab);
-      setSalesData(formattedSales);
-    };
-
     fetchData();
-  }, [tab]);
-
+  }, [fetchData]); // Only depends on fetchData, no infinite loop
   const totalSales = calculateTotalSales();
 
   return (
@@ -372,7 +398,9 @@ export default function SalesHistory() {
           >
             Sales History
           </motion.h1>
-          <motion.p className="tracking-tighter text-lg text-gray-500">Your sales stats are shown in graph below</motion.p>
+          <motion.p className="tracking-tighter text-lg text-gray-500">
+            Your sales stats are shown in graph below
+          </motion.p>
         </div>
         <Tabs
           defaultValue="weekly"

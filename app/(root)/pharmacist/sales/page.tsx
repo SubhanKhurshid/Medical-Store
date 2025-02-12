@@ -214,7 +214,7 @@ const SalesPage = () => {
           setCart([]);
           setDiscount("");
           setIsReceiptModalOpen(false);
-          fetchProducts(); 
+          fetchProducts();
         }, 100);
       } else {
         toast.error("Failed to record sale.");
@@ -244,7 +244,9 @@ const SalesPage = () => {
             >
               Sales Dashboard
             </motion.h1>
-            <motion.p className="tracking-tighter text-lg text-gray-500">Generate sales by adding entries in below</motion.p>
+            <motion.p className="tracking-tighter text-lg text-gray-500">
+              Generate sales by adding entries in below
+            </motion.p>
           </div>
           <Button
             onClick={() => setIsReceiptModalOpen(true)}
@@ -301,7 +303,8 @@ const SalesPage = () => {
                       No items found
                     </h3>
                     <p className="text-sm text-gray-500">
-                      Try adjusting your search or filter to find what you're looking for.
+                      Try adjusting your search or filter to find what you're
+                      looking for.
                     </p>
                   </motion.div>
                 ) : (
@@ -551,62 +554,60 @@ const SalesPage = () => {
       </Dialog>
 
       <style jsx global>{`
-  @media print {
-    @page {
-      size: 80mm auto;
-      margin: 0;
-    }
+        @media print {
+          @page {
+            size: 80mm auto;
+            margin: 0;
+          }
 
-    body > *:not(.print-content) {
-      display: none !important;
-    }
+          body > *:not(.print-content) {
+            display: none !important;
+          }
 
-    .print-content {
-      display: block !important;
-      position: absolute !important;
-      left: 0 !important;
-      top: 0 !important;
-      width: 80mm !important;
-      margin: 0 !important;
-      padding: 0 !important;
-      font-size: 16px !important; /* Increase the font size */
-    }
+          .print-content {
+            display: block !important;
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 80mm !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            font-size: 16px !important; /* Increase the font size */
+          }
 
-    .print\\:hidden {
-      display: none !important;
-    }
+          .print\\:hidden {
+            display: none !important;
+          }
 
-    * {
-      background-color: white !important;
-      -webkit-print-color-adjust: exact !important;
-      color-adjust: exact !important;
-    }
+          * {
+            background-color: white !important;
+            -webkit-print-color-adjust: exact !important;
+            color-adjust: exact !important;
+          }
 
-    [role="dialog"] {
-      position: absolute !important;
-      padding: 0 !important;
-      margin: 0 !important;
-      border: 0 !important;
-      background: none !important;
-      box-shadow: none !important;
-    }
+          [role="dialog"] {
+            position: absolute !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            border: 0 !important;
+            background: none !important;
+            box-shadow: none !important;
+          }
 
-    /* Customize specific elements in the receipt */
-    .print-content h1,
-    .print-content h2,
-    .print-content p {
-      font-size: 18px !important; /* You can customize specific headings here */
-    }
+          /* Customize specific elements in the receipt */
+          .print-content h1,
+          .print-content h2,
+          .print-content p {
+            font-size: 18px !important; /* You can customize specific headings here */
+          }
 
-    .print-content .receipt-item {
-      font-size: 16px !important; /* Customize font size for receipt items */
-    }
-  }
-`}</style>
-
+          .print-content .receipt-item {
+            font-size: 16px !important; /* Customize font size for receipt items */
+          }
+        }
+      `}</style>
     </div>
   );
 };
 
 export default SalesPage;
-
