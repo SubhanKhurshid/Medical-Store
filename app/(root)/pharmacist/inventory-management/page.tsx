@@ -52,8 +52,8 @@ const surgeryItemSchema = baseSchema.extend({
 });
 
 const generalItemSchema = baseSchema.extend({
-  category: z.string().min(1, "Category is required"),
-  unit: z.string().min(1, "Unit is required"),
+  category: z.string().min(1, "Category is required").optional(),
+  unit: z.number().min(0, "Unit must be positive"), // Removed .optional()
 });
 
 type FormValues = z.infer<typeof medicineSchema> &
@@ -96,7 +96,7 @@ export default function InventoryManagement() {
       sterilizationMethod: "",
       size: "",
       category: "",
-      unit: "",
+      unit: 0,
     },
   });
 
@@ -413,8 +413,9 @@ export default function InventoryManagement() {
                     <Label htmlFor="unit">Unit</Label>
                     <Input
                       id="unit"
+                      type="number"
                       placeholder="Unit"
-                      {...form.register("unit")}
+                      {...form.register("unit", { valueAsNumber: true })}
                     />
                   </div>
                 </>

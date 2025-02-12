@@ -96,6 +96,8 @@ const Inventory = () => {
                         <SelectItem value="MEDICINE">Medicine</SelectItem>
                         <SelectItem value="SURGERY">Surgery</SelectItem>
                         <SelectItem value="INJECTION">Injection</SelectItem>
+                          <SelectItem value="GENERAL">General</SelectItem>
+
                       </SelectContent>
                     </Select>
                   </div>
