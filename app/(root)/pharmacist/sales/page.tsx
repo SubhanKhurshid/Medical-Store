@@ -14,12 +14,22 @@ import {
 import { Label } from "@/components/ui/label";
 import {
   Plus,
+  UserPlus,
+  Stethoscope,
+  Syringe,
   Minus,
   Printer,
   Barcode,
   Search,
   ShoppingCart,
+  Pill,
+  Clipboard,
+  Package,
+  AlertTriangle,
+  Scissors,
 } from "lucide-react";
+// import { UserPlus, Stethoscope, Syringe, Pill, UserCircle } from "lucide-react";
+
 import { toast } from "sonner";
 import axios from "axios";
 import { useAuth } from "@/app/providers/AuthProvider";
@@ -27,11 +37,12 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Receipt } from "@/components/Receipt";
 
 interface Product {
-  id: string; // Changed from number to string to match backend
+  id: string;
   name: string;
   price: number;
   quantity: number;
-  imageUrl: string; // Added imageUrl to Product type
+  imageUrl: string;
+  type: string;
 }
 
 interface CartItem extends Product {
@@ -81,6 +92,21 @@ const SalesPage = () => {
     }
   }, [accessToken]);
 
+  const getProductIcon = (type: string) => {
+    switch (type) {
+      case "MEDICINE":
+        return <Pill className="h-16 w-16 text-muted-foreground/40" />;
+      case "INJECTION":
+        return <Syringe className="h-16 w-16 text-muted-foreground/40" />;
+      case "GENERAL":
+        return <Package className="h-16 w-16 text-muted-foreground/40" />;
+      case "SURGERY":
+        return <Scissors className="h-16 w-16 text-muted-foreground/40" />;
+      default:
+        return <AlertTriangle className="h-16 w-16 text-muted-foreground/40" />;
+    }
+  };
+
   useEffect(() => {
     if (searchTerm) {
       const results = products.filter((product) => {
@@ -94,20 +120,20 @@ const SalesPage = () => {
   }, [searchTerm, products]);
 
   const addToCart = (product: Product, quantity: number = 1) => {
-    const availableQuantity =
-      products.find((p) => p.id === product.id)?.quantity ?? 0;
-    if (availableQuantity && quantity > availableQuantity) {
-      toast.error("Cannot add more items than are in stock.");
-      setIsStockErrorOpen(true);
+    if (product.quantity < quantity) {
+      toast.error(
+        `Insufficient stock: Only ${product.quantity} available.`
+      );
       return;
     }
 
     setCart((prevCart) => {
       const existingItem = prevCart.find((item) => item.id === product.id);
       if (existingItem) {
-        if (existingItem.quantity + quantity > availableQuantity) {
-          toast.error("Cannot add more items than are in stock.");
-          setIsStockErrorOpen(true);
+        if (existingItem.quantity + quantity > product.quantity) {
+          toast.error(
+            `Cannot exceed stock: Only ${product.quantity} available.`
+          );
           return prevCart;
         }
         return prevCart.map((item) =>
@@ -316,29 +342,25 @@ const SalesPage = () => {
                       exit={{ opacity: 0, y: -20 }}
                       transition={{ duration: 0.3 }}
                     >
-                      <Card className="hover:shadow-lg transition-shadow duration-200">
-                        <CardContent className="flex justify-between items-center p-4">
-                          <div className="flex gap-4">
+                      <Card key={product.id}>
+                        <CardContent className="flex items-center gap-24 p-4">
+                          {product.imageUrl ? (
                             <img
                               src={product.imageUrl}
                               alt={product.name}
                               className="w-16 h-16 object-cover rounded-md"
                             />
-                            <div>
-                              <h3 className="font-semibold text-gray-800">
-                                {product.name}
-                              </h3>
-                              <p className="text-sm text-gray-600">
-                                Price: Rs {product.price}
-                              </p>
-                              <p className="text-sm text-gray-600">
-                                Quantity: {product.quantity}
-                              </p>
-                            </div>
+                          ) : (
+                            getProductIcon(product.type)
+                          )}
+                          <div>
+                            <h3 className="font-semibold">{product.name}</h3>
+                            <p className="text-sm text-gray-600">Price: Rs {product.price}</p>
+                            <p className="text-sm text-gray-600">Stock: {product.quantity}</p>
                           </div>
                           <Button
                             onClick={() => addToCart(product)}
-                            className="bg-red-800 hover:bg-red-800/80 transition-colors duration-200"
+                            className="bg-red-800"
                           >
                             <Plus className="h-4 w-4" />
                           </Button>
@@ -598,11 +620,11 @@ const SalesPage = () => {
           .print-content h1,
           .print-content h2,
           .print-content p {
-            font-size: 18px !important; /* You can customize specific headings here */
+            font-size: 20px !important; /* You can customize specific headings here */
           }
 
           .print-content .receipt-item {
-            font-size: 16px !important; /* Customize font size for receipt items */
+            font-size: 20px !important; /* Customize font size for receipt items */
           }
         }
       `}</style>
