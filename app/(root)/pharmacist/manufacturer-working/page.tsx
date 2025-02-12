@@ -181,9 +181,9 @@ const Manufacturer = () => {
                   columns={columns}
                   data={manufacturers.filter(
                     (m) =>
-                      m.name.toLowerCase().includes(search.toLowerCase()) ||
-                      m.city.toLowerCase().includes(search.toLowerCase()) ||
-                      m.country.toLowerCase().includes(search.toLowerCase())
+                      m.name?.toLowerCase().includes(search?.toLowerCase()) ||
+                      m.city?.toLowerCase().includes(search?.toLowerCase()) ||
+                      m.country?.toLowerCase().includes(search?.toLowerCase())
                   )}
                 />
               </motion.div>
