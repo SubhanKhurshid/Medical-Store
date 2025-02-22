@@ -1,12 +1,13 @@
 import { format } from "date-fns";
-// import { CartItem } from "@/types/sales";
 import Barcode from "react-barcode";
+
 interface CartItem {
   id: string;
   name: string;
   price: number;
   quantity: number;
 }
+
 interface ReceiptProps {
   cart: CartItem[];
   discount: string;
@@ -28,21 +29,27 @@ export function Receipt({
   return (
     <div
       style={{
-        width: "80mm",
+        width: "120mm", // Increased width
         margin: "0 auto",
-        padding: "8px",
+        padding: "16px",
         backgroundColor: "white",
-        fontFamily: "Consolas, monospace",
-        fontSize: "12px",
-        lineHeight: "1.2",
+        fontFamily: "Arial, sans-serif",
+        fontSize: "14px", // Increased font size
+        lineHeight: "1.5",
         color: "black",
         pageBreakInside: "avoid",
+        borderRadius: "8px",
+        boxShadow: "0px 4px 8px rgba(0, 0, 0, 0.2)",
       }}
     >
+      {/* Title */}
       <div style={{ textAlign: "center", marginBottom: "1rem" }}>
-        <h2 style={{ fontSize: "16px", margin: "0" }}>Ibrahim Medical</h2>
+        <h2 style={{ fontSize: "20px", fontWeight: "bold", margin: "0" }}>
+          NS Ibrahim Medical
+        </h2>
       </div>
 
+      {/* Barcode */}
       <div
         style={{
           display: "flex",
@@ -52,15 +59,16 @@ export function Receipt({
       >
         <Barcode
           value={orderNumber}
-          width={1.2}
-          height={40}
-          fontSize={10}
+          width={1.8} // Increased width
+          height={50} // Increased height
+          fontSize={12}
           margin={0}
           displayValue={false}
         />
       </div>
 
-      <div style={{ marginBottom: "1rem" }}>
+      {/* Order Details */}
+      <div style={{ marginBottom: "1rem", fontSize: "16px" }}>
         <div
           style={{
             display: "grid",
@@ -69,70 +77,94 @@ export function Receipt({
           }}
         >
           <div>Order #:</div>
-          <div style={{ textAlign: "right" }}>{orderNumber}</div>
+          <div style={{ textAlign: "right", fontWeight: "bold" }}>
+            {orderNumber}
+          </div>
 
           <div>Order Date:</div>
-          <div style={{ textAlign: "right" }}>{format(now, "MM/dd/yy")}</div>
+          <div style={{ textAlign: "right" }}>{format(now, "MM/dd/yyyy")}</div>
+
           <div>Order Time:</div>
           <div style={{ textAlign: "right" }}>{format(now, "hh:mm:ss a")}</div>
 
           <div>Register:</div>
           <div style={{ textAlign: "right" }}>1</div>
-          <div>Order type:</div>
+
+          <div>Order Type:</div>
           <div style={{ textAlign: "right" }}>Quick Sale</div>
         </div>
       </div>
 
+      {/* Items Section */}
       <div
         style={{
-          borderTop: "1px solid black",
-          borderBottom: "1px solid black",
-          padding: "0.5rem 0",
+          borderTop: "2px solid black",
+          borderBottom: "2px solid black",
+          padding: "0.75rem 0",
           marginBottom: "1rem",
+          fontSize: "16px",
         }}
       >
         {cart.map((item) => (
-          <div key={item.id} style={{ marginBottom: "0.25rem" }}>
-            <div style={{ display: "flex", justifyContent: "space-between" }}>
+          <div key={item.id} style={{ marginBottom: "0.5rem" }}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                fontWeight: "bold",
+              }}
+            >
               <span>{item.name}</span>
-              <span>Rs{(item.price * item.quantity).toFixed(2)}</span>
+              <span>Rs {(item.price * item.quantity).toFixed(2)}</span>
             </div>
-            <div style={{ marginLeft: "1rem" }}>x {item.quantity}</div>
+            <div style={{ marginLeft: "1.5rem", fontSize: "14px" }}>
+              x {item.quantity}
+            </div>
           </div>
         ))}
       </div>
 
-      <div style={{ marginBottom: "1rem" }}>
+      {/* Totals Section */}
+      <div style={{ fontSize: "16px", marginBottom: "1rem" }}>
         <div style={{ display: "flex", justifyContent: "space-between" }}>
           <span>Subtotal</span>
-          <span>Rs{totalBill.toFixed(2)}</span>
+          <span style={{ fontWeight: "bold" }}>Rs {totalBill.toFixed(2)}</span>
         </div>
+
         {parseFloat(discount) > 0 && (
           <div style={{ display: "flex", justifyContent: "space-between" }}>
             <span>Discount</span>
-            <span>Rs{parseFloat(discount).toFixed(2)}</span>
+            <span style={{ fontWeight: "bold", color: "red" }}>
+              - Rs {parseFloat(discount).toFixed(2)}
+            </span>
           </div>
         )}
+
         <div
           style={{
             display: "flex",
             justifyContent: "space-between",
             fontWeight: "bold",
+            fontSize: "18px",
+            marginTop: "10px",
+            borderTop: "2px solid black",
+            paddingTop: "5px",
           }}
         >
           <span>Total</span>
-          <span>Rs{discountedTotal.toFixed(2)}</span>
+          <span>Rs {discountedTotal.toFixed(2)}</span>
         </div>
       </div>
 
-      <div>
+      {/* Payment Section */}
+      <div style={{ fontSize: "16px", fontWeight: "bold" }}>
         <div style={{ display: "flex", justifyContent: "space-between" }}>
           <span>Cash Tendered</span>
-          <span>Rs{discountedTotal.toFixed(2)}</span>
+          <span>Rs {discountedTotal.toFixed(2)}</span>
         </div>
         <div style={{ display: "flex", justifyContent: "space-between" }}>
           <span>CHANGE DUE</span>
-          <span>Rs0.00</span>
+          <span>Rs 0.00</span>
         </div>
       </div>
     </div>

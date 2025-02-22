@@ -121,9 +121,7 @@ const SalesPage = () => {
 
   const addToCart = (product: Product, quantity: number = 1) => {
     if (product.quantity < quantity) {
-      toast.error(
-        `Insufficient stock: Only ${product.quantity} available.`
-      );
+      toast.error(`Insufficient stock: Only ${product.quantity} available.`);
       return;
     }
 
@@ -343,24 +341,32 @@ const SalesPage = () => {
                       transition={{ duration: 0.3 }}
                     >
                       <Card key={product.id}>
-                        <CardContent className="flex items-center justify-center gap-52 p-4">
-                          {product.imageUrl ? (
-                            <img
-                              src={product.imageUrl}
-                              alt={product.name}
-                              className="w-16 h-16 object-cover rounded-md"
-                            />
-                          ) : (
-                            getProductIcon(product.type)
-                          )}
-                          <div>
-                            <h3 className="font-semibold">{product.name}</h3>
-                            <p className="text-sm text-gray-600">Price: Rs {product.price}</p>
-                            <p className="text-sm text-gray-600">Stock: {product.quantity}</p>
+                        <CardContent className="flex items-center p-4">
+                          <div className="w-16 h-16 flex-shrink-0 flex items-center justify-center">
+                            {product.imageUrl ? (
+                              <img
+                                src={product.imageUrl}
+                                alt={product.name}
+                                className="w-16 h-16 object-cover rounded-md"
+                              />
+                            ) : (
+                              getProductIcon(product.type)
+                            )}
+                          </div>
+                          <div className="flex-grow mx-6">
+                            <h3 className="font-semibold text-lg">
+                              {product.name}
+                            </h3>
+                            <p className="text-sm text-gray-600">
+                              Price: Rs {product.price}
+                            </p>
+                            <p className="text-sm text-gray-600">
+                              Stock: {product.quantity}
+                            </p>
                           </div>
                           <Button
                             onClick={() => addToCart(product)}
-                            className="bg-red-800"
+                            className="bg-red-800 flex-shrink-0"
                           >
                             <Plus className="h-4 w-4" />
                           </Button>
@@ -544,11 +550,11 @@ const SalesPage = () => {
 
       {/* Receipt Modal Dialog */}
       <Dialog open={isReceiptModalOpen} onOpenChange={setIsReceiptModalOpen}>
-        <DialogContent className="sm:max-w-[350px] p-0">
-          <DialogHeader className="px-6 pt-6 print:hidden">
+        <DialogContent className="sm:max-w-[500px] p-0">
+          <DialogHeader className="px-4 pt-2 print:hidden">
             <DialogTitle className="text-red-800">Receipt</DialogTitle>
           </DialogHeader>
-          <div className="p-6 print:p-0 print-content">
+          <div className="p-4 print:p-0 print-content ">
             <Receipt
               cart={cart}
               discount={discount}
