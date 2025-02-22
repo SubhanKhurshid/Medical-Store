@@ -63,7 +63,7 @@ const Sidebar = () => {
   const currentNavItems = navItems[role as keyof typeof navItems] || [];
 
   const SidebarContent = () => (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full ">
       <div className="flex items-center justify-center p-6 bg-white shadow-md">
         <Link href={`/${role}`}>
           <Image
@@ -101,10 +101,10 @@ const Sidebar = () => {
 
   return (
     <>
-      <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0">
+      <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 ">
         <SidebarContent />
       </aside>
-      <div className="lg:hidden">
+      <div className="lg:hidden ">
         <Sheet>
           <SheetTrigger asChild>
             <Button

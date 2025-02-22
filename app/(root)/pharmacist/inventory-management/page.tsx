@@ -33,7 +33,9 @@ const baseSchema = z.object({
   price: z.number().min(0, "Price must be positive"),
   minimumStock: z.number().min(0, "Minimum stock must be positive"),
   description: z.string().optional(),
-  manufacturerDiscount: z.number()
+  manufacturerDiscount: z
+    .number()
+    .min(0, "Manufacturer discount must be positive"),
   // productCode: z.string().min(1, "Product Code is required"),
 });
 
@@ -89,6 +91,7 @@ export default function InventoryManagement() {
       manufacturer: "",
       price: 0,
       minimumStock: 0,
+      manufacturerDiscount: 0,
       description: "",
       dosage: "",
       activeIngredient: "",
@@ -235,6 +238,11 @@ export default function InventoryManagement() {
                   className="text-lg p-4"
                   {...form.register("name")}
                 />
+                {form.formState.errors.name && (
+                  <span className="text-red-500 text-sm">
+                    {form.formState.errors.name.message}
+                  </span>
+                )}
               </div>
               <div className="flex flex-col gap-2">
                 <Label htmlFor="quantity">Quantity</Label>
@@ -244,6 +252,11 @@ export default function InventoryManagement() {
                   className="text-lg p-4"
                   {...form.register("quantity", { valueAsNumber: true })}
                 />
+                {form.formState.errors.quantity && (
+                  <span className="text-red-500 text-sm">
+                    {form.formState.errors.quantity.message}
+                  </span>
+                )}
               </div>
               {/* <div className="flex flex-col gap-2">
                 <Label htmlFor="productCode">Product Code</Label>
@@ -261,6 +274,11 @@ export default function InventoryManagement() {
                   className="text-lg p-4"
                   {...form.register("batchNumber")}
                 />
+                {form.formState.errors.batchNumber && (
+                  <span className="text-red-500 text-sm">
+                    {form.formState.errors.batchNumber.message}
+                  </span>
+                )}
               </div>
               <div className="flex flex-col gap-2">
                 <Label htmlFor="expiryDate">Expiry Date</Label>
@@ -270,15 +288,31 @@ export default function InventoryManagement() {
                   className="text-lg p-4"
                   {...form.register("expiryDate")}
                 />
+                {form.formState.errors.expiryDate && (
+                  <span className="text-red-500 text-sm">
+                    {form.formState.errors.expiryDate.message}
+                  </span>
+                )}
               </div>
               <div className="flex flex-col gap-2">
-                <Label htmlFor="manufacturerDiscount">Manufacturer Discount</Label>
+                <Label htmlFor="manufacturerDiscount">
+                  Manufacturer Discount
+                </Label>
                 <Input
                   id="manufacturerDiscount"
                   placeholder="Manufacturer Discount"
+                  type="number"
                   className="text-lg p-4"
-                  {...form.register("manufacturerDiscount")}
+                  {...form.register("manufacturerDiscount", {
+                    valueAsNumber: true,
+                    setValueAs: (value) => Number(value) || 0, // Convert empty string to 0
+                  })}
                 />
+                {form.formState.errors.manufacturerDiscount && (
+                  <span className="text-red-500 text-sm">
+                    {form.formState.errors.manufacturerDiscount.message}
+                  </span>
+                )}
               </div>
               <div className="flex flex-col gap-2">
                 <Label htmlFor="manufacturer">Manufacturer</Label>
@@ -311,6 +345,11 @@ export default function InventoryManagement() {
                     </Select>
                   )}
                 />
+                {form.formState.errors.manufacturer && (
+                  <span className="text-red-500 text-sm">
+                    {form.formState.errors.manufacturer.message}
+                  </span>
+                )}
               </div>
 
               <div className="flex flex-col gap-2">
@@ -321,6 +360,11 @@ export default function InventoryManagement() {
                   className="text-lg p-4"
                   {...form.register("price", { valueAsNumber: true })}
                 />
+                {form.formState.errors.price && (
+                  <span className="text-red-500 text-sm">
+                    {form.formState.errors.price.message}
+                  </span>
+                )}
               </div>
               <div className="flex flex-col gap-2">
                 <Label htmlFor="minimumStock">Minimum Stock</Label>
@@ -330,6 +374,11 @@ export default function InventoryManagement() {
                   className="text-lg p-4"
                   {...form.register("minimumStock", { valueAsNumber: true })}
                 />
+                {form.formState.errors.minimumStock && (
+                  <span className="text-red-500 text-sm">
+                    {form.formState.errors.minimumStock.message}
+                  </span>
+                )}
               </div>
 
               {itemType === ItemType.MEDICINE && (
@@ -342,6 +391,11 @@ export default function InventoryManagement() {
                       className="text-lg p-4"
                       {...form.register("dosage")}
                     />
+                    {form.formState.errors.dosage && (
+                      <span className="text-red-500 text-sm">
+                        {form.formState.errors.dosage.message}
+                      </span>
+                    )}
                   </div>
                   <div className="flex flex-col gap-2">
                     <Label htmlFor="activeIngredient">Active Ingredient</Label>
@@ -351,6 +405,11 @@ export default function InventoryManagement() {
                       className="text-lg p-4"
                       {...form.register("activeIngredient")}
                     />
+                    {form.formState.errors.activeIngredient && (
+                      <span className="text-red-500 text-sm">
+                        {form.formState.errors.activeIngredient.message}
+                      </span>
+                    )}
                   </div>
                 </>
               )}
@@ -365,6 +424,11 @@ export default function InventoryManagement() {
                       className="text-lg p-4"
                       {...form.register("volume", { valueAsNumber: true })}
                     />
+                    {form.formState.errors.volume && (
+                      <span className="text-red-500 text-sm">
+                        {form.formState.errors.volume.message}
+                      </span>
+                    )}
                   </div>
                   <div className="flex flex-col gap-2">
                     <Label htmlFor="route">Route of Administration</Label>
@@ -377,22 +441,36 @@ export default function InventoryManagement() {
                           defaultValue={field.value}
                         >
                           <SelectTrigger className="text-lg p-4">
-                            <SelectValue className="text-lg p-4" placeholder="Select route" />
+                            <SelectValue
+                              className="text-lg p-4"
+                              placeholder="Select route"
+                            />
                           </SelectTrigger>
                           <SelectContent className="text-lg">
-                            <SelectItem className="text-lg" value="Intramuscular">
+                            <SelectItem
+                              className="text-lg"
+                              value="Intramuscular"
+                            >
                               Intramuscular
                             </SelectItem>
                             <SelectItem className="text-lg" value="Intravenous">
                               Intravenous
                             </SelectItem>
-                            <SelectItem className="text-lg" value="Subcutaneous">
+                            <SelectItem
+                              className="text-lg"
+                              value="Subcutaneous"
+                            >
                               Subcutaneous
                             </SelectItem>
                           </SelectContent>
                         </Select>
                       )}
                     />
+                    {form.formState.errors.route && (
+                      <span className="text-red-500 text-sm">
+                        {form.formState.errors.route.message}
+                      </span>
+                    )}
                   </div>
                 </>
               )}
@@ -409,6 +487,11 @@ export default function InventoryManagement() {
                       className="text-lg p-4"
                       {...form.register("sterilizationMethod")}
                     />
+                    {form.formState.errors.sterilizationMethod && (
+                      <span className="text-red-500 text-sm">
+                        {form.formState.errors.sterilizationMethod.message}
+                      </span>
+                    )}
                   </div>
                   <div className="flex flex-col gap-2">
                     <Label htmlFor="size">Size</Label>
@@ -418,6 +501,11 @@ export default function InventoryManagement() {
                       className="text-lg p-4"
                       {...form.register("size")}
                     />
+                    {form.formState.errors.size && (
+                      <span className="text-red-500 text-sm">
+                        {form.formState.errors.size.message}
+                      </span>
+                    )}
                   </div>
                 </>
               )}
@@ -432,6 +520,11 @@ export default function InventoryManagement() {
                       className="text-lg p-4"
                       {...form.register("category")}
                     />
+                    {form.formState.errors.category && (
+                      <span className="text-red-500 text-sm">
+                        {form.formState.errors.category.message}
+                      </span>
+                    )}
                   </div>
                   <div className="flex flex-col gap-2">
                     <Label htmlFor="unit">Unit</Label>
@@ -442,6 +535,11 @@ export default function InventoryManagement() {
                       placeholder="Unit"
                       {...form.register("unit", { valueAsNumber: true })}
                     />
+                    {form.formState.errors.unit && (
+                      <span className="text-red-500 text-sm">
+                        {form.formState.errors.unit.message}
+                      </span>
+                    )}
                   </div>
                 </>
               )}
@@ -455,6 +553,11 @@ export default function InventoryManagement() {
                 className="text-lg"
                 {...form.register("description")}
               />
+              {form.formState.errors.description && (
+                <span className="text-red-500 text-sm">
+                  {form.formState.errors.description.message}
+                </span>
+              )}
             </div>
 
             <div>

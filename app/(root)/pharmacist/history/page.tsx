@@ -1,13 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { DataTable } from "@/components/shared/DataTable";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 
 interface Sale {
   id: string;
@@ -15,8 +14,8 @@ interface Sale {
   salePrice: number;
   totalPrice: number;
   soldAt: string;
-  customerName: string;
-  customerPhone: string;
+  customerName?: string | null; // Optional
+  customerPhone?: string | null; // Optional
   saleItems: {
     inventoryItem: {
       id: string;
@@ -29,93 +28,106 @@ interface Sale {
 
 const SalesTable = () => {
   const [search, setSearch] = useState("");
-  const [sales, setSales] = useState<Sale[]>([ // Dummy data
-    {
-      id: "sale123",
-      quantity: 5,
-      salePrice: 50.0,
-      totalPrice: 250.0,
-      soldAt: "2025-02-20T10:00:00.000Z",
-      customerName: "John Doe",
-      customerPhone: "1234567890",
-      saleItems: [
-        {
-          inventoryItem: {
-            id: "item456",
-            name: "Paracetamol",
-            type: "MEDICINE",
-            price: 50.0,
-          },
-        },
-      ],
-    },
-    {
-      id: "sale124",
-      quantity: 2,
-      salePrice: 100.0,
-      totalPrice: 200.0,
-      soldAt: "2025-02-21T14:30:00.000Z",
-      customerName: "Jane Smith",
-      customerPhone: "9876543210",
-      saleItems: [
-        {
-          inventoryItem: {
-            id: "item789",
-            name: "Ibuprofen",
-            type: "MEDICINE",
-            price: 100.0,
-          },
-        },
-      ],
-    },
-  ]);
+  const [loading, setLoading] = useState(false);
+  const [sales, setSales] = useState<Sale[]>([]);
+
+  // Fetch Sales Data from API
+  const fetchSalesWithDateRange = async (
+    startDate?: string,
+    endDate?: string
+  ) => {
+    try {
+      setLoading(true);
+      const queryParams = new URLSearchParams();
+      if (startDate) queryParams.append("startDate", startDate);
+      if (endDate) queryParams.append("endDate", endDate);
+
+      const response = await fetch(
+        `https://annual-johna-uni2234-7798c123.koyeb.app/pharmacist/sales?${queryParams}`
+      );
+      const result = await response.json();
+
+      if (response.ok && result.success && Array.isArray(result.data)) {
+        setSales(result.data); // ✅ Ensures only data array is set
+      } else {
+        console.error("Invalid response format:", result);
+        setSales([]); // ✅ Prevents crash
+      }
+    } catch (error) {
+      console.error("Error fetching sales:", error);
+      setSales([]); // ✅ Ensures table does not break
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch Data on Component Mount
+  useEffect(() => {
+    fetchSalesWithDateRange();
+  }, []);
 
   const columns = [
     {
       id: "customerName",
       header: "Customer",
       cell: ({ row }: any) => (
-        <span className="text-lg font-semibold">{row.original.customerName}</span>
+        <span className="text-lg font-semibold">
+          {row.original.customerName || "--"} {/* ✅ Handles null names */}
+        </span>
       ),
     },
     {
       id: "customerPhone",
       header: "Phone",
       cell: ({ row }: any) => (
-        <span className="text-lg font-semibold">{row.original.customerPhone}</span>
+        <span className="text-lg font-semibold">
+          {row.original.customerPhone || "--"} {/* ✅ Handles null phone */}
+        </span>
       ),
     },
     {
       id: "soldAt",
       header: "Date",
       cell: ({ row }: any) => (
-        <span className="text-lg font-semibold">{new Date(row.original.soldAt).toLocaleDateString()}</span>
+        <span className="text-lg font-semibold">
+          {new Date(row.original.soldAt).toLocaleDateString()}
+        </span>
       ),
     },
     {
       id: "quantity",
       header: "Quantity",
-      cell: ({ row }: any) => <span className="text-lg font-semibold">{row.original.quantity}</span>,
+      cell: ({ row }: any) => (
+        <span className="text-lg font-semibold">{row.original.quantity}</span>
+      ),
     },
     {
       id: "salePrice",
       header: "Sale Price",
-      cell: ({ row }: any) => <span className="text-lg font-semibold">{row.original.salePrice} Rs</span>,
+      cell: ({ row }: any) => (
+        <span className="text-lg font-semibold">
+          {row.original.salePrice} Rs
+        </span>
+      ),
     },
     {
       id: "totalPrice",
       header: "Total Price",
-      cell: ({ row }: any) => <span className="text-lg font-semibold">{row.original.totalPrice} Rs</span>,
-    },
-    {
-      id: "actions",
-      header: "Actions",
       cell: ({ row }: any) => (
-        <Button variant="ghost" size="icon">
-          <Eye className="h-6 w-6 text-gray-600" />
-        </Button>
+        <span className="text-lg font-semibold">
+          {row.original.totalPrice} Rs
+        </span>
       ),
     },
+    // {
+    //   id: "actions",
+    //   header: "Actions",
+    //   cell: ({ row }: any) => (
+    //     <Button variant="ghost" size="icon">
+    //       <Eye className="h-6 w-6 text-gray-600" />
+    //     </Button>
+    //   ),
+    // },
   ];
 
   return (
@@ -156,11 +168,7 @@ const SalesTable = () => {
             >
               <DataTable
                 columns={columns}
-                data={sales.filter(
-                  (s) =>
-                    s.customerName?.toLowerCase().includes(search?.toLowerCase()) ||
-                    s.customerPhone?.includes(search)
-                )}
+                data={Array.isArray(sales) ? sales : []} // ✅ Prevents errors
               />
             </motion.div>
           </AnimatePresence>
