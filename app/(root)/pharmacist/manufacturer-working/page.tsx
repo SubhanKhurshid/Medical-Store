@@ -133,10 +133,10 @@ const Manufacturer = () => {
     >
       <Card className="bg-white shadow-xl border-0 rounded-xl overflow-hidden">
         <CardHeader className="text-red-800 p-6 border-b-2 border-red-700">
-          <CardTitle className="text-2xl md:text-3xl font-bold tracking-tighter">
+          <CardTitle className="text-3xl md:text-4xl font-bold">
             Manufacturer Directory
           </CardTitle>
-          <p className="text-gray-500 mt-2 text-lg tracking-tighter">
+          <p className="text-gray-500 mt-2 text-xl">
             Manage and track your manufacturer partners efficiently
           </p>
         </CardHeader>
@@ -148,12 +148,12 @@ const Manufacturer = () => {
                 placeholder="Search manufacturers..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="pl-10 pr-4 py-2 bg-white border border-gray-200 rounded-lg focus:border-red-500 focus:ring focus:ring-red-200 transition-all"
+                className="pl-10 pr-4 py-2 bg-white border border-gray-200 rounded-lg text-xl"
               />
             </div>
             <Button
               onClick={() => setIsModalOpen(true)}
-              className="bg-red-800 hover:bg-red-900 text-white transition-colors duration-200"
+              className="bg-red-800 hover:bg-red-900 text-white transition-colors duration-200 text-xl"
             >
               <PlusCircle className="mr-2 h-4 w-4" />
               Add Manufacturer

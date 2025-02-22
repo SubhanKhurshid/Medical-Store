@@ -81,7 +81,8 @@ export function DataTable<TData extends Record<string, any>, TValue>({
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id} className="px-2 py-3 text-left">
+                  <TableHead key={header.id} className="px-3 py-4 text-left text-lg font-semibold"
+                  >
                     {header.isPlaceholder
                       ? null
                       : flexRender(
@@ -102,7 +103,7 @@ export function DataTable<TData extends Record<string, any>, TValue>({
                   className="cursor-pointer hover:bg-muted/50"
                 >
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id} className="px-2 py-3">
+                    <TableCell key={cell.id} className="px-3 py-4 text-base font-medium">
                       {flexRender(
                         cell.column.columnDef.cell,
                         cell.getContext()
@@ -115,7 +116,7 @@ export function DataTable<TData extends Record<string, any>, TValue>({
               <TableRow>
                 <TableCell
                   colSpan={columns.length}
-                  className="h-24 text-center"
+                    className="h-24 text-center text-lg font-semibold"
                 >
                   No results.
                 </TableCell>

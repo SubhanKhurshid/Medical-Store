@@ -57,10 +57,10 @@ const Inventory = () => {
     >
       <Card className="bg-white/90 backdrop-blur-md shadow-lg border-0 rounded-lg">
         <CardHeader className="border-b-2 border-red-700 p-6">
-          <CardTitle className="text-2xl md:text-3xl font-bold text-red-800 tracking-tighter">
+          <CardTitle className="text-3xl md:text-4xl font-bold text-red-800">
             Inventory Management
           </CardTitle>
-          <p className="text-lg text-gray-500 mt-1 tracking-tighter">
+          <p className="text-xl text-gray-500 mt-2">
             Manage and track your medical inventory
           </p>
         </CardHeader>
@@ -79,11 +79,11 @@ const Inventory = () => {
                       placeholder="Search items..."
                       value={search}
                       onChange={(e) => setSearch(e.target.value)}
-                      className="pl-10 pr-4 py-2 bg-white border border-gray-300 rounded-md focus:border-red-500 focus:ring focus:ring-red-500 focus:ring-opacity-50 transition-colors"
+                        className="pl-10 pr-4 py-2 bg-white border border-gray-300 rounded-md text-lg"
                     />
                   </div>
                   <div className="relative">
-                    <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 h-4 w-4" />
+                      {/* <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 h-4 w-4" /> */}
                     <Select
                       onValueChange={(value) => setTypeFilter(value)}
                       value={typeFilter}
@@ -92,11 +92,11 @@ const Inventory = () => {
                         <SelectValue placeholder="Filter by type" className="pl-10 pr-4 py-2" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="all"> Types</SelectItem>
-                        <SelectItem value="MEDICINE">Medicine</SelectItem>
-                        <SelectItem value="SURGERY">Surgery</SelectItem>
-                        <SelectItem value="INJECTION">Injection</SelectItem>
-                          <SelectItem value="GENERAL">General</SelectItem>
+                          <SelectItem className="text-lg" value="all">Types</SelectItem>
+                          <SelectItem className="text-lg" value="MEDICINE">Medicine</SelectItem>
+                          <SelectItem className="text-lg" value="SURGERY">Surgery</SelectItem>
+                          <SelectItem className="text-lg" value="INJECTION">Injection</SelectItem>
+                          <SelectItem className="text-lg" value="GENERAL">General</SelectItem>
 
                       </SelectContent>
                     </Select>

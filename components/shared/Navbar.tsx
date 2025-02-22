@@ -25,7 +25,7 @@ const Navbar = () => {
         <div className="flex justify-end items-center h-16">
           <div className="relative z-50">
             <Menu as="div" className="relative inline-block text-left">
-              <Menu.Button className="flex items-center space-x-3 rounded-full px-4 py-2 bg-white group transition-all duration-200 ease-in-out transform">
+              <Menu.Button className="flex items-center space-x-5 px-4 py-2">
                 <div className="relative flex-shrink-0">
                   {user?.image ? (
                     <Image
@@ -42,7 +42,7 @@ const Navbar = () => {
                   )}
                 </div>
                 <div className="hidden md:flex flex-col items-start">
-                  <p className="text-sm font-semibold text-gray-800 capitalize">{user?.name || "User"}</p>
+                  <p className="text-xl font-semibold text-gray-800 capitalize">{user?.name || "User"}</p>
                   <p className="text-xs font-normal text-red-600 capitalize">{role}</p>
                 </div>
                 <ChevronDownIcon
@@ -75,7 +75,7 @@ const Navbar = () => {
                         </Link>
                       )}
                     </Menu.Item>
-                    <Menu.Item>
+                    {/* <Menu.Item>
                       {({ active }) => (
                         <Link
                           href="/settings"
@@ -87,7 +87,7 @@ const Navbar = () => {
                           Settings
                         </Link>
                       )}
-                    </Menu.Item>
+                    </Menu.Item> */}
                   </div>
                   <div className="px-1 py-2">
                     <Menu.Item>

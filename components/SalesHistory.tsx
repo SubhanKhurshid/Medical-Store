@@ -391,14 +391,14 @@ export default function SalesHistory() {
       <div className="flex-1 p-2 sm:p-4 md:p-8">
         <div className="flex flex-col gap-2 mb-10">
           <motion.h1
-            className="text-2xl sm:text-3xl font-bold text-red-800 tracking-tighter"
+            className="text-3xl md:text-4xl font-bold text-red-800"
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
           >
             Sales History
           </motion.h1>
-          <motion.p className="tracking-tighter text-lg text-gray-500">
+          <motion.p className="text-xl text-gray-500">
             Your sales stats are shown in graph below
           </motion.p>
         </div>

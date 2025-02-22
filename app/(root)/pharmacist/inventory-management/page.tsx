@@ -33,6 +33,7 @@ const baseSchema = z.object({
   price: z.number().min(0, "Price must be positive"),
   minimumStock: z.number().min(0, "Minimum stock must be positive"),
   description: z.string().optional(),
+  manufacturerDiscount: z.number()
   // productCode: z.string().min(1, "Product Code is required"),
 });
 
@@ -182,14 +183,14 @@ export default function InventoryManagement() {
     <div className="p-4 md:p-8 max-w-9xl mx-auto min-h-screen">
       <div className="flex flex-col gap-2 mb-6">
         <motion.h1
-          className="text-2xl sm:text-3xl font-bold text-red-800 tracking-tighter"
+          className="text-3xl md:text-4xl font-bold text-red-800"
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
         >
           Add Item Here
         </motion.h1>
-        <motion.p className="tracking-tighter text-lg text-gray-500">
+        <motion.p className="text-xl text-gray-500">
           You can add item by filling these fields
         </motion.p>
       </div>
@@ -224,13 +225,14 @@ export default function InventoryManagement() {
               <TabsTrigger value="general">General Item</TabsTrigger>
             </TabsList>
           </Tabs>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="flex flex-col gap-2">
                 <Label htmlFor="name">Item Name</Label>
                 <Input
                   id="name"
                   placeholder="Item name"
+                  className="text-lg p-4"
                   {...form.register("name")}
                 />
               </div>
@@ -239,6 +241,7 @@ export default function InventoryManagement() {
                 <Input
                   id="quantity"
                   type="number"
+                  className="text-lg p-4"
                   {...form.register("quantity", { valueAsNumber: true })}
                 />
               </div>
@@ -255,6 +258,7 @@ export default function InventoryManagement() {
                 <Input
                   id="batchNumber"
                   placeholder="Batch number"
+                  className="text-lg p-4"
                   {...form.register("batchNumber")}
                 />
               </div>
@@ -263,7 +267,17 @@ export default function InventoryManagement() {
                 <Input
                   id="expiryDate"
                   type="date"
+                  className="text-lg p-4"
                   {...form.register("expiryDate")}
+                />
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="manufacturerDiscount">Manufacturer Discount</Label>
+                <Input
+                  id="manufacturerDiscount"
+                  placeholder="Manufacturer Discount"
+                  className="text-lg p-4"
+                  {...form.register("manufacturerDiscount")}
                 />
               </div>
               <div className="flex flex-col gap-2">
@@ -273,18 +287,20 @@ export default function InventoryManagement() {
                   control={form.control}
                   render={({ field }) => (
                     <Select onValueChange={field.onChange} value={field.value}>
-                      <SelectTrigger>
+                      <SelectTrigger className="text-lg p-4">
                         <SelectValue
                           placeholder="Select Manufacturer"
+                          className="text-lg p-4"
                           defaultValue={
                             manufacturers.find((m) => m.id === field.value)
                               ?.companyName
                           }
                         />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="text-lg">
                         {manufacturers.map((manufacturer) => (
                           <SelectItem
+                            className="text-lg"
                             key={manufacturer.id}
                             value={manufacturer.id}
                           >
@@ -302,6 +318,7 @@ export default function InventoryManagement() {
                 <Input
                   id="price"
                   type="number"
+                  className="text-lg p-4"
                   {...form.register("price", { valueAsNumber: true })}
                 />
               </div>
@@ -310,6 +327,7 @@ export default function InventoryManagement() {
                 <Input
                   id="minimumStock"
                   type="number"
+                  className="text-lg p-4"
                   {...form.register("minimumStock", { valueAsNumber: true })}
                 />
               </div>
@@ -321,6 +339,7 @@ export default function InventoryManagement() {
                     <Input
                       id="dosage"
                       placeholder="Dosage"
+                      className="text-lg p-4"
                       {...form.register("dosage")}
                     />
                   </div>
@@ -329,6 +348,7 @@ export default function InventoryManagement() {
                     <Input
                       id="activeIngredient"
                       placeholder="Active ingredient"
+                      className="text-lg p-4"
                       {...form.register("activeIngredient")}
                     />
                   </div>
@@ -342,6 +362,7 @@ export default function InventoryManagement() {
                     <Input
                       id="volume"
                       type="number"
+                      className="text-lg p-4"
                       {...form.register("volume", { valueAsNumber: true })}
                     />
                   </div>
@@ -355,17 +376,17 @@ export default function InventoryManagement() {
                           onValueChange={field.onChange}
                           defaultValue={field.value}
                         >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select route" />
+                          <SelectTrigger className="text-lg p-4">
+                            <SelectValue className="text-lg p-4" placeholder="Select route" />
                           </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Intramuscular">
+                          <SelectContent className="text-lg">
+                            <SelectItem className="text-lg" value="Intramuscular">
                               Intramuscular
                             </SelectItem>
-                            <SelectItem value="Intravenous">
+                            <SelectItem className="text-lg" value="Intravenous">
                               Intravenous
                             </SelectItem>
-                            <SelectItem value="Subcutaneous">
+                            <SelectItem className="text-lg" value="Subcutaneous">
                               Subcutaneous
                             </SelectItem>
                           </SelectContent>
@@ -385,6 +406,7 @@ export default function InventoryManagement() {
                     <Input
                       id="sterilizationMethod"
                       placeholder="Sterilization method"
+                      className="text-lg p-4"
                       {...form.register("sterilizationMethod")}
                     />
                   </div>
@@ -393,6 +415,7 @@ export default function InventoryManagement() {
                     <Input
                       id="size"
                       placeholder="Size"
+                      className="text-lg p-4"
                       {...form.register("size")}
                     />
                   </div>
@@ -406,6 +429,7 @@ export default function InventoryManagement() {
                     <Input
                       id="category"
                       placeholder="Category"
+                      className="text-lg p-4"
                       {...form.register("category")}
                     />
                   </div>
@@ -414,6 +438,7 @@ export default function InventoryManagement() {
                     <Input
                       id="unit"
                       type="number"
+                      className="text-lg p-4"
                       placeholder="Unit"
                       {...form.register("unit", { valueAsNumber: true })}
                     />
@@ -427,6 +452,7 @@ export default function InventoryManagement() {
               <Textarea
                 id="description"
                 placeholder="Item description"
+                className="text-lg"
                 {...form.register("description")}
               />
             </div>

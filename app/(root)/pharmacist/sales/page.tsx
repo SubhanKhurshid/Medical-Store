@@ -263,20 +263,20 @@ const SalesPage = () => {
         <div className="flex justify-between items-center mb-8">
           <div className="flex flex-col gap-2">
             <motion.h1
-              className="text-2xl sm:text-3xl font-bold text-red-800 tracking-tighter"
+              className="text-3xl md:text-4xl font-bold text-red-800"
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
             >
               Sales Dashboard
             </motion.h1>
-            <motion.p className="tracking-tighter text-lg text-gray-500">
+            <motion.p className="text-xl text-gray-500">
               Generate sales by adding entries in below
             </motion.p>
           </div>
           <Button
             onClick={() => setIsReceiptModalOpen(true)}
-            className="bg-red-800 hover:bg-red-800/80"
+            className="bg-red-800 hover:bg-red-800/80 text-xl"
           >
             <Printer className="mr-2 h-4 w-4" />
             Print Receipt
@@ -289,7 +289,7 @@ const SalesPage = () => {
             transition={{ duration: 0.5 }}
             className="bg-white p-6 rounded-lg shadow-lg"
           >
-            <h2 className="text-2xl font-semibold mb-6 text-red-800 tracking-tighter">
+            <h2 className="text-3xl font-semibold mb-6 text-red-800">
               Product Search
             </h2>
             <div className="flex gap-4 mb-6">
@@ -299,11 +299,11 @@ const SalesPage = () => {
                   placeholder="Search product by name or code"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 border-red-800 focus:ring-red-800"
+                  className="pl-10 border-red-800 text-lg"
                 />
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-red-800" />
               </div>
-              <div className="relative">
+              {/* <div className="relative">
                 <Input
                   type="text"
                   placeholder="Scan barcode"
@@ -312,7 +312,7 @@ const SalesPage = () => {
                   className="pl-10 border-red-800 focus:ring-red-800"
                 />
                 <Barcode className="absolute left-3 top-1/2 transform -translate-y-1/2 text-red-800" />
-              </div>
+              </div> */}
             </div>
             <div className="space-y-4 max-h-[calc(100vh-300px)] overflow-y-auto">
               <AnimatePresence>
@@ -380,7 +380,7 @@ const SalesPage = () => {
             transition={{ duration: 0.5, delay: 0.2 }}
             className="bg-white p-6 rounded-lg shadow-lg"
           >
-            <h2 className="text-2xl font-semibold mb-6 text-red-800 flex items-center">
+            <h2 className="text-3xl font-semibold mb-6 text-red-800 flex items-center">
               <ShoppingCart className="mr-2" /> Cart
             </h2>
             <div className="space-y-4 max-h-[calc(100vh-400px)] overflow-y-auto mb-4">
@@ -451,7 +451,7 @@ const SalesPage = () => {
               </p>
               <Button
                 onClick={handleCheckout}
-                className="mt-4 w-full bg-red-800 hover:bg-red-800/80 transition-colors duration-200"
+                className="mt-4 text-lg w-full bg-red-800 hover:bg-red-800/80 transition-colors duration-200"
               >
                 Proceed to Checkout
               </Button>

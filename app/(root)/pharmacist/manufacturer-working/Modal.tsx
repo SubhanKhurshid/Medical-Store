@@ -89,16 +89,16 @@ const ManufacturerModal = ({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-10"
         >
           <motion.div
             initial={{ y: 50, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 50, opacity: 0 }}
-            className="bg-white rounded-xl w-full max-w-md shadow-2xl overflow-hidden"
+            className="bg-white rounded-xl w-full max-w-5xl shadow-2xl overflow-hidden"
           >
             <div className="flex justify-between items-center p-6 border-b-2 border-red-700">
-              <h3 className="text-xl font-semibold text-red-800 tracking-tighter font-bold">
+              <h3 className="text-3xl text-red-800 font-bold">
                 Add New Manufacturer
               </h3>
               <button
@@ -116,11 +116,12 @@ const ManufacturerModal = ({
                   <Input
                     required
                     placeholder="Company Name"
+
                     value={formData.companyName}
                     onChange={(e) =>
                       setFormData({ ...formData, companyName: e.target.value })
                     }
-                    className="pl-10 focus:ring-red-500 focus:border-red-500"
+                    className="pl-10 text-2xl"
                   />
                 </div>
 
@@ -135,8 +136,7 @@ const ManufacturerModal = ({
                       onChange={(e) =>
                         setFormData({ ...formData, email: e.target.value })
                       }
-                      className="pl-10 focus:ring-red-500 focus:border-red-500"
-                    />
+                      className="pl-10 text-2xl" />
                   </div>
                   <div className="relative">
                     <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
@@ -147,8 +147,7 @@ const ManufacturerModal = ({
                       onChange={(e) =>
                         setFormData({ ...formData, phone: e.target.value })
                       }
-                      className="pl-10 focus:ring-red-500 focus:border-red-500"
-                    />
+                      className="pl-10 text-2xl" />
                   </div>
                 </div>
 
@@ -162,8 +161,7 @@ const ManufacturerModal = ({
                       onChange={(e) =>
                         setFormData({ ...formData, country: e.target.value })
                       }
-                      className="pl-10 focus:ring-red-500 focus:border-red-500"
-                    />
+                      className="pl-10 text-2xl" />
                   </div>
                   <div className="relative">
                     <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
@@ -174,8 +172,7 @@ const ManufacturerModal = ({
                       onChange={(e) =>
                         setFormData({ ...formData, city: e.target.value })
                       }
-                      className="pl-10 focus:ring-red-500 focus:border-red-500"
-                    />
+                      className="pl-10 text-2xl" />
                   </div>
                   <div className="relative">
                     <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
@@ -186,8 +183,7 @@ const ManufacturerModal = ({
                       onChange={(e) =>
                         setFormData({ ...formData, province: e.target.value })
                       }
-                      className="pl-10 focus:ring-red-500 focus:border-red-500"
-                    />
+                      className="pl-10 text-2xl" />
                   </div>
                 </div>
 
@@ -203,8 +199,7 @@ const ManufacturerModal = ({
                       onChange={(e) =>
                         setFormData({ ...formData, balance: e.target.value })
                       }
-                      className="pl-10 focus:ring-red-500 focus:border-red-500"
-                    />
+                      className="pl-10 text-2xl" />
                   </div>
                   {/* <div className="relative">
                     <Activity className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
@@ -231,13 +226,13 @@ const ManufacturerModal = ({
                   type="button"
                   variant="outline"
                   onClick={onClose}
-                  className="border-gray-300 hover:bg-gray-50 text-gray-700"
+                  className="border-gray-300 hover:bg-gray-50 text-gray-700 text-xl"
                 >
                   Cancel
                 </Button>
                 <Button
                   type="submit"
-                  className="bg-red-800 hover:bg-red-900 text-white"
+                  className="bg-red-800 hover:bg-red-900 text-white text-xl"
                 >
                   Save Manufacturer
                 </Button>
