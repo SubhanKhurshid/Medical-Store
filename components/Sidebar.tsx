@@ -2,19 +2,18 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import React from "react";
+import type React from "react";
 import Image from "next/image";
 import { useAuth } from "@/app/providers/AuthProvider";
 import { Button } from "@/components/ui/button";
 import logo from "@/public/Ibrahim Clinic.png";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { LogOut, Menu } from "lucide-react";
+import { Menu } from "lucide-react";
 import {
   Sheet,
   SheetContent,
   SheetHeader,
-  SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
 
@@ -54,6 +53,14 @@ const Sidebar = () => {
       { href: "/pharmacist/inventory-management", label: "Add Medicine" },
       { href: "/pharmacist/manufacturer-working", label: "Manufacturer" },
       { href: "/pharmacist/inventory-view", label: "View Inventory" },
+      {
+        href: "/pharmacist/purchase-orders/create",
+        label: "Create Purchase Orders",
+      },
+      {
+        href: "/pharmacist/purchase-orders/view",
+        label: "View Purchase Orders",
+      },
       { href: "/pharmacist/sales", label: "Sales" },
       { href: "/pharmacist/sales-history", label: "Sales History" },
       { href: "/pharmacist/history", label: "View Sales" },
@@ -67,7 +74,7 @@ const Sidebar = () => {
       <div className="flex items-center justify-center p-6 bg-white shadow-md">
         <Link href={`/${role}`}>
           <Image
-            src={logo}
+            src={logo || "/placeholder.svg"}
             alt="logo"
             width={200}
             height={200}

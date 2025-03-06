@@ -79,6 +79,7 @@ const SalesPage = () => {
         quantity: product.quantity || 0,
         imageUrl: product.imageUrl || "", // Ensure each product has an imageUrl
       }));
+      console.log("Fetched products:", fetchedProducts);
       setProducts(fetchedProducts);
     } catch (error) {
       console.error("Failed to fetch products", error);
@@ -120,17 +121,28 @@ const SalesPage = () => {
   }, [searchTerm, products]);
 
   const addToCart = (product: Product, quantity: number = 1) => {
-    if (product.quantity < quantity) {
-      toast.error(`Insufficient stock: Only ${product.quantity} available.`);
+    // Get the freshest product data from state
+    const currentProductData = products.find((p) => p.id === product.id);
+
+    if (!currentProductData) {
+      toast.error("Product not found in inventory.");
+      return;
+    }
+
+    if (currentProductData.quantity < quantity) {
+      toast.error(
+        `Cannot exceed stock: Only ${currentProductData.quantity} available.`
+      );
       return;
     }
 
     setCart((prevCart) => {
       const existingItem = prevCart.find((item) => item.id === product.id);
+
       if (existingItem) {
-        if (existingItem.quantity + quantity > product.quantity) {
+        if (existingItem.quantity + quantity > currentProductData.quantity) {
           toast.error(
-            `Cannot exceed stock: Only ${product.quantity} available.`
+            `Cannot exceed stock: Only ${currentProductData.quantity} available.`
           );
           return prevCart;
         }
@@ -140,7 +152,8 @@ const SalesPage = () => {
             : item
         );
       }
-      return [...prevCart, { ...product, quantity }];
+
+      return [...prevCart, { ...currentProductData, quantity }];
     });
   };
 
@@ -159,13 +172,21 @@ const SalesPage = () => {
   };
 
   const updateCartItemQuantity = (productId: string, newQuantity: number) => {
-    const availableQuantity =
-      products.find((p) => p.id === productId)?.quantity ?? 0;
+    const currentProduct = products.find((p) => p.id === productId);
+
+    if (!currentProduct) {
+      toast.error("Product not found in inventory.");
+      return;
+    }
+
+    const availableQuantity = currentProduct.quantity;
+
     if (newQuantity > availableQuantity) {
-      toast.error("Cannot add more items than are in stock.");
+      toast.error(`Cannot exceed stock: Only ${availableQuantity} available.`);
       setIsStockErrorOpen(true);
       return;
     }
+
     setCart((prevCart) =>
       prevCart.map((item) =>
         item.id === productId
