@@ -32,14 +32,19 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import type { ColumnDef } from "@tanstack/react-table";
+import axios from "axios";
 
-// Define the LowStockItem type
 interface LowStockItem {
   id: string;
   name: string;
   currentQuantity: number;
   minimumQuantity: number;
   manufacturer: string;
+}
+
+interface CreateOrderPayload {
+  inventoryItemId: string;
+  quantityOrdered: number;
 }
 
 export default function CreatePurchaseOrdersPage() {
@@ -57,18 +62,36 @@ export default function CreatePurchaseOrdersPage() {
     setDialogOpen(true);
   };
 
-  const handleCreateOrder = () => {
+  const handleCreateOrder = async () => {
     if (!selectedItem) return;
 
-    // Here you would typically make an API call to create the purchase order
-    toast.success("Purchase Order Created", {
-      description: `Order for ${quantity} units of ${selectedItem.name} has been created.`,
-    });
+    try {
+      const payload: CreateOrderPayload = {
+        inventoryItemId: selectedItem.id,
+        quantityOrdered: quantity
+      };
 
-    setDialogOpen(false);
+      const { data } = await axios.post('https://annual-johna-uni2234-7798c123.koyeb.app/pharmacist/purchase-order', payload);
+
+      toast.success("Purchase Order Created", {
+        description: `Order for ${quantity} units of ${selectedItem.name} has been created.`,
+      });
+
+      // Refresh low stock items
+      const { data: newData } = await axios.get('https://annual-johna-uni2234-7798c123.koyeb.app/pharmacist/low-stock');
+      setLowStockItems(newData);
+
+    } catch (error) {
+      console.error("Error creating order:", error);
+      toast.error("Failed to create purchase order");
+      if (axios.isAxiosError(error)) {
+        setError(error.response?.data?.message || "An error occurred");
+      }
+    } finally {
+      setDialogOpen(false);
+    }
   };
 
-  // Column definitions for low stock items
   const columns: ColumnDef<LowStockItem>[] = [
     {
       accessorKey: "name",
@@ -99,7 +122,6 @@ export default function CreatePurchaseOrdersPage() {
       header: "Action",
       cell: ({ row }) => {
         const item = row.original;
-
         return (
           <Button
             variant="default"
@@ -130,48 +152,14 @@ export default function CreatePurchaseOrdersPage() {
     const fetchLowStockItems = async () => {
       try {
         setLoading(true);
-        // This would be your actual API endpoint
-        // const response = await fetch('/api/low-stock-items');
-
-        // For demo purposes, we'll use mock data
-        setTimeout(() => {
-          const mockData: LowStockItem[] = [
-            {
-              id: "1",
-              name: "Paracetamol 500mg",
-              currentQuantity: 20,
-              minimumQuantity: 50,
-              manufacturer: "ABC Pharmaceuticals",
-            },
-            {
-              id: "2",
-              name: "Amoxicillin 250mg",
-              currentQuantity: 15,
-              minimumQuantity: 30,
-              manufacturer: "XYZ Medical",
-            },
-            {
-              id: "3",
-              name: "Ibuprofen 400mg",
-              currentQuantity: 10,
-              minimumQuantity: 40,
-              manufacturer: "MediPharm",
-            },
-            {
-              id: "4",
-              name: "Cetirizine 10mg",
-              currentQuantity: 5,
-              minimumQuantity: 25,
-              manufacturer: "HealthCare Ltd",
-            },
-          ];
-
-          setLowStockItems(mockData);
-          setLoading(false);
-        }, 1000);
-      } catch (err) {
-        console.error("Error fetching low stock items:", err);
-        setError("Failed to load low stock items. Please try again later.");
+        const { data } = await axios.get('https://annual-johna-uni2234-7798c123.koyeb.app/pharmacist/low-stock');
+        setLowStockItems(data);
+      } catch (error) {
+        console.error("Error fetching low stock items:", error);
+        setError(axios.isAxiosError(error)
+          ? error.response?.data?.message || "Failed to load low stock items"
+          : "Failed to load low stock items");
+      } finally {
         setLoading(false);
       }
     };

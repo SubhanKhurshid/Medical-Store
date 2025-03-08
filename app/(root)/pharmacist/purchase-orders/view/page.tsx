@@ -37,15 +37,15 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import type { ColumnDef } from "@tanstack/react-table";
+import axios from "axios";
 
-// Define the PurchaseOrder type
 interface PurchaseOrder {
   id: string;
   orderNumber: string;
   itemName: string;
   quantity: number;
   manufacturer: string;
-  status: "pending" | "completed" | "cancelled";
+  status: "PENDING" | "DELIVERED" | "CANCELLED";
   createdAt: string;
 }
 
@@ -74,65 +74,46 @@ export default function ViewPurchaseOrdersPage() {
     setSelectedRow(null);
   };
 
-  // Status badge component
   const StatusBadge = ({ status }: { status: string }) => {
     switch (status) {
-      case "pending":
-        return (
-          <Badge
-            variant="outline"
-            className="bg-yellow-100 text-yellow-800 border-yellow-300"
-          >
-            Pending
-          </Badge>
-        );
-      case "completed":
-        return (
-          <Badge
-            variant="outline"
-            className="bg-green-100 text-green-800 border-green-300"
-          >
-            Completed
-          </Badge>
-        );
-      case "cancelled":
-        return (
-          <Badge
-            variant="outline"
-            className="bg-red-100 text-red-800 border-red-300"
-          >
-            Cancelled
-          </Badge>
-        );
+      case "PENDING":
+        return <Badge className="bg-yellow-100 text-yellow-800">Pending</Badge>;
+      case "DELIVERED":
+        return <Badge className="bg-green-100 text-green-800">Delivered</Badge>;
+      case "CANCELLED":
+        return <Badge className="bg-red-100 text-red-800">Cancelled</Badge>;
       default:
-        return <Badge variant="outline">{status}</Badge>;
+        return <Badge>{status}</Badge>;
     }
   };
 
-  // Handle status change
-  const handleStatusChange = (
-    orderId: string,
-    newStatus: "completed" | "cancelled"
-  ) => {
-    setPurchaseOrders((prevOrders) =>
-      prevOrders.map((order) =>
-        order.id === orderId ? { ...order, status: newStatus } : order
-      )
-    );
 
-    toast.success("Status Updated", {
-      description: `Purchase order has been marked as ${newStatus}.`,
-    });
+  // Handle status change
+  const handleStatusChange = async (orderId: string, newStatus: "DELIVERED" | "CANCELLED") => {
+    try {
+      await axios.patch(`https://annual-johna-uni2234-7798c123.koyeb.app/pharmacist/${orderId}/purchase-order-status`, { status: newStatus });
+
+      setPurchaseOrders(prevOrders =>
+        prevOrders.map(order =>
+          order.id === orderId ? { ...order, status: newStatus } : order
+        )
+      );
+
+      toast.success("Status Updated", {
+        description: `Purchase order has been marked as ${newStatus.toLowerCase()}.`,
+      });
+
+    } catch (error) {
+      console.error("Error updating status:", error);
+      toast.error("Failed to update order status");
+    }
   };
 
-  // Column definitions for purchase orders
   const columns: ColumnDef<PurchaseOrder>[] = [
     {
       accessorKey: "orderNumber",
       header: "Order Number",
-      cell: ({ row }) => (
-        <div className="font-medium">{row.getValue("orderNumber")}</div>
-      ),
+      cell: ({ row }) => <div className="font-medium">{row.getValue("orderNumber")}</div>,
     },
     {
       accessorKey: "itemName",
@@ -161,30 +142,24 @@ export default function ViewPurchaseOrdersPage() {
       header: "Actions",
       cell: ({ row }) => {
         const order = row.original;
-
-        // Only show actions for pending orders
-        if (order.status !== "pending") {
-          return null;
-        }
+        if (order.status !== "PENDING") return null;
 
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm">
-                Actions
-              </Button>
+              <Button variant="outline" size="sm">Actions</Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
               <DropdownMenuItem
-                onClick={() => handleStatusChange(order.id, "completed")}
-                className="text-green-600 cursor-pointer"
+                onClick={() => handleStatusChange(order.id, "DELIVERED")}
+                className="text-green-600"
               >
                 <CheckCircle className="mr-2 h-4 w-4" />
-                Mark as Completed
+                Mark as Delivered
               </DropdownMenuItem>
               <DropdownMenuItem
-                onClick={() => handleStatusChange(order.id, "cancelled")}
-                className="text-red-600 cursor-pointer"
+                onClick={() => handleStatusChange(order.id, "CANCELLED")}
+                className="text-red-600"
               >
                 <XCircle className="mr-2 h-4 w-4" />
                 Cancel Order
@@ -196,73 +171,35 @@ export default function ViewPurchaseOrdersPage() {
     },
   ];
 
-  // Set up the table
+
   const table = useReactTable({
     data: purchaseOrders,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
-    initialState: {
-      pagination: {
-        pageSize: 5,
-      },
-    },
+    initialState: { pagination: { pageSize: 5 } },
   });
 
   useEffect(() => {
     const fetchPurchaseOrders = async () => {
       try {
         setLoading(true);
-        // This would be your actual API endpoint
-        // const response = await fetch('/api/purchase-orders');
+        const { data } = await axios.get('https://annual-johna-uni2234-7798c123.koyeb.app/pharmacist/purchase-orders');
 
-        // For demo purposes, we'll use mock data
-        setTimeout(() => {
-          const mockData: PurchaseOrder[] = [
-            {
-              id: "1",
-              orderNumber: "PO-2023-001",
-              itemName: "Paracetamol 500mg",
-              quantity: 500,
-              manufacturer: "ABC Pharmaceuticals",
-              status: "pending",
-              createdAt: "2023-05-15T10:30:00Z",
-            },
-            {
-              id: "2",
-              orderNumber: "PO-2023-002",
-              itemName: "Amoxicillin 250mg",
-              quantity: 300,
-              manufacturer: "XYZ Medical",
-              status: "completed",
-              createdAt: "2023-05-10T14:45:00Z",
-            },
-            {
-              id: "3",
-              orderNumber: "PO-2023-003",
-              itemName: "Ibuprofen 400mg",
-              quantity: 400,
-              manufacturer: "MediPharm",
-              status: "cancelled",
-              createdAt: "2023-05-05T09:15:00Z",
-            },
-            {
-              id: "4",
-              orderNumber: "PO-2023-004",
-              itemName: "Cetirizine 10mg",
-              quantity: 200,
-              manufacturer: "HealthCare Ltd",
-              status: "pending",
-              createdAt: "2023-05-01T11:20:00Z",
-            },
-          ];
+        const transformedData = data.map((order: any) => ({
+          ...order,
+          itemName: order.inventoryItem?.name || "N/A",
+          manufacturer: order.manufacturer?.companyName || "N/A",
+          orderNumber: `PO-${new Date(order.createdAt).getFullYear()}-${order.id.slice(-4)}`
+        }));
 
-          setPurchaseOrders(mockData);
-          setLoading(false);
-        }, 1000);
-      } catch (err) {
-        console.error("Error fetching purchase orders:", err);
-        setError("Failed to load purchase orders. Please try again later.");
+        setPurchaseOrders(transformedData);
+      } catch (error) {
+        console.error("Error fetching purchase orders:", error);
+        setError(axios.isAxiosError(error)
+          ? error.response?.data?.message || "Failed to load orders"
+          : "Failed to load orders");
+      } finally {
         setLoading(false);
       }
     };
@@ -463,12 +400,12 @@ export default function ViewPurchaseOrdersPage() {
                 <p className="text-base">{formatDate(selectedRow.createdAt)}</p>
               </div>
 
-              {selectedRow.status === "pending" && (
+              {selectedRow.status === "PENDING" && (
                 <div className="flex justify-end space-x-2 pt-4">
                   <Button
                     variant="outline"
                     onClick={() => {
-                      handleStatusChange(selectedRow.id, "cancelled");
+                      handleStatusChange(selectedRow.id, "CANCELLED");
                       closeModal();
                     }}
                     className="text-red-600 border-red-200 hover:bg-red-50"
@@ -478,7 +415,7 @@ export default function ViewPurchaseOrdersPage() {
                   </Button>
                   <Button
                     onClick={() => {
-                      handleStatusChange(selectedRow.id, "completed");
+                      handleStatusChange(selectedRow.id, "DELIVERED");
                       closeModal();
                     }}
                     className="bg-green-600 hover:bg-green-700 text-white"
