@@ -58,7 +58,7 @@ export const inventoryColumns: ColumnDef<InventoryItem>[] = [
 
       return (
         <Badge variant={badgeVariant} className="capitalize">
-          {type.toLowerCase()}
+          {type?.toLowerCase()}
         </Badge>
       );
     },
