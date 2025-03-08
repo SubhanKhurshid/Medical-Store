@@ -4,7 +4,16 @@ import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import Unauthorized from "@/app/(root)/unauthorized/page";
-import { Pill, Clipboard, User, BarChart, ArrowRight, TrendingDown, Package, AlertTriangle } from 'lucide-react';
+import {
+  Pill,
+  Clipboard,
+  User,
+  BarChart,
+  ArrowRight,
+  TrendingDown,
+  Package,
+  AlertTriangle,
+} from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -80,7 +89,7 @@ const PharmacistPage = () => {
 
   return (
     <div className="p-4 sm:p-8 max-w-9xl mx-auto min-h-screen bg-gray-50">
-      <motion.h1 
+      <motion.h1
         className="font-bold text-3xl md:text-4xl text-red-800 "
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -88,8 +97,10 @@ const PharmacistPage = () => {
       >
         Pharmacy Dashboard
       </motion.h1>
-      <motion.p className="mt-2 mb-6 text-xl text-gray-500">Welcome to the Dashboard of Pharmacist</motion.p>
-{/* 
+      <motion.p className="mt-2 mb-6 text-xl text-gray-500">
+        Welcome to the Dashboard of Pharmacist
+      </motion.p>
+      {/* 
       <motion.div 
         className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8"
         variants={{
@@ -130,22 +141,22 @@ const PharmacistPage = () => {
           </motion.div>
         ))}
       </motion.div> */}
-       <PharmacyStats 
+      <PharmacyStats
         items={items}
         lowStockCount={lowStockCount}
         expiringCount={expiringCount}
       />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="">
         <motion.div
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.5, delay: 0.2 }}
         >
-          <Card className="p-4 shadow-md">
+          {/* <Card className="p-4 shadow-md">
             <h2 className="text-lg font-semibold mb-4 text-red-700">Low Stock Items</h2>
             <DataTable columns={inventoryColumns} data={lowStockItems} />
-          </Card>
+          </Card> */}
         </motion.div>
         <motion.div
           initial={{ opacity: 0, x: 20 }}
@@ -153,7 +164,9 @@ const PharmacistPage = () => {
           transition={{ duration: 0.5, delay: 0.2 }}
         >
           <Card className="p-4 shadow-md">
-            <h2 className="text-lg font-semibold mb-4 text-red-700">Expiring Soon</h2>
+            <h2 className="text-lg font-semibold mb-4 text-red-700">
+              Expiring Soon
+            </h2>
             <DataTable columns={inventoryColumns} data={expiringItems} />
           </Card>
         </motion.div>
@@ -163,4 +176,3 @@ const PharmacistPage = () => {
 };
 
 export default PharmacistPage;
-
