@@ -43,7 +43,7 @@ interface PurchaseOrder {
   id: string;
   orderNumber: string;
   itemName: string;
-  quantity: number;
+  quantityOrdered: number;
   manufacturer: string;
   status: "PENDING" | "DELIVERED" | "CANCELLED";
   createdAt: string;
@@ -87,14 +87,19 @@ export default function ViewPurchaseOrdersPage() {
     }
   };
 
-
   // Handle status change
-  const handleStatusChange = async (orderId: string, newStatus: "DELIVERED" | "CANCELLED") => {
+  const handleStatusChange = async (
+    orderId: string,
+    newStatus: "DELIVERED" | "CANCELLED"
+  ) => {
     try {
-      await axios.patch(`https://annual-johna-uni2234-7798c123.koyeb.app/pharmacist/${orderId}/purchase-order-status`, { status: newStatus });
+      await axios.patch(
+        `https://annual-johna-uni2234-7798c123.koyeb.app/pharmacist/${orderId}/purchase-order-status`,
+        { status: newStatus }
+      );
 
-      setPurchaseOrders(prevOrders =>
-        prevOrders.map(order =>
+      setPurchaseOrders((prevOrders) =>
+        prevOrders.map((order) =>
           order.id === orderId ? { ...order, status: newStatus } : order
         )
       );
@@ -102,7 +107,6 @@ export default function ViewPurchaseOrdersPage() {
       toast.success("Status Updated", {
         description: `Purchase order has been marked as ${newStatus.toLowerCase()}.`,
       });
-
     } catch (error) {
       console.error("Error updating status:", error);
       toast.error("Failed to update order status");
@@ -113,7 +117,9 @@ export default function ViewPurchaseOrdersPage() {
     {
       accessorKey: "orderNumber",
       header: "Order Number",
-      cell: ({ row }) => <div className="font-medium">{row.getValue("orderNumber")}</div>,
+      cell: ({ row }) => (
+        <div className="font-medium">{row.getValue("orderNumber")}</div>
+      ),
     },
     {
       accessorKey: "itemName",
@@ -147,7 +153,9 @@ export default function ViewPurchaseOrdersPage() {
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm">Actions</Button>
+              <Button variant="outline" size="sm">
+                Actions
+              </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
               <DropdownMenuItem
@@ -171,7 +179,6 @@ export default function ViewPurchaseOrdersPage() {
     },
   ];
 
-
   const table = useReactTable({
     data: purchaseOrders,
     columns,
@@ -184,21 +191,27 @@ export default function ViewPurchaseOrdersPage() {
     const fetchPurchaseOrders = async () => {
       try {
         setLoading(true);
-        const { data } = await axios.get('https://annual-johna-uni2234-7798c123.koyeb.app/pharmacist/purchase-orders');
+        const { data } = await axios.get(
+          "https://annual-johna-uni2234-7798c123.koyeb.app/pharmacist/purchase-orders"
+        );
 
         const transformedData = data.map((order: any) => ({
           ...order,
           itemName: order.inventoryItem?.name || "N/A",
           manufacturer: order.manufacturer?.companyName || "N/A",
-          orderNumber: `PO-${new Date(order.createdAt).getFullYear()}-${order.id.slice(-4)}`
+          orderNumber: `PO-${new Date(
+            order.createdAt
+          ).getFullYear()}-${order.id.slice(-4)}`,
         }));
 
         setPurchaseOrders(transformedData);
       } catch (error) {
         console.error("Error fetching purchase orders:", error);
-        setError(axios.isAxiosError(error)
-          ? error.response?.data?.message || "Failed to load orders"
-          : "Failed to load orders");
+        setError(
+          axios.isAxiosError(error)
+            ? error.response?.data?.message || "Failed to load orders"
+            : "Failed to load orders"
+        );
       } finally {
         setLoading(false);
       }
@@ -345,72 +358,70 @@ export default function ViewPurchaseOrdersPage() {
 
       {/* Order Details Dialog - Would be expanded with more details in a real application */}
       <Dialog open={!!selectedRow} onOpenChange={closeModal}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-bold">
+        <DialogContent className="sm:max-w-[700px] md:max-w-[900px] w-full p-6">
+          <DialogHeader className="mb-4">
+            <DialogTitle className="text-2xl font-bold">
               Purchase Order Details
             </DialogTitle>
           </DialogHeader>
 
           {selectedRow && (
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-6">
                 <div>
-                  <h4 className="text-sm font-medium text-muted-foreground mb-1">
+                  <h4 className="text-base font-medium text-muted-foreground mb-2">
                     Order Number
                   </h4>
-                  <p className="text-base font-semibold">
+                  <p className="text-lg font-semibold">
                     {selectedRow.orderNumber}
                   </p>
                 </div>
                 <div>
-                  <h4 className="text-sm font-medium text-muted-foreground mb-1">
+                  <h4 className="text-base font-medium text-muted-foreground mb-2">
                     Status
                   </h4>
                   <StatusBadge status={selectedRow.status} />
                 </div>
-              </div>
-
-              <div>
-                <h4 className="text-sm font-medium text-muted-foreground mb-1">
-                  Item
-                </h4>
-                <p className="text-base">{selectedRow.itemName}</p>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <h4 className="text-sm font-medium text-muted-foreground mb-1">
+                  <h4 className="text-base font-medium text-muted-foreground mb-2">
+                    Item
+                  </h4>
+                  <p className="text-lg">{selectedRow.itemName}</p>
+                </div>
+                <div>
+                  <h4 className="text-base font-medium text-muted-foreground mb-2">
                     Quantity
                   </h4>
-                  <p className="text-base">{selectedRow.quantity} units</p>
+                  <p className="text-lg">{selectedRow.quantityOrdered} units</p>
                 </div>
                 <div>
-                  <h4 className="text-sm font-medium text-muted-foreground mb-1">
+                  <h4 className="text-base font-medium text-muted-foreground mb-2">
                     Manufacturer
                   </h4>
-                  <p className="text-base">{selectedRow.manufacturer}</p>
+                  <p className="text-lg">{selectedRow.manufacturer}</p>
                 </div>
               </div>
 
+              <div className="grid grid-cols-2 gap-6 mt-4"></div>
+
               <div>
-                <h4 className="text-sm font-medium text-muted-foreground mb-1">
+                <h4 className="text-base font-medium text-muted-foreground mb-2">
                   Date Created
                 </h4>
-                <p className="text-base">{formatDate(selectedRow.createdAt)}</p>
+                <p className="text-lg">{formatDate(selectedRow.createdAt)}</p>
               </div>
 
               {selectedRow.status === "PENDING" && (
-                <div className="flex justify-end space-x-2 pt-4">
+                <div className="flex justify-end space-x-4 pt-6">
                   <Button
                     variant="outline"
                     onClick={() => {
                       handleStatusChange(selectedRow.id, "CANCELLED");
                       closeModal();
                     }}
-                    className="text-red-600 border-red-200 hover:bg-red-50"
+                    className="text-red-600 border-red-200 hover:bg-red-50 px-6 py-2 text-base"
                   >
-                    <XCircle className="mr-2 h-4 w-4" />
+                    <XCircle className="mr-2 h-5 w-5" />
                     Cancel Order
                   </Button>
                   <Button
@@ -418,9 +429,9 @@ export default function ViewPurchaseOrdersPage() {
                       handleStatusChange(selectedRow.id, "DELIVERED");
                       closeModal();
                     }}
-                    className="bg-green-600 hover:bg-green-700 text-white"
+                    className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 text-base"
                   >
-                    <CheckCircle className="mr-2 h-4 w-4" />
+                    <CheckCircle className="mr-2 h-5 w-5" />
                     Mark as Completed
                   </Button>
                 </div>

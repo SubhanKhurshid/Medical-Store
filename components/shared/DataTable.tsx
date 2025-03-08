@@ -81,7 +81,9 @@ export function DataTable<TData extends Record<string, any>, TValue>({
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id} className="px-3 py-4 text-left text-lg font-semibold"
+                  <TableHead
+                    key={header.id}
+                    className="px-3 py-4 text-left text-lg font-semibold"
                   >
                     {header.isPlaceholder
                       ? null
@@ -103,7 +105,10 @@ export function DataTable<TData extends Record<string, any>, TValue>({
                   className="cursor-pointer hover:bg-muted/50"
                 >
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id} className="px-3 py-4 text-base font-medium">
+                    <TableCell
+                      key={cell.id}
+                      className="px-3 py-4 text-base font-medium"
+                    >
                       {flexRender(
                         cell.column.columnDef.cell,
                         cell.getContext()
@@ -116,7 +121,7 @@ export function DataTable<TData extends Record<string, any>, TValue>({
               <TableRow>
                 <TableCell
                   colSpan={columns.length}
-                    className="h-24 text-center text-lg font-semibold"
+                  className="h-24 text-center text-lg font-semibold"
                 >
                   No results.
                 </TableCell>
@@ -206,7 +211,7 @@ export function DataTable<TData extends Record<string, any>, TValue>({
                         Quantity
                       </h4>
                       <p className="text-sm font-semibold">
-                        {selectedRow?.quantity}
+                        {selectedRow?.currentQuantity}
                       </p>
                     </div>
                     <div>
@@ -230,7 +235,7 @@ export function DataTable<TData extends Record<string, any>, TValue>({
                       <h4 className="text-sm font-medium text-muted-foreground mb-1">
                         Manufacturer
                       </h4>
-                      {selectedRow?.manufacturer?.companyName || "N/A"}
+                      {selectedRow?.manufacturer || "N/A"}
                     </div>
                   </div>
                 </div>

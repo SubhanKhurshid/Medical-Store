@@ -68,19 +68,23 @@ export default function CreatePurchaseOrdersPage() {
     try {
       const payload: CreateOrderPayload = {
         inventoryItemId: selectedItem.id,
-        quantityOrdered: quantity
+        quantityOrdered: quantity,
       };
 
-      const { data } = await axios.post('https://annual-johna-uni2234-7798c123.koyeb.app/pharmacist/purchase-order', payload);
+      const { data } = await axios.post(
+        "https://annual-johna-uni2234-7798c123.koyeb.app/pharmacist/purchase-order",
+        payload
+      );
 
       toast.success("Purchase Order Created", {
         description: `Order for ${quantity} units of ${selectedItem.name} has been created.`,
       });
 
       // Refresh low stock items
-      const { data: newData } = await axios.get('https://annual-johna-uni2234-7798c123.koyeb.app/pharmacist/low-stock');
+      const { data: newData } = await axios.get(
+        "https://annual-johna-uni2234-7798c123.koyeb.app/pharmacist/low-stock"
+      );
       setLowStockItems(newData);
-
     } catch (error) {
       console.error("Error creating order:", error);
       toast.error("Failed to create purchase order");
@@ -152,13 +156,17 @@ export default function CreatePurchaseOrdersPage() {
     const fetchLowStockItems = async () => {
       try {
         setLoading(true);
-        const { data } = await axios.get('https://annual-johna-uni2234-7798c123.koyeb.app/pharmacist/low-stock');
+        const { data } = await axios.get(
+          "https://annual-johna-uni2234-7798c123.koyeb.app/pharmacist/low-stock"
+        );
         setLowStockItems(data);
       } catch (error) {
         console.error("Error fetching low stock items:", error);
-        setError(axios.isAxiosError(error)
-          ? error.response?.data?.message || "Failed to load low stock items"
-          : "Failed to load low stock items");
+        setError(
+          axios.isAxiosError(error)
+            ? error.response?.data?.message || "Failed to load low stock items"
+            : "Failed to load low stock items"
+        );
       } finally {
         setLoading(false);
       }
@@ -301,11 +309,13 @@ export default function CreatePurchaseOrdersPage() {
 
       {/* Order Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[600px] md:max-w-[800px] w-full">
           <DialogHeader>
-            <DialogTitle>Create Purchase Order</DialogTitle>
+            <DialogTitle className="text-xl font-bold">
+              Create Purchase Order
+            </DialogTitle>
             {selectedItem && (
-              <DialogDescription>
+              <DialogDescription className="text-base mt-2">
                 Create a purchase order for {selectedItem.name} from{" "}
                 {selectedItem.manufacturer}
               </DialogDescription>
@@ -313,43 +323,56 @@ export default function CreatePurchaseOrdersPage() {
           </DialogHeader>
           {selectedItem && (
             <>
-              <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="current-quantity" className="text-right">
+              <div className="flex flex-col gap-6 py-6">
+                <div className="flex flex-col gap-2">
+                  <Label
+                    htmlFor="current-quantity"
+                    className="text-base font-medium"
+                  >
                     Current Qty
                   </Label>
                   <Input
                     id="current-quantity"
                     value={selectedItem.currentQuantity}
-                    className="col-span-3"
+                    className="h-12 text-base"
                     disabled
                   />
                 </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="minimum-quantity" className="text-right">
+                <div className="flex flex-col gap-2">
+                  <Label
+                    htmlFor="minimum-quantity"
+                    className="text-base font-medium"
+                  >
                     Minimum Qty
                   </Label>
                   <Input
                     id="minimum-quantity"
                     value={selectedItem.minimumQuantity}
-                    className="col-span-3"
+                    className="h-12 text-base"
                     disabled
                   />
                 </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="order-quantity" className="text-right">
+                <div className="flex flex-col gap-2">
+                  <Label
+                    htmlFor="order-quantity"
+                    className="text-base font-medium"
+                  >
                     Order Qty
                   </Label>
                   <Input
                     id="order-quantity"
                     type="number"
                     onChange={(e) => setQuantity(Number(e.target.value))}
-                    className="col-span-3"
+                    className="h-12 text-base"
                   />
                 </div>
               </div>
-              <DialogFooter>
-                <Button type="submit" onClick={handleCreateOrder}>
+              <DialogFooter className="pt-4">
+                <Button
+                  type="submit"
+                  onClick={handleCreateOrder}
+                  className="px-8 py-3 text-base"
+                >
                   Create Order
                 </Button>
               </DialogFooter>
