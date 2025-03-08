@@ -343,9 +343,7 @@ export default function CreatePurchaseOrdersPage() {
                   <Input
                     id="order-quantity"
                     type="number"
-                    value={quantity}
                     onChange={(e) => setQuantity(Number(e.target.value))}
-                    min={1}
                     className="col-span-3"
                   />
                 </div>
