@@ -27,7 +27,7 @@ const SearchPage = () => {
     if (term) {
       setLoading(true)
       try {
-        const { data } = await axios.get("https://annual-johna-uni2234-7798c123.koyeb.app/frontdesk/patients", {
+        const { data } = await axios.get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/frontdesk/patients`, {
           params: { cnic: term },
           headers: {
             Authorization: `Bearer ${accessToken}`,
@@ -57,7 +57,7 @@ const SearchPage = () => {
   const handleAddVisit = async (patientId: string) => {
     try {
       const { data } = await axios.post(
-        "https://annual-johna-uni2234-7798c123.koyeb.app/frontdesk/visits",
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/frontdesk/visits`,
         { patientId: patientId },
         { headers: { Authorization: `Bearer ${accessToken}` } }
       )

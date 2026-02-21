@@ -52,7 +52,7 @@ const ViewPatientPage = () => {
     const getData = async () => {
       try {
         const response = await axios.get(
-          `https://annual-johna-uni2234-7798c123.koyeb.app/frontdesk/patient/${id}`,
+          `${process.env.NEXT_PUBLIC_API_BASE_URL}/frontdesk/patient/${id}`,
           {
             headers: {
               Authorization: `Bearer ${accessToken}`,

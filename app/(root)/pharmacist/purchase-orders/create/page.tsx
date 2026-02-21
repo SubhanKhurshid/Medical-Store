@@ -72,7 +72,7 @@ export default function CreatePurchaseOrdersPage() {
       };
 
       const { data } = await axios.post(
-        "https://annual-johna-uni2234-7798c123.koyeb.app/pharmacist/purchase-order",
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/purchase-order`,
         payload
       );
 
@@ -82,7 +82,7 @@ export default function CreatePurchaseOrdersPage() {
 
       // Refresh low stock items
       const { data: newData } = await axios.get(
-        "https://annual-johna-uni2234-7798c123.koyeb.app/pharmacist/low-stock"
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/low-stock`
       );
       setLowStockItems(newData);
     } catch (error) {
@@ -157,7 +157,7 @@ export default function CreatePurchaseOrdersPage() {
       try {
         setLoading(true);
         const { data } = await axios.get(
-          "https://annual-johna-uni2234-7798c123.koyeb.app/pharmacist/low-stock"
+          `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/low-stock`
         );
         setLowStockItems(data);
       } catch (error) {

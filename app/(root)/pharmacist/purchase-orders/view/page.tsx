@@ -94,7 +94,7 @@ export default function ViewPurchaseOrdersPage() {
   ) => {
     try {
       await axios.patch(
-        `https://annual-johna-uni2234-7798c123.koyeb.app/pharmacist/${orderId}/purchase-order-status`,
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/${orderId}/purchase-order-status`,
         { status: newStatus }
       );
 
@@ -192,7 +192,7 @@ export default function ViewPurchaseOrdersPage() {
       try {
         setLoading(true);
         const { data } = await axios.get(
-          "https://annual-johna-uni2234-7798c123.koyeb.app/pharmacist/purchase-orders"
+          `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/purchase-orders`
         );
 
         const transformedData = data.map((order: any) => ({

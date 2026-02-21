@@ -66,7 +66,7 @@ const NurseEditingPage = () => {
     try {
       // Sending POST request to the backend
       const response = await axios.post(
-        `https://annual-johna-uni2234-7798c123.koyeb.app/nurse/${id}/details`, // Endpoint from the service you built
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/nurse/${id}/details`,
         data,
         {
           headers: {

@@ -43,7 +43,7 @@ const SalesTable = () => {
       if (endDate) queryParams.append("endDate", endDate);
 
       const response = await fetch(
-        `https://annual-johna-uni2234-7798c123.koyeb.app/pharmacist/sales?${queryParams}`
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/sales?${queryParams}`
       );
       const result = await response.json();
 

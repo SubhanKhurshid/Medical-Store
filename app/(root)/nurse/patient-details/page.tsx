@@ -28,7 +28,7 @@ const PatientDetailsSearch = () => {
     if (term) {
       setLoading(true)
       try {
-        const { data } = await axios.get("https://annual-johna-uni2234-7798c123.koyeb.app/nurse/details", {
+        const { data } = await axios.get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/nurse/details`, {
           params: { cnic: term },
           headers: {
             Authorization: `Bearer ${accessToken}`,

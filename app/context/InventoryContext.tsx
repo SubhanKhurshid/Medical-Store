@@ -101,7 +101,7 @@ export const InventoryProvider = ({
   useEffect(() => {
     const loadInventory = async () => {
       const response = await axios.get(
-        "https://annual-johna-uni2234-7798c123.koyeb.app/pharmacist",
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist`,
         {
           headers: {
             Authorization: `Bearer ${accessToken}`,
@@ -118,7 +118,7 @@ export const InventoryProvider = ({
     item: Omit<InventoryItem, "id" | "createdAt" | "updatedAt">
   ) => {
     const response = await axios.post(
-      "https://annual-johna-uni2234-7798c123.koyeb.app/pharmacist",
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist`,
       item,
       {
         headers: {
@@ -134,7 +134,7 @@ export const InventoryProvider = ({
     item: Omit<InventoryItem, "id" | "createdAt" | "updatedAt">
   ) => {
     const response = await axios.patch(
-      `https://annual-johna-uni2234-7798c123.koyeb.app/pharmacist/${id}`,
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/${id}`,
       item,
       {
         headers: {
@@ -147,7 +147,7 @@ export const InventoryProvider = ({
 
   const deleteItem = async (id: string) => {
     await axios.delete(
-      `https://annual-johna-uni2234-7798c123.koyeb.app/pharmacist/${id}`,
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/${id}`,
       {
         headers: {
           Authorization: `Bearer ${accessToken}`,
@@ -159,7 +159,7 @@ export const InventoryProvider = ({
 
   const getLowStockItems = async (): Promise<InventoryItem[]> => {
     const response = await axios.get(
-      "https://annual-johna-uni2234-7798c123.koyeb.app/pharmacist/low-stock",
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/low-stock`,
       {
         headers: {
           Authorization: `Bearer ${accessToken}`,
@@ -171,7 +171,7 @@ export const InventoryProvider = ({
 
   const getExpiringItems = async (): Promise<InventoryItem[]> => {
     const response = await axios.get(
-      "https://annual-johna-uni2234-7798c123.koyeb.app/pharmacist/expiring",
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/expiring`,
       {
         headers: {
           Authorization: `Bearer ${accessToken}`,

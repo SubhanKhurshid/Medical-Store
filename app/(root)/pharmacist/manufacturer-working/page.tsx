@@ -38,7 +38,7 @@ const Manufacturer = () => {
       setLoading(true);
       try {
         const response = await fetch(
-          "https://annual-johna-uni2234-7798c123.koyeb.app/pharmacist/manufacturer"
+          `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/manufacturer`
         );
         if (!response.ok) {
           throw new Error("Failed to fetch manufacturers");

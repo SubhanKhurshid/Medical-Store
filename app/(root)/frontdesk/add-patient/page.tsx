@@ -84,7 +84,7 @@ const AddPatientPage = () => {
     const fetchDoctors = async () => {
       try {
         const response = await axios.get(
-          "https://annual-johna-uni2234-7798c123.koyeb.app/frontdesk/doctors",
+          `${process.env.NEXT_PUBLIC_API_BASE_URL}/frontdesk/doctors`,
           {
             headers: {
               Authorization: `Bearer ${accessToken}`,
@@ -159,7 +159,7 @@ const AddPatientPage = () => {
 
       // Send the request
       const response = await axios.post(
-        "https://annual-johna-uni2234-7798c123.koyeb.app/frontdesk/patients",
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/frontdesk/patients`,
         requestData,
         {
           headers: {

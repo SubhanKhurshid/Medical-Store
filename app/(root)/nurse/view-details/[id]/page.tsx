@@ -24,7 +24,7 @@ const PatientRecords = () => {
     const fetchPatientRecords = async () => {
         setLoading(true);
         try {
-            const response = await axios.get(`https://annual-johna-uni2234-7798c123.koyeb.app/nurse/${id}/data`, {
+            const response = await axios.get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/nurse/${id}/data`, {
                 headers: {
                     Authorization: `Bearer ${accessToken}`,
                 },

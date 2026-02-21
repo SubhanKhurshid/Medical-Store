@@ -49,7 +49,7 @@ const Signup = () => {
       }
 
       const response = await axios.post(
-        "https://annual-johna-uni2234-7798c123.koyeb.app/users",
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/users`,
         {
           name,
           email,

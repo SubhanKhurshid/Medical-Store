@@ -67,7 +67,7 @@ const SalesPage = () => {
   const fetchProducts = async () => {
     try {
       const response = await axios.get(
-        "https://annual-johna-uni2234-7798c123.koyeb.app/pharmacist",
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist`,
         {
           headers: {
             Authorization: `Bearer ${accessToken}`,
@@ -243,7 +243,7 @@ const SalesPage = () => {
       };
 
       const response = await axios.post(
-        "https://annual-johna-uni2234-7798c123.koyeb.app/pharmacist/sales",
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/sales`,
         saleData,
         {
           headers: {
