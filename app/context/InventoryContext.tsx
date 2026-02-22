@@ -19,8 +19,11 @@ export interface InventoryItem {
   expiryDate: string;
   manufacturer: string;
   price: number;
+  purchasePrice?: number;
+  sellingPrice?: number;
+  barcode?: string | null;
+  category?: string | null;
   manufacturerDiscount: number;
-  // productCode: string;
   minimumStock: number;
   description?: string;
   createdAt: string;

@@ -18,6 +18,7 @@ interface StatCardProps {
     value: number
     trend: "up" | "down"
   }
+  changeLabel?: string
   icon: React.ElementType
   color: {
     light: string
@@ -26,7 +27,7 @@ interface StatCardProps {
   }
 }
 
-const StatCard = ({ title, value, change, icon: Icon, color }: StatCardProps) => {
+const StatCard = ({ title, value, change, changeLabel = "vs. last week", icon: Icon, color }: StatCardProps) => {
   const sparklineData = generateSparklineData(20, change.trend)
 
   return (
@@ -74,7 +75,7 @@ const StatCard = ({ title, value, change, icon: Icon, color }: StatCardProps) =>
             >
               {change.trend === "up" ? "↑" : "↓"} {Math.abs(change.value)}%
             </span>
-            <span className="text-xs text-gray-500">vs. last week</span>
+            <span className="text-xs text-gray-500">{changeLabel}</span>
           </div>
         </div>
       </div>
@@ -82,19 +83,38 @@ const StatCard = ({ title, value, change, icon: Icon, color }: StatCardProps) =>
   )
 }
 
+function formatCurrency(amount: number) {
+  return new Intl.NumberFormat("en-PK", {
+    style: "currency",
+    currency: "PKR",
+    maximumFractionDigits: 0,
+  }).format(amount)
+}
+
 export default function PharmacyStats({
   items,
   lowStockCount,
   expiringCount,
+  earnedThisMonth = 0,
+  earnedLastMonth = 0,
 }: {
   items: any[]
   lowStockCount: number
   expiringCount: number
+  earnedThisMonth?: number
+  earnedLastMonth?: number
 }) {
+  const earnedChange =
+    earnedLastMonth > 0
+      ? ((earnedThisMonth - earnedLastMonth) / earnedLastMonth) * 100
+      : 0
+  const earnedTrend: "up" | "down" = earnedChange >= 0 ? "up" : "down"
+
   const stats: {
     title: string
     value: string | number
     change: { value: number; trend: "up" | "down" }
+    changeLabel?: string
     icon: React.ElementType
     color: { light: string; medium: string; dark: string }
   }[] = [
@@ -133,8 +153,9 @@ export default function PharmacyStats({
     },
     {
       title: "Earned This Month",
-      value: "RS12,345",
-      change: { value: 1.34, trend: "up" },
+      value: formatCurrency(earnedThisMonth),
+      change: { value: Math.abs(Number(earnedChange.toFixed(1))), trend: earnedTrend },
+      changeLabel: "vs. last month",
       icon: BarChart,
       color: {
         light: "#dcfce7",

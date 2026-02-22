@@ -58,6 +58,8 @@ const SalesPage = () => {
   const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
   const [discount, setDiscount] = useState<string>("");
   const [barcodeInput, setBarcodeInput] = useState("");
+  const [customerName, setCustomerName] = useState("");
+  const [customerPhone, setCustomerPhone] = useState("");
   const [isStockErrorOpen, setIsStockErrorOpen] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
   const { user } = useAuth();
@@ -119,6 +121,34 @@ const SalesPage = () => {
       setSearchResults(products.slice(0, 10)); // Show 10 items initially
     }
   }, [searchTerm, products]);
+
+  const addByBarcode = async () => {
+    const code = barcodeInput?.trim();
+    if (!code) return;
+    try {
+      const { data } = await axios.get(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/by-barcode/${encodeURIComponent(code)}`,
+        { headers: { Authorization: `Bearer ${accessToken}` } }
+      );
+      const product: Product = {
+        id: data.id,
+        name: data.name,
+        price: data.sellingPrice ?? data.price ?? 0,
+        quantity: data.quantity ?? 0,
+        imageUrl: data.image ?? "",
+        type: data.type ?? "GENERAL",
+      };
+      setProducts((prev) => {
+        if (prev.some((p) => p.id === product.id)) return prev;
+        return [...prev, product];
+      });
+      addToCart(product, 1);
+      setBarcodeInput("");
+      toast.success(`Added ${product.name} to cart`);
+    } catch (err: any) {
+      toast.error(err.response?.data?.message ?? "No item found for this barcode");
+    }
+  };
 
   const addToCart = (product: Product, quantity: number = 1) => {
     // Get the freshest product data from state
@@ -232,8 +262,8 @@ const SalesPage = () => {
     setIsProcessing(true);
     try {
       const saleData = {
-        customerName: "",
-        customerPhone: "",
+        customerName: customerName.trim() || undefined,
+        customerPhone: customerPhone.trim() || undefined,
         saleItems: cart.map((item) => ({
           inventoryItemId: item.id,
           quantity: item.quantity,
@@ -258,6 +288,8 @@ const SalesPage = () => {
           window.print();
           setCart([]);
           setDiscount("");
+          setCustomerName("");
+          setCustomerPhone("");
           setIsReceiptModalOpen(false);
           fetchProducts();
         }, 100);
@@ -322,16 +354,24 @@ const SalesPage = () => {
                 />
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-red-800" />
               </div>
-              {/* <div className="relative">
+              <div className="relative flex gap-2 flex-shrink-0">
                 <Input
                   type="text"
                   placeholder="Scan barcode"
                   value={barcodeInput}
                   onChange={(e) => setBarcodeInput(e.target.value)}
-                  className="pl-10 border-red-800 focus:ring-red-800"
+                  onKeyDown={(e) => e.key === "Enter" && addByBarcode()}
+                  className="pl-10 border-red-800 focus:ring-red-800 w-48"
                 />
-                <Barcode className="absolute left-3 top-1/2 transform -translate-y-1/2 text-red-800" />
-              </div> */}
+                <Barcode className="absolute left-3 top-1/2 transform -translate-y-1/2 text-red-800 pointer-events-none" />
+                <Button
+                  type="button"
+                  onClick={addByBarcode}
+                  className="bg-red-800 hover:bg-red-900"
+                >
+                  Add
+                </Button>
+              </div>
             </div>
             <div className="space-y-4 max-h-[calc(100vh-300px)] overflow-y-auto">
               <AnimatePresence>
@@ -410,6 +450,26 @@ const SalesPage = () => {
             <h2 className="text-3xl font-semibold mb-6 text-red-800 flex items-center">
               <ShoppingCart className="mr-2" /> Cart
             </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+              <div>
+                <Label className="text-gray-600">Customer name (optional)</Label>
+                <Input
+                  placeholder="Customer name"
+                  value={customerName}
+                  onChange={(e) => setCustomerName(e.target.value)}
+                  className="mt-1 border-gray-300 focus:ring-red-800"
+                />
+              </div>
+              <div>
+                <Label className="text-gray-600">Phone (optional)</Label>
+                <Input
+                  placeholder="Phone number"
+                  value={customerPhone}
+                  onChange={(e) => setCustomerPhone(e.target.value)}
+                  className="mt-1 border-gray-300 focus:ring-red-800"
+                />
+              </div>
+            </div>
             <div className="space-y-4 max-h-[calc(100vh-400px)] overflow-y-auto mb-4">
               <AnimatePresence>
                 {cart.map((item) => (

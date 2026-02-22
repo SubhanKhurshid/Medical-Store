@@ -1,27 +1,23 @@
 "use client";
 import { useAuth } from "@/app/providers/AuthProvider";
-import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import Unauthorized from "@/app/(root)/unauthorized/page";
-import {
-  Pill,
-  Clipboard,
-  User,
-  BarChart,
-  ArrowRight,
-  TrendingDown,
-  Package,
-  AlertTriangle,
-} from "lucide-react";
+import { TrendingDown, Package, AlertTriangle } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import Link from "next/link";
 import { DataTable } from "@/components/shared/DataTable";
 import { inventoryColumns } from "@/components/shared/columns";
 import { useInventory } from "@/app/context/InventoryContext";
 import { InventoryItem } from "@/app/context/InventoryContext";
 import PharmacyStats from "./pharmacy-stats";
+
+function getMonthRange(monthOffset: number) {
+  const d = new Date();
+  d.setMonth(d.getMonth() + monthOffset);
+  const start = new Date(d.getFullYear(), d.getMonth(), 1);
+  const end = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59, 999);
+  return { start, end };
+}
 
 const PharmacistPage = () => {
   const {
@@ -34,9 +30,10 @@ const PharmacistPage = () => {
   const [expiringItems, setExpiringItems] = useState<InventoryItem[]>([]);
   const [lowStockCount, setLowStockCount] = useState(0);
   const [expiringCount, setExpiringCount] = useState(0);
+  const [earnedThisMonth, setEarnedThisMonth] = useState(0);
+  const [earnedLastMonth, setEarnedLastMonth] = useState(0);
 
   const { user } = useAuth();
-  console.log(user);
 
   const fadeInUp = {
     initial: { opacity: 0, y: 20 },
@@ -56,36 +53,40 @@ const PharmacistPage = () => {
     fetchData();
   }, []);
 
+  useEffect(() => {
+    const fetchEarned = async () => {
+      if (!user?.access_token) return;
+      const base = process.env.NEXT_PUBLIC_API_BASE_URL;
+      const headers = { Authorization: `Bearer ${user.access_token}` };
+      try {
+        const thisMonth = getMonthRange(0);
+        const lastMonth = getMonthRange(-1);
+        const [resThis, resLast] = await Promise.all([
+          fetch(
+            `${base}/pharmacist/sales?startDate=${thisMonth.start.toISOString()}&endDate=${thisMonth.end.toISOString()}`,
+            { headers }
+          ),
+          fetch(
+            `${base}/pharmacist/sales?startDate=${lastMonth.start.toISOString()}&endDate=${lastMonth.end.toISOString()}`,
+            { headers }
+          ),
+        ]);
+        const dataThis = await resThis.json();
+        const dataLast = await resLast.json();
+        const salesThis = dataThis?.success && Array.isArray(dataThis?.data) ? dataThis.data : [];
+        const salesLast = dataLast?.success && Array.isArray(dataLast?.data) ? dataLast.data : [];
+        setEarnedThisMonth(salesThis.reduce((sum: number, s: { totalPrice?: number }) => sum + (s.totalPrice ?? 0), 0));
+        setEarnedLastMonth(salesLast.reduce((sum: number, s: { totalPrice?: number }) => sum + (s.totalPrice ?? 0), 0));
+      } catch (e) {
+        console.error("Error fetching sales for stats:", e);
+      }
+    };
+    fetchEarned();
+  }, [user?.access_token]);
+
   if (user?.role !== "pharmacist") {
     return <Unauthorized />;
   }
-
-  const stats = [
-    {
-      title: "Total Items",
-      value: items.length,
-      icon: Package,
-      color: "from-red-600 to-red-400",
-    },
-    {
-      title: "Low Stock",
-      value: lowStockCount,
-      icon: TrendingDown,
-      color: "from-red-500 to-red-300",
-    },
-    {
-      title: "Expiring Soon",
-      value: expiringCount,
-      icon: AlertTriangle,
-      color: "from-red-400 to-red-200",
-    },
-    {
-      title: "Earned This Month",
-      value: "12,345",
-      icon: BarChart,
-      color: "from-red-700 to-red-500",
-    },
-  ];
 
   return (
     <div className="p-4 sm:p-8 max-w-9xl mx-auto min-h-screen bg-gray-50">
@@ -145,6 +146,8 @@ const PharmacistPage = () => {
         items={items}
         lowStockCount={lowStockCount}
         expiringCount={expiringCount}
+        earnedThisMonth={earnedThisMonth}
+        earnedLastMonth={earnedLastMonth}
       />
 
       <div className="">

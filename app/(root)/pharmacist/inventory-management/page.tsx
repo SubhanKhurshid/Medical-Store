@@ -30,13 +30,16 @@ const baseSchema = z.object({
   batchNumber: z.string().min(1, "Batch number is required"),
   expiryDate: z.string().min(1, "Expiry date is required"),
   manufacturer: z.string().min(1, "Manufacturer is required"),
-  price: z.number().min(0, "Price must be positive"),
+  price: z.number().min(0, "Selling price must be positive"),
+  purchasePrice: z.number().min(0, "Purchase price must be positive").optional(),
+  sellingPrice: z.number().min(0, "Selling price must be positive").optional(),
+  barcode: z.string().optional(),
+  category: z.string().optional(),
   minimumStock: z.number().min(0, "Minimum stock must be positive"),
   description: z.string().optional(),
   manufacturerDiscount: z
     .number()
     .min(0, "Manufacturer discount must be positive"),
-  // productCode: z.string().min(1, "Product Code is required"),
 });
 
 const medicineSchema = baseSchema.extend({
@@ -90,6 +93,10 @@ export default function InventoryManagement() {
       expiryDate: "",
       manufacturer: "",
       price: 0,
+      purchasePrice: 0,
+      sellingPrice: 0,
+      barcode: "",
+      category: "",
       minimumStock: 0,
       manufacturerDiscount: 0,
       description: "",
@@ -99,7 +106,6 @@ export default function InventoryManagement() {
       route: "Intramuscular",
       sterilizationMethod: "",
       size: "",
-      category: "",
       unit: 0,
     },
   });
@@ -137,9 +143,16 @@ export default function InventoryManagement() {
     }
   };
   const onSubmit = async (data: FormValues) => {
+    const sellingPrice = data.sellingPrice ?? data.price;
+    const purchasePrice = data.purchasePrice ?? 0;
     const formattedData = {
       ...data,
-      manufacturerId: data.manufacturer, // This will now be the selected manufacturer ID
+      price: sellingPrice,
+      sellingPrice,
+      purchasePrice,
+      ...(data.barcode && data.barcode.trim() && { barcode: data.barcode.trim() }),
+      ...(data.category && data.category.trim() && { category: data.category.trim() }),
+      manufacturerId: data.manufacturer,
       expiryDate: new Date(data.expiryDate).toISOString(),
       type: itemType,
       ...(itemType === ItemType.MEDICINE && {
@@ -353,10 +366,28 @@ export default function InventoryManagement() {
               </div>
 
               <div className="flex flex-col gap-2">
-                <Label htmlFor="price">Price</Label>
+                <Label htmlFor="purchasePrice">Purchase Price (cost)</Label>
+                <Input
+                  id="purchasePrice"
+                  type="number"
+                  step="0.01"
+                  min={0}
+                  className="text-lg p-4"
+                  {...form.register("purchasePrice", { valueAsNumber: true })}
+                />
+                {form.formState.errors.purchasePrice && (
+                  <span className="text-red-500 text-sm">
+                    {form.formState.errors.purchasePrice.message}
+                  </span>
+                )}
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="price">Selling Price</Label>
                 <Input
                   id="price"
                   type="number"
+                  step="0.01"
+                  min={0}
                   className="text-lg p-4"
                   {...form.register("price", { valueAsNumber: true })}
                 />
@@ -365,6 +396,24 @@ export default function InventoryManagement() {
                     {form.formState.errors.price.message}
                   </span>
                 )}
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="barcode">Barcode (optional)</Label>
+                <Input
+                  id="barcode"
+                  placeholder="Scan or enter barcode"
+                  className="text-lg p-4"
+                  {...form.register("barcode")}
+                />
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="category">Category (optional)</Label>
+                <Input
+                  id="category"
+                  placeholder="e.g. Pain Relief, Vitamins"
+                  className="text-lg p-4"
+                  {...form.register("category")}
+                />
               </div>
               <div className="flex flex-col gap-2">
                 <Label htmlFor="minimumStock">Minimum Stock</Label>

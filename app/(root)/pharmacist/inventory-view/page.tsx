@@ -26,9 +26,18 @@ const Inventory = () => {
 
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [loading, setLoading] = useState(true);
   const [lowStockItems, setLowStockItems] = useState<InventoryItem[]>([]);
   const [expiringItems, setExpiringItems] = useState<InventoryItem[]>([]);
+
+  const categories = Array.from(
+    new Set(
+      items
+        .map((item) => item.category)
+        .filter((c): c is string => !!c && c.trim() !== "")
+    )
+  ).sort();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -45,7 +54,10 @@ const Inventory = () => {
   const filteredItems = items.filter((item) => {
     const matchesSearch = item.name.toLowerCase().includes(search.toLowerCase());
     const matchesType = typeFilter === "all" || item.type === typeFilter;
-    return matchesSearch && matchesType;
+    const matchesCategory =
+      categoryFilter === "all" ||
+      (item.category && item.category === categoryFilter);
+    return matchesSearch && matchesType && matchesCategory;
   });
 
   return (
@@ -72,7 +84,7 @@ const Inventory = () => {
               </div>
             ) : (
               <>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 h-4 w-4" />
                     <Input
@@ -83,7 +95,6 @@ const Inventory = () => {
                     />
                   </div>
                   <div className="relative">
-                      {/* <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 h-4 w-4" /> */}
                     <Select
                       onValueChange={(value) => setTypeFilter(value)}
                       value={typeFilter}
@@ -92,12 +103,29 @@ const Inventory = () => {
                         <SelectValue placeholder="Filter by type" className="pl-10 pr-4 py-2" />
                       </SelectTrigger>
                       <SelectContent>
-                          <SelectItem className="text-lg" value="all">Types</SelectItem>
+                          <SelectItem className="text-lg" value="all">All types</SelectItem>
                           <SelectItem className="text-lg" value="MEDICINE">Medicine</SelectItem>
                           <SelectItem className="text-lg" value="SURGERY">Surgery</SelectItem>
                           <SelectItem className="text-lg" value="INJECTION">Injection</SelectItem>
                           <SelectItem className="text-lg" value="GENERAL">General</SelectItem>
-
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="relative">
+                    <Select
+                      onValueChange={(value) => setCategoryFilter(value)}
+                      value={categoryFilter}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Category" className="pl-10 pr-4 py-2" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem className="text-lg" value="all">All categories</SelectItem>
+                        {categories.map((cat) => (
+                          <SelectItem key={cat} className="text-lg" value={cat}>
+                            {cat}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>

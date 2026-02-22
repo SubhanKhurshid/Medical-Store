@@ -66,6 +66,19 @@ export const inventoryColumns: ColumnDef<InventoryItem>[] = [
   {
     accessorKey: "quantity",
     header: "Quantity",
+    cell: ({ row }) => {
+      const qty = row.getValue("quantity") as number;
+      const min = row.original.minimumStock ?? 0;
+      const isLow = min > 0 && qty < min;
+      return (
+        <span className={isLow ? "text-red-600 font-medium" : ""}>
+          {qty}
+          {isLow && (
+            <Badge variant="destructive" className="ml-1 text-xs">Low</Badge>
+          )}
+        </span>
+      );
+    },
   },
   {
     accessorKey: "batchNumber",
@@ -80,15 +93,38 @@ export const inventoryColumns: ColumnDef<InventoryItem>[] = [
     },
   },
   {
-    accessorKey: "price",
-    header: "Price",
+    accessorKey: "category",
+    header: "Category",
+    cell: ({ row }) => (row.getValue("category") as string) || "—",
+  },
+  {
+    accessorKey: "purchasePrice",
+    header: "Purchase",
     cell: ({ row }) => {
-      const amount = parseFloat(row.getValue("price"));
+      const item = row.original;
+      const amount = item.purchasePrice ?? 0;
       return new Intl.NumberFormat("en-US", {
         style: "currency",
         currency: "PKR",
       }).format(amount);
     },
+  },
+  {
+    accessorKey: "price",
+    header: "Selling Price",
+    cell: ({ row }) => {
+      const item = row.original;
+      const amount = item.sellingPrice ?? item.price ?? 0;
+      return new Intl.NumberFormat("en-US", {
+        style: "currency",
+        currency: "PKR",
+      }).format(amount);
+    },
+  },
+  {
+    accessorKey: "barcode",
+    header: "Barcode",
+    cell: ({ row }) => (row.getValue("barcode") as string) || "—",
   },
   {
     id: "actions",

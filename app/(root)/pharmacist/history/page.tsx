@@ -14,15 +14,15 @@ interface Sale {
   salePrice: number;
   totalPrice: number;
   soldAt: string;
-  customerName?: string | null; // Optional
-  customerPhone?: string | null; // Optional
+  customerName?: string | null;
+  customerPhone?: string | null;
   saleItems: {
     inventoryItem: {
       id: string;
       name: string;
       type: string;
       price: number;
-    };
+    } | null;
   }[];
 }
 
@@ -48,14 +48,14 @@ const SalesTable = () => {
       const result = await response.json();
 
       if (response.ok && result.success && Array.isArray(result.data)) {
-        setSales(result.data); // ✅ Ensures only data array is set
+        setSales(result.data);
       } else {
         console.error("Invalid response format:", result);
-        setSales([]); // ✅ Prevents crash
+        setSales([]); 
       }
     } catch (error) {
       console.error("Error fetching sales:", error);
-      setSales([]); // ✅ Ensures table does not break
+      setSales([]); 
     } finally {
       setLoading(false);
     }
@@ -72,7 +72,7 @@ const SalesTable = () => {
       header: "Customer",
       cell: ({ row }: any) => (
         <span className="text-lg font-semibold">
-          {row.original.customerName || "--"} {/* ✅ Handles null names */}
+          {row.original.customerName || "--"} 
         </span>
       ),
     },
@@ -81,7 +81,7 @@ const SalesTable = () => {
       header: "Phone",
       cell: ({ row }: any) => (
         <span className="text-lg font-semibold">
-          {row.original.customerPhone || "--"} {/* ✅ Handles null phone */}
+          {row.original.customerPhone || "--"} 
         </span>
       ),
     },
@@ -168,7 +168,7 @@ const SalesTable = () => {
             >
               <DataTable
                 columns={columns}
-                data={Array.isArray(sales) ? sales : []} // ✅ Prevents errors
+                data={Array.isArray(sales) ? sales : []}
               />
             </motion.div>
           </AnimatePresence>
