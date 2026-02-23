@@ -40,6 +40,7 @@ const ManufacturerModal = ({
     country: "",
     city: "",
     province: "",
+    address: "",
     // status: "Active",
   });
 
@@ -54,6 +55,7 @@ const ManufacturerModal = ({
       country: formData.country,
       city: formData.city,
       province: formData.province,
+      address: formData.address,
     };
 
     try {
@@ -185,6 +187,17 @@ const ManufacturerModal = ({
                       }
                       className="pl-10 text-2xl" />
                   </div>
+                </div>
+
+                <div className="relative">
+                  <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                  <Input
+                    placeholder="Address (Optional)"
+                    value={formData.address}
+                    onChange={(e) =>
+                      setFormData({ ...formData, address: e.target.value })
+                    }
+                    className="pl-10 text-2xl" />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">

@@ -61,6 +61,14 @@ const Sidebar = () => {
         href: "/pharmacist/purchase-orders/view",
         label: "View Purchase Orders",
       },
+      {
+        href: "/pharmacist/purchase-invoices",
+        label: "Purchase Invoices",
+      },
+      {
+        href: "/pharmacist/supplier-payments",
+        label: "Supplier Payments",
+      },
       { href: "/pharmacist/sales", label: "Sales" },
       { href: "/pharmacist/sales-history", label: "Sales History" },
       { href: "/pharmacist/history", label: "View Sales" },
@@ -143,11 +151,10 @@ const NavLink = ({
 }) => (
   <Link
     href={href}
-    className={`block px-4 py-2 rounded-md text-sm font-medium ${
-      currentPath === href
+    className={`block px-4 py-2 rounded-md text-sm font-medium ${currentPath === href
         ? "text-red-800 bg-white"
         : "text-white hover:text-red-800 hover:bg-red-100"
-    } transition-all duration-200 ease-in-out`}
+      } transition-all duration-200 ease-in-out`}
   >
     {children}
   </Link>

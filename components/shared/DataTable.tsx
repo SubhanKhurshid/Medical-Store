@@ -88,9 +88,9 @@ export function DataTable<TData extends Record<string, any>, TValue>({
                     {header.isPlaceholder
                       ? null
                       : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext()
-                        )}
+                        header.column.columnDef.header,
+                        header.getContext()
+                      )}
                   </TableHead>
                 ))}
               </TableRow>
@@ -185,7 +185,7 @@ export function DataTable<TData extends Record<string, any>, TValue>({
                   </Badge>
                   {selectedRow?.quantity &&
                     selectedRow.quantity <=
-                      (selectedRow?.minimumStock || 0) && (
+                    (selectedRow?.minimumStock || 0) && (
                       <Badge variant="destructive" className="text-sm">
                         Low Stock
                       </Badge>
@@ -211,7 +211,7 @@ export function DataTable<TData extends Record<string, any>, TValue>({
                         Quantity
                       </h4>
                       <p className="text-sm font-semibold">
-                        {selectedRow?.currentQuantity}
+                        {selectedRow?.quantity ?? selectedRow?.currentQuantity ?? "N/A"}
                       </p>
                     </div>
                     <div>
@@ -235,7 +235,11 @@ export function DataTable<TData extends Record<string, any>, TValue>({
                       <h4 className="text-sm font-medium text-muted-foreground mb-1">
                         Manufacturer
                       </h4>
-                      {selectedRow?.manufacturer || "N/A"}
+                      <p className="text-sm">
+                        {typeof selectedRow?.manufacturer === "object"
+                          ? selectedRow?.manufacturer?.companyName
+                          : selectedRow?.manufacturer || "N/A"}
+                      </p>
                     </div>
                   </div>
                 </div>
