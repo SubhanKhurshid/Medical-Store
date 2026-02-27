@@ -50,6 +50,7 @@ const Sidebar = () => {
     ],
     pharmacist: [
       { href: "/pharmacist", label: "Dashboard" },
+      { href: "/pharmacist/customers", label: "Customers" },
       { href: "/pharmacist/inventory-management", label: "Add Medicine" },
       { href: "/pharmacist/manufacturer-working", label: "Manufacturer" },
       { href: "/pharmacist/inventory-view", label: "View Inventory" },
@@ -152,8 +153,8 @@ const NavLink = ({
   <Link
     href={href}
     className={`block px-4 py-2 rounded-md text-sm font-medium ${currentPath === href
-        ? "text-red-800 bg-white"
-        : "text-white hover:text-red-800 hover:bg-red-100"
+      ? "text-red-800 bg-white"
+      : "text-white hover:text-red-800 hover:bg-red-100"
       } transition-all duration-200 ease-in-out`}
   >
     {children}

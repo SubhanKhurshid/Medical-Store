@@ -31,11 +31,15 @@ import { Calendar, Package2, AlertCircle, X, Pill } from "lucide-react";
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
+  onRowClick?: (row: TData) => void;
+  disableRowClick?: boolean;
 }
 
 export function DataTable<TData extends Record<string, any>, TValue>({
   columns,
   data,
+  onRowClick,
+  disableRowClick,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [selectedRow, setSelectedRow] = useState<TData | null>(null);
@@ -101,8 +105,15 @@ export function DataTable<TData extends Record<string, any>, TValue>({
               table.getRowModel().rows.map((row) => (
                 <TableRow
                   key={row.id}
-                  onClick={() => handleRowClick(row.original)}
-                  className="cursor-pointer hover:bg-muted/50"
+                  onClick={() => {
+                    if (disableRowClick) return;
+                    if (onRowClick) {
+                      onRowClick(row.original);
+                    } else {
+                      handleRowClick(row.original);
+                    }
+                  }}
+                  className={disableRowClick ? "" : "cursor-pointer hover:bg-muted/50"}
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell

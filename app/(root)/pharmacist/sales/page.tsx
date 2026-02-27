@@ -60,6 +60,7 @@ const SalesPage = () => {
   const [barcodeInput, setBarcodeInput] = useState("");
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
+  const [customerId, setCustomerId] = useState<string | undefined>();
   const [isStockErrorOpen, setIsStockErrorOpen] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
   const { user } = useAuth();
@@ -262,6 +263,7 @@ const SalesPage = () => {
     setIsProcessing(true);
     try {
       const saleData = {
+        customerId,
         customerName: customerName.trim() || undefined,
         customerPhone: customerPhone.trim() || undefined,
         saleItems: cart.map((item) => ({
@@ -288,6 +290,7 @@ const SalesPage = () => {
           window.print();
           setCart([]);
           setDiscount("");
+          setCustomerId(undefined);
           setCustomerName("");
           setCustomerPhone("");
           setIsReceiptModalOpen(false);
@@ -450,23 +453,41 @@ const SalesPage = () => {
             <h2 className="text-3xl font-semibold mb-6 text-red-800 flex items-center">
               <ShoppingCart className="mr-2" /> Cart
             </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4 relative">
               <div>
-                <Label className="text-gray-600">Customer name (optional)</Label>
+                <Label className="text-gray-600">Phone (search customer)</Label>
+                <Input
+                  placeholder="Phone number"
+                  value={customerPhone}
+                  onChange={async (e) => {
+                    const val = e.target.value;
+                    setCustomerPhone(val);
+                    setCustomerId(undefined);
+                    if (val.length >= 7) {
+                      try {
+                        const { data } = await axios.get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/customer?phone=${val}`, { headers: { Authorization: `Bearer ${accessToken}` } });
+                        if (data && data.length > 0) {
+                          const customer = data.find((c: any) => c.phone === val);
+                          if (customer) {
+                            setCustomerId(customer.id);
+                            setCustomerName(customer.name);
+                            toast.success(`Customer ${customer.name} selected automatically`);
+                          }
+                        }
+                      } catch (err) { console.error(err); }
+                    }
+                  }}
+                  className="mt-1 border-gray-300 focus:ring-red-800"
+                />
+              </div>
+              <div>
+                <Label className="text-gray-600">Customer name {customerId && <span className="text-red-700 text-xs">(Linked)</span>}</Label>
                 <Input
                   placeholder="Customer name"
                   value={customerName}
                   onChange={(e) => setCustomerName(e.target.value)}
                   className="mt-1 border-gray-300 focus:ring-red-800"
-                />
-              </div>
-              <div>
-                <Label className="text-gray-600">Phone (optional)</Label>
-                <Input
-                  placeholder="Phone number"
-                  value={customerPhone}
-                  onChange={(e) => setCustomerPhone(e.target.value)}
-                  className="mt-1 border-gray-300 focus:ring-red-800"
+                  readOnly={!!customerId}
                 />
               </div>
             </div>
