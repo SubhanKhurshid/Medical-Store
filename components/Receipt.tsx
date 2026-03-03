@@ -8,23 +8,40 @@ interface CartItem {
   quantity: number;
 }
 
+export type PaymentMethodDisplay = "CASH" | "CARD" | "ONLINE" | "DONATION" | "CREDIT";
+
 interface ReceiptProps {
   cart: CartItem[];
   discount: string;
   totalBill: number;
   discountedTotal: number;
+  /** Invoice number from backend after sale is created */
+  invoiceNumber?: string | null;
+  /** Payment method used for this sale */
+  paymentMethod?: PaymentMethodDisplay | string | null;
 }
+
+const PAYMENT_LABELS: Record<string, string> = {
+  CASH: "Cash",
+  CARD: "Card",
+  ONLINE: "Online",
+  DONATION: "Donation",
+  CREDIT: "Credit",
+};
 
 export function Receipt({
   cart,
   discount,
   totalBill,
   discountedTotal,
+  invoiceNumber,
+  paymentMethod,
 }: ReceiptProps) {
-  const orderNumber = Math.floor(Math.random() * 1000000000)
+  const orderNumber = invoiceNumber ?? Math.floor(Math.random() * 1000000000)
     .toString()
     .padStart(11, "0");
   const now = new Date();
+  const paymentLabel = paymentMethod ? (PAYMENT_LABELS[String(paymentMethod)] ?? String(paymentMethod)) : "Cash";
 
   return (
     <div
@@ -76,7 +93,7 @@ export function Receipt({
             gap: "0.5rem",
           }}
         >
-          <div>Order #:</div>
+          <div>{invoiceNumber ? "Invoice #:" : "Order #:"}</div>
           <div style={{ textAlign: "right", fontWeight: "bold" }}>
             {orderNumber}
           </div>
@@ -159,13 +176,15 @@ export function Receipt({
       {/* Payment Section */}
       <div style={{ fontSize: "16px", fontWeight: "bold" }}>
         <div style={{ display: "flex", justifyContent: "space-between" }}>
-          <span>Cash Tendered</span>
+          <span>Payment ({paymentLabel})</span>
           <span>Rs {discountedTotal.toFixed(2)}</span>
         </div>
-        <div style={{ display: "flex", justifyContent: "space-between" }}>
-          <span>CHANGE DUE</span>
-          <span>Rs 0.00</span>
-        </div>
+        {paymentLabel === "Cash" && (
+          <div style={{ display: "flex", justifyContent: "space-between" }}>
+            <span>CHANGE DUE</span>
+            <span>Rs 0.00</span>
+          </div>
+        )}
       </div>
     </div>
   );

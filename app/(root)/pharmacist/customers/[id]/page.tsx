@@ -1,41 +1,99 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { motion, AnimatePresence } from "framer-motion";
-import { Loader2, ArrowLeft, User, Phone, Mail, MapPin, Calendar, Receipt } from "lucide-react";
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogFooter,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { motion } from "framer-motion";
+import { Loader2, ArrowLeft, User, Phone, Mail, MapPin, Calendar, Receipt, Wallet, Banknote, Bell, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
+import { useAuth } from "@/app/providers/AuthProvider";
+import axios from "axios";
+import { toast } from "sonner";
+
+const API = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 export default function CustomerDetailPage() {
     const params = useParams();
     const router = useRouter();
+    const { user } = useAuth();
+    const accessToken = user?.access_token;
     const [customer, setCustomer] = useState<any>(null);
     const [loading, setLoading] = useState(true);
+    const [transactions, setTransactions] = useState<any[]>([]);
+    const [reminders, setReminders] = useState<any[]>([]);
+    const [paymentAmount, setPaymentAmount] = useState("");
+    const [paymentReference, setPaymentReference] = useState("");
+    const [paymentSubmitting, setPaymentSubmitting] = useState(false);
+    const [reminderOpen, setReminderOpen] = useState(false);
+    const [reminderType, setReminderType] = useState("REFILL");
+    const [reminderChannel, setReminderChannel] = useState("SMS");
+    const [reminderNote, setReminderNote] = useState("");
+    const [reminderSubmitting, setReminderSubmitting] = useState(false);
+
+    const fetchCustomer = useCallback(async () => {
+        if (!params.id) return;
+        if (!accessToken) {
+            setLoading(false);
+            return;
+        }
+        try {
+            const { data } = await axios.get(`${API}/pharmacist/customer/${params.id}`, {
+                headers: { Authorization: `Bearer ${accessToken}` },
+            });
+            setCustomer(data);
+        } catch (e) {
+            console.error(e);
+            setCustomer(null);
+        } finally {
+            setLoading(false);
+        }
+    }, [params.id, accessToken]);
+
+    const fetchTransactions = useCallback(async () => {
+        if (!params.id || !accessToken) return;
+        try {
+            const { data } = await axios.get(`${API}/pharmacist/customer/${params.id}/transactions`, {
+                headers: { Authorization: `Bearer ${accessToken}` },
+            });
+            setTransactions(Array.isArray(data) ? data : []);
+        } catch (e) {
+            setTransactions([]);
+        }
+    }, [params.id, accessToken]);
+
+    const fetchReminders = useCallback(async () => {
+        if (!params.id || !accessToken) return;
+        try {
+            const { data } = await axios.get(`${API}/pharmacist/customer/${params.id}/reminders`, {
+                headers: { Authorization: `Bearer ${accessToken}` },
+            });
+            setReminders(Array.isArray(data) ? data : []);
+        } catch (e) {
+            setReminders([]);
+        }
+    }, [params.id, accessToken]);
 
     useEffect(() => {
-        const fetchCustomer = async () => {
-            if (!params.id) return;
-            setLoading(true);
-            try {
-                const response = await fetch(
-                    `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/customer/${params.id}`
-                );
-                if (!response.ok) {
-                    throw new Error("Failed to fetch customer details");
-                }
-                const data = await response.json();
-                setCustomer(data);
-            } catch (error) {
-                console.error("Error fetching customer:", error);
-            } finally {
-                setLoading(false);
-            }
-        };
-
+        setLoading(true);
         fetchCustomer();
-    }, [params.id]);
+    }, [fetchCustomer]);
+
+    useEffect(() => {
+        if (params.id && accessToken) {
+            fetchTransactions();
+            fetchReminders();
+        }
+    }, [params.id, accessToken, fetchTransactions, fetchReminders]);
 
     if (loading) {
         return (
@@ -108,6 +166,68 @@ export default function CustomerDetailPage() {
                                 <Calendar className="h-5 w-5 text-gray-400" />
                                 <span>Joined {format(new Date(customer.createdAt), "MMM d, yyyy")}</span>
                             </div>
+                            <div className="flex items-center gap-3 text-lg">
+                                <Wallet className="h-5 w-5 text-gray-400" />
+                                <span className="text-gray-700">Credit balance:</span>
+                                <span className={`font-bold ${(customer.creditBalance || 0) > 0 ? "text-amber-700" : "text-gray-900"}`}>
+                                    Rs {(Number(customer.creditBalance) || 0).toLocaleString()}
+                                </span>
+                            </div>
+                        </div>
+
+                        <div className="mt-6 pt-4 border-t border-gray-100">
+                            <p className="text-sm text-gray-500 uppercase tracking-wider font-semibold mb-2">Record payment</p>
+                            <div className="flex flex-wrap gap-2 items-end">
+                                <div>
+                                    <Label className="text-xs">Amount (Rs)</Label>
+                                    <Input
+                                        type="number"
+                                        min="0.01"
+                                        step="0.01"
+                                        placeholder="0"
+                                        value={paymentAmount}
+                                        onChange={(e) => setPaymentAmount(e.target.value)}
+                                        className="w-28 mt-0.5"
+                                    />
+                                </div>
+                                <div>
+                                    <Label className="text-xs">Reference (optional)</Label>
+                                    <Input
+                                        placeholder="e.g. Cash"
+                                        value={paymentReference}
+                                        onChange={(e) => setPaymentReference(e.target.value)}
+                                        className="w-32 mt-0.5"
+                                    />
+                                </div>
+                                <Button
+                                    size="sm"
+                                    className="bg-red-800 hover:bg-red-900"
+                                    disabled={!paymentAmount || parseFloat(paymentAmount) <= 0 || paymentSubmitting}
+                                    onClick={async () => {
+                                        const amt = parseFloat(paymentAmount);
+                                        if (!amt || amt <= 0) return;
+                                        setPaymentSubmitting(true);
+                                        try {
+                                            await axios.post(
+                                                `${API}/pharmacist/customer/${params.id}/payment`,
+                                                { amount: amt, reference: paymentReference || undefined },
+                                                { headers: { Authorization: `Bearer ${accessToken}` } }
+                                            );
+                                            toast.success("Payment recorded.");
+                                            setPaymentAmount("");
+                                            setPaymentReference("");
+                                            fetchCustomer();
+                                            fetchTransactions();
+                                        } catch (e: any) {
+                                            toast.error(e.response?.data?.message ?? "Failed to record payment.");
+                                        } finally {
+                                            setPaymentSubmitting(false);
+                                        }
+                                    }}
+                                >
+                                    {paymentSubmitting ? "..." : "Record"}
+                                </Button>
+                            </div>
                         </div>
 
                         <div className="mt-8 pt-6 border-t border-gray-100 flex justify-between items-center">
@@ -176,6 +296,141 @@ export default function CustomerDetailPage() {
                     </CardContent>
                 </Card>
             </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                {/* Credit / Transactions */}
+                <Card className="shadow-lg border-0">
+                    <CardHeader className="border-b bg-gray-50/50">
+                        <CardTitle className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                            <Banknote className="h-5 w-5 text-red-700" />
+                            Credit &amp; Payments
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                        {transactions.length === 0 ? (
+                            <div className="p-6 text-center text-gray-500">No transactions yet.</div>
+                        ) : (
+                            <ul className="divide-y divide-gray-100 max-h-[280px] overflow-y-auto">
+                                {transactions.map((tx: any) => (
+                                    <li key={tx.id} className="p-4 flex justify-between items-center">
+                                        <div>
+                                            <p className="text-sm text-gray-600">{tx.reference || "—"}</p>
+                                            <p className="text-xs text-gray-400">{format(new Date(tx.createdAt), "PPp")}</p>
+                                        </div>
+                                        <span className={`font-semibold ${tx.amount >= 0 ? "text-amber-700" : "text-green-700"}`}>
+                                            {tx.amount >= 0 ? "+" : ""}Rs {tx.amount.toLocaleString()}
+                                        </span>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                    </CardContent>
+                </Card>
+
+                {/* Reminders */}
+                <Card className="shadow-lg border-0">
+                    <CardHeader className="border-b bg-gray-50/50 flex flex-row items-center justify-between">
+                        <CardTitle className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                            <Bell className="h-5 w-5 text-red-700" />
+                            Reminders
+                        </CardTitle>
+                        <Button
+                            size="sm"
+                            className="bg-red-800 hover:bg-red-900"
+                            onClick={() => setReminderOpen(true)}
+                        >
+                            <MessageSquare className="h-4 w-4 mr-1" />
+                            Log reminder
+                        </Button>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                        {reminders.length === 0 ? (
+                            <div className="p-6 text-center text-gray-500">No reminders logged yet.</div>
+                        ) : (
+                            <ul className="divide-y divide-gray-100 max-h-[280px] overflow-y-auto">
+                                {reminders.map((r: any) => (
+                                    <li key={r.id} className="p-4">
+                                        <div className="flex justify-between items-start">
+                                            <span className="font-medium text-gray-800">{r.type}</span>
+                                            <span className="text-xs text-gray-400">{format(new Date(r.sentAt), "PPp")}</span>
+                                        </div>
+                                        <p className="text-sm text-gray-600 mt-0.5">{r.channel}{r.note ? ` · ${r.note}` : ""}</p>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                    </CardContent>
+                </Card>
+            </div>
+
+            <Dialog open={reminderOpen} onOpenChange={setReminderOpen}>
+                <DialogContent className="max-w-sm">
+                    <DialogHeader>
+                        <DialogTitle>Log reminder</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 py-2">
+                        <div>
+                            <Label>Type</Label>
+                            <select
+                                value={reminderType}
+                                onChange={(e) => setReminderType(e.target.value)}
+                                className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2"
+                            >
+                                <option value="REFILL">Refill</option>
+                                <option value="FOLLOW_UP">Follow-up</option>
+                                <option value="EXPIRY">Expiry</option>
+                            </select>
+                        </div>
+                        <div>
+                            <Label>Channel</Label>
+                            <select
+                                value={reminderChannel}
+                                onChange={(e) => setReminderChannel(e.target.value)}
+                                className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2"
+                            >
+                                <option value="SMS">SMS</option>
+                                <option value="EMAIL">Email</option>
+                            </select>
+                        </div>
+                        <div>
+                            <Label>Note (optional)</Label>
+                            <Input
+                                value={reminderNote}
+                                onChange={(e) => setReminderNote(e.target.value)}
+                                placeholder="e.g. Refill due next week"
+                                className="mt-1"
+                            />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setReminderOpen(false)}>Cancel</Button>
+                        <Button
+                            className="bg-red-800 hover:bg-red-900"
+                            disabled={reminderSubmitting}
+                            onClick={async () => {
+                                setReminderSubmitting(true);
+                                try {
+                                    await axios.post(
+                                        `${API}/pharmacist/customer/${params.id}/reminder`,
+                                        { type: reminderType, channel: reminderChannel, note: reminderNote || undefined },
+                                        { headers: { Authorization: `Bearer ${accessToken}` } }
+                                    );
+                                    toast.success("Reminder logged.");
+                                    setReminderOpen(false);
+                                    setReminderNote("");
+                                    fetchReminders();
+                                } catch (e: any) {
+                                    toast.error(e.response?.data?.message ?? "Failed to log reminder.");
+                                } finally {
+                                    setReminderSubmitting(false);
+                                }
+                            }}
+                        >
+                            {reminderSubmitting ? "..." : "Log reminder"}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </motion.div>
     );
 }

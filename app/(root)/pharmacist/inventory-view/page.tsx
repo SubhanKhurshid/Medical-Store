@@ -22,6 +22,7 @@ const Inventory = () => {
     state: { items },
     getLowStockItems,
     getExpiringItems,
+    refetchInventory,
   } = useInventory();
 
   const [search, setSearch] = useState("");
@@ -39,6 +40,11 @@ const Inventory = () => {
     )
   ).sort();
 
+  // Refetch inventory when this page is shown so quantities are up to date after sales/refunds
+  useEffect(() => {
+    refetchInventory();
+  }, [refetchInventory]);
+
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
@@ -49,7 +55,7 @@ const Inventory = () => {
       setLoading(false);
     };
     fetchData();
-  }, []);
+  }, [items]);
 
   const filteredItems = items.filter((item) => {
     const matchesSearch = item.name.toLowerCase().includes(search.toLowerCase());

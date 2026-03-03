@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, User, Phone, Mail, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -10,9 +10,11 @@ interface CustomerModalProps {
     isOpen: boolean;
     onClose: () => void;
     onSave: (data: any) => void;
+    editingCustomer?: { id: string; name: string; phone: string; email?: string | null; address?: string | null } | null;
+    accessToken?: string | null;
 }
 
-const CustomerModal = ({ isOpen, onClose, onSave }: CustomerModalProps) => {
+const CustomerModal = ({ isOpen, onClose, onSave, editingCustomer, accessToken }: CustomerModalProps) => {
     const [formData, setFormData] = useState({
         name: "",
         phone: "",
@@ -20,25 +22,55 @@ const CustomerModal = ({ isOpen, onClose, onSave }: CustomerModalProps) => {
         address: "",
     });
 
+    useEffect(() => {
+        if (editingCustomer) {
+            setFormData({
+                name: editingCustomer.name,
+                phone: editingCustomer.phone,
+                email: editingCustomer.email ?? "",
+                address: editingCustomer.address ?? "",
+            });
+        } else {
+            setFormData({ name: "", phone: "", email: "", address: "" });
+        }
+    }, [editingCustomer, isOpen]);
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
+        const headers: Record<string, string> = { "Content-Type": "application/json" };
+        if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
+
         try {
-            const response = await fetch(
-                `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/customer`,
-                {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(formData),
+            if (editingCustomer) {
+                const response = await fetch(
+                    `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/customer/${editingCustomer.id}`,
+                    {
+                        method: "PATCH",
+                        headers,
+                        body: JSON.stringify(formData),
+                    }
+                );
+                if (!response.ok) {
+                    throw new Error("Failed to update customer");
                 }
-            );
-
-            if (!response.ok) {
-                throw new Error("Failed to create customer");
+                const updated = await response.json();
+                onSave(updated);
+            } else {
+                const response = await fetch(
+                    `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/customer`,
+                    {
+                        method: "POST",
+                        headers,
+                        body: JSON.stringify(formData),
+                    }
+                );
+                if (!response.ok) {
+                    throw new Error("Failed to create customer");
+                }
+                const savedCustomer = await response.json();
+                onSave(savedCustomer);
             }
-
-            const savedCustomer = await response.json();
-            onSave(savedCustomer);
             onClose();
         } catch (error) {
             console.error("Error saving customer:", error);
@@ -63,7 +95,7 @@ const CustomerModal = ({ isOpen, onClose, onSave }: CustomerModalProps) => {
                     >
                         <div className="flex justify-between items-center p-6 border-b-2 border-red-700">
                             <h3 className="text-3xl text-red-800 font-bold">
-                                Add New Customer
+                                {editingCustomer ? "Edit Customer" : "Add New Customer"}
                             </h3>
                             <button
                                 type="button"
@@ -141,7 +173,7 @@ const CustomerModal = ({ isOpen, onClose, onSave }: CustomerModalProps) => {
                                     type="submit"
                                     className="bg-red-800 hover:bg-red-900 text-white text-lg"
                                 >
-                                    Save Customer
+                                    {editingCustomer ? "Update Customer" : "Save Customer"}
                                 </Button>
                             </div>
                         </form>

@@ -8,7 +8,7 @@ import {
   Mail,
   Phone,
   MapPin,
-  DollarSign,
+  Banknote,
   Activity,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -202,12 +202,12 @@ const ManufacturerModal = ({
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="relative">
-                    <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                    <Banknote className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
                     <Input
                       type="number"
                       min="0"
                       required
-                      placeholder="Balance"
+                      placeholder="Balance (Rs)"
                       value={formData.balance}
                       onChange={(e) =>
                         setFormData({ ...formData, balance: e.target.value })
