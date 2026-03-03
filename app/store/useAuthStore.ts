@@ -1,6 +1,7 @@
 import { createStore } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import axios from "axios";
+import { getApiBaseUrl } from "@/lib/api";
 
 // Auth State Interface
 interface AuthState {
@@ -37,7 +38,7 @@ export const createAuthStore = () => {
 
           try {
             const response = await axios.post(
-              `${process.env.NEXT_PUBLIC_API_BASE_URL}/auth/login`,
+              `${getApiBaseUrl()}/auth/login`,
               { email, password }
             );
             const userData = { ...response.data };
