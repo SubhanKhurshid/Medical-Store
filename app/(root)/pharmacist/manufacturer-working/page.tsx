@@ -4,6 +4,12 @@ import { useState, useEffect } from "react";
 import { DataTable } from "@/components/shared/DataTable";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search,
@@ -12,12 +18,15 @@ import {
   Building2,
   Phone,
   MapPin,
+  Eye,
+  Mail,
+  Banknote,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import ManufacturerModal from "./Modal";
 
-interface Manufacturer {
+interface ManufacturerRow {
   id: string;
   name: string;
   phone: string;
@@ -27,11 +36,25 @@ interface Manufacturer {
   status: "Active" | "Inactive";
 }
 
+interface ManufacturerRaw {
+  id: string;
+  companyName: string;
+  phone: string;
+  email?: string | null;
+  country: string;
+  city: string;
+  province?: string | null;
+  address?: string | null;
+  balance: number;
+}
+
 const Manufacturer = () => {
   const [search, setSearch] = useState("");
-  const [manufacturers, setManufacturers] = useState<Manufacturer[]>([]);
+  const [manufacturers, setManufacturers] = useState<ManufacturerRow[]>([]);
+  const [manufacturersRaw, setManufacturersRaw] = useState<ManufacturerRaw[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [viewManufacturer, setViewManufacturer] = useState<ManufacturerRaw | null>(null);
 
   useEffect(() => {
     const fetchManufacturers = async () => {
@@ -45,20 +68,19 @@ const Manufacturer = () => {
         }
 
         const data = await response.json();
-
-        // If the API returns a single object instead of an array, wrap it in an array
         const manufacturersArray = Array.isArray(data) ? data : [data];
 
-        // Map API data to match the Manufacturer interface
-        const mappedData = manufacturersArray.map(
+        setManufacturersRaw(manufacturersArray);
+
+        const mappedData: ManufacturerRow[] = manufacturersArray.map(
           (item: any, index: number) => ({
-            id: `#M-${index + 1}`,
+            id: item.id ?? `#M-${index + 1}`,
             name: item.companyName,
             phone: item.phone,
             city: item.city,
             country: item.country,
-            balance: `${item.balance.toLocaleString()} Rs`,
-            status: "Active" as "Active" | "Inactive", // Explicitly cast the status
+            balance: `Rs ${Number(item.balance ?? 0).toLocaleString()}`,
+            status: "Active" as "Active" | "Inactive",
           })
         );
 
@@ -121,6 +143,24 @@ const Manufacturer = () => {
           {row.original.status}
         </Badge>
       ),
+    },
+    {
+      id: "actions",
+      header: "Actions",
+      cell: ({ row }: any) => {
+        const raw = manufacturersRaw.find((m) => m.id === row.original.id || m.companyName === row.original.name);
+        return (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-red-700 hover:text-red-900 hover:bg-red-50"
+            onClick={() => raw && setViewManufacturer(raw)}
+          >
+            <Eye className="h-4 w-4 mr-2" />
+            View
+          </Button>
+        );
+      },
     },
   ];
 
@@ -185,6 +225,7 @@ const Manufacturer = () => {
                       m.city?.toLowerCase().includes(search?.toLowerCase()) ||
                       m.country?.toLowerCase().includes(search?.toLowerCase())
                   )}
+                  disableRowClick={true}
                 />
               </motion.div>
             )}
@@ -195,10 +236,57 @@ const Manufacturer = () => {
       <ManufacturerModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        onSave={(newManufacturer: Manufacturer) => {
-          setManufacturers([...manufacturers, newManufacturer]);
+        onSave={(newManufacturer: any) => {
+          const row: ManufacturerRow = {
+            id: newManufacturer.id,
+            name: newManufacturer.companyName,
+            phone: newManufacturer.phone,
+            city: newManufacturer.city,
+            country: newManufacturer.country,
+            balance: `Rs ${Number(newManufacturer.balance ?? 0).toLocaleString()}`,
+            status: "Active",
+          };
+          setManufacturers([row, ...manufacturers]);
+          setManufacturersRaw([newManufacturer, ...manufacturersRaw]);
         }}
       />
+
+      <Dialog open={!!viewManufacturer} onOpenChange={() => setViewManufacturer(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-red-800 flex items-center gap-2">
+              <Building2 className="h-5 w-5" />
+              {viewManufacturer?.companyName}
+            </DialogTitle>
+          </DialogHeader>
+          {viewManufacturer && (
+            <div className="space-y-4 pt-2">
+              <div className="flex items-center gap-3 text-gray-700">
+                <Phone className="h-4 w-4 text-gray-400" />
+                <span>{viewManufacturer.phone}</span>
+              </div>
+              {viewManufacturer.email && (
+                <div className="flex items-center gap-3 text-gray-700">
+                  <Mail className="h-4 w-4 text-gray-400" />
+                  <span>{viewManufacturer.email}</span>
+                </div>
+              )}
+              <div className="flex items-center gap-3 text-gray-700">
+                <MapPin className="h-4 w-4 text-gray-400" />
+                <span>
+                  {[viewManufacturer.address, viewManufacturer.city, viewManufacturer.province, viewManufacturer.country]
+                    .filter(Boolean)
+                    .join(", ")}
+                </span>
+              </div>
+              <div className="flex items-center gap-3 text-gray-700 font-medium">
+                <Banknote className="h-4 w-4 text-gray-400" />
+                <span>Balance: Rs {Number(viewManufacturer.balance ?? 0).toLocaleString()}</span>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </motion.div>
   );
 };

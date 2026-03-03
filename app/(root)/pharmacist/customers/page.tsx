@@ -5,48 +5,56 @@ import { DataTable } from "@/components/shared/DataTable";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, PlusCircle, Loader2, User, Phone, Eye } from "lucide-react";
+import { Search, PlusCircle, Loader2, User, Phone, Eye, Pencil, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import CustomerModal from "./Modal";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/app/providers/AuthProvider";
 
 interface Customer {
     id: string;
     name: string;
     phone: string;
-    email: string;
-    address: string;
+    email?: string | null;
+    address?: string | null;
+    creditBalance?: number;
 }
 
 const CustomersPage = () => {
     const router = useRouter();
+    const { user } = useAuth();
+    const accessToken = user?.access_token;
     const [search, setSearch] = useState("");
     const [customers, setCustomers] = useState<Customer[]>([]);
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
+
+    const fetchCustomers = async () => {
+        setLoading(true);
+        try {
+            const response = await fetch(
+                `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/customer`,
+                {
+                    headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
+                }
+            );
+            if (!response.ok) {
+                throw new Error("Failed to fetch customers");
+            }
+            const data = await response.json();
+            const customersArray = Array.isArray(data) ? data : [data];
+            setCustomers(customersArray);
+        } catch (error) {
+            console.error("Error fetching customers:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     useEffect(() => {
-        const fetchCustomers = async () => {
-            setLoading(true);
-            try {
-                const response = await fetch(
-                    `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/customer`
-                );
-                if (!response.ok) {
-                    throw new Error("Failed to fetch customers");
-                }
-                const data = await response.json();
-                const customersArray = Array.isArray(data) ? data : [data];
-                setCustomers(customersArray);
-            } catch (error) {
-                console.error("Error fetching customers:", error);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchCustomers();
-    }, []);
+        if (accessToken) fetchCustomers();
+    }, [accessToken]);
 
     const columns = [
         {
@@ -75,18 +83,47 @@ const CustomersPage = () => {
             cell: ({ row }: any) => <span>{row.original.email || "-"}</span>,
         },
         {
+            id: "creditBalance",
+            header: "Credit Balance",
+            cell: ({ row }: any) => {
+                const bal = Number(row.original.creditBalance) || 0;
+                return (
+                    <div className="flex items-center space-x-2">
+                        <Wallet className="h-4 w-4 text-gray-500" />
+                        <span className={bal > 0 ? "font-semibold text-amber-700" : "text-gray-600"}>
+                            Rs {bal.toLocaleString()}
+                        </span>
+                    </div>
+                );
+            },
+        },
+        {
             id: "actions",
             header: "Actions",
             cell: ({ row }: any) => (
-                <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-red-700 hover:text-red-900 hover:bg-red-50"
-                    onClick={() => router.push(`/pharmacist/customers/${row.original.id}`)}
-                >
-                    <Eye className="h-4 w-4 mr-2" />
-                    View History
-                </Button>
+                <div className="flex gap-2">
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-gray-600 hover:bg-gray-100"
+                        onClick={() => {
+                            setEditingCustomer(row.original);
+                            setIsModalOpen(true);
+                        }}
+                    >
+                        <Pencil className="h-4 w-4 mr-1" />
+                        Edit
+                    </Button>
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-red-700 hover:text-red-900 hover:bg-red-50"
+                        onClick={() => router.push(`/pharmacist/customers/${row.original.id}`)}
+                    >
+                        <Eye className="h-4 w-4 mr-2" />
+                        View
+                    </Button>
+                </div>
             ),
         },
     ];
@@ -161,10 +198,21 @@ const CustomersPage = () => {
 
             <CustomerModal
                 isOpen={isModalOpen}
-                onClose={() => setIsModalOpen(false)}
-                onSave={(newCustomer: Customer) => {
-                    setCustomers([newCustomer, ...customers]);
+                onClose={() => {
+                    setIsModalOpen(false);
+                    setEditingCustomer(null);
                 }}
+                onSave={(saved: Customer) => {
+                    if (editingCustomer) {
+                        setCustomers(customers.map((c) => (c.id === saved.id ? saved : c)));
+                    } else {
+                        setCustomers([saved, ...customers]);
+                    }
+                    setIsModalOpen(false);
+                    setEditingCustomer(null);
+                }}
+                editingCustomer={editingCustomer}
+                accessToken={accessToken}
             />
         </motion.div>
     );

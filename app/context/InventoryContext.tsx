@@ -1,5 +1,5 @@
 import axios from "axios";
-import React, { createContext, useContext, useReducer, useEffect } from "react";
+import React, { createContext, useContext, useReducer, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { useAuth } from "../providers/AuthProvider";
 
@@ -58,6 +58,8 @@ const InventoryContext = createContext<{
   deleteItem: (id: string) => Promise<void>;
   getLowStockItems: () => Promise<InventoryItem[]>;
   getExpiringItems: () => Promise<InventoryItem[]>;
+  /** Refetch inventory from API (e.g. after sale or refund) so quantities stay in sync */
+  refetchInventory: () => Promise<void>;
 } | null>(null);
 
 const inventoryReducer = (
@@ -101,21 +103,22 @@ export const InventoryProvider = ({
   const { user } = useAuth();
   const accessToken = user?.access_token;
 
-  useEffect(() => {
-    const loadInventory = async () => {
-      const response = await axios.get(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist`,
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        }
-      );
-
-      dispatch({ type: "SET_ITEMS", payload: response.data });
-    };
-    loadInventory();
+  const refetchInventory = useCallback(async () => {
+    if (!accessToken) return;
+    const response = await axios.get(
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist`,
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      }
+    );
+    dispatch({ type: "SET_ITEMS", payload: response.data });
   }, [accessToken]);
+
+  useEffect(() => {
+    refetchInventory();
+  }, [refetchInventory]);
 
   const addItem = async (
     item: Omit<InventoryItem, "id" | "createdAt" | "updatedAt">
@@ -194,6 +197,7 @@ export const InventoryProvider = ({
         deleteItem,
         getLowStockItems,
         getExpiringItems,
+        refetchInventory,
       }}
     >
       {children}
