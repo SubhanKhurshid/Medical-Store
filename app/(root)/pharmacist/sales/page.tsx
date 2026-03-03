@@ -33,6 +33,7 @@ import {
 import { toast } from "sonner";
 import axios from "axios";
 import { useAuth } from "@/app/providers/AuthProvider";
+import { useInventory } from "@/app/context/InventoryContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { Receipt } from "@/components/Receipt";
 
@@ -61,10 +62,13 @@ const SalesPage = () => {
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [customerId, setCustomerId] = useState<string | undefined>();
+  const [paymentMethod, setPaymentMethod] = useState<"CASH" | "CARD" | "ONLINE" | "DONATION" | "CREDIT">("CASH");
+  const [completedSale, setCompletedSale] = useState<{ invoiceNumber: string; paymentMethod: string } | null>(null);
   const [isStockErrorOpen, setIsStockErrorOpen] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
   const { user } = useAuth();
   const accessToken = user?.access_token;
+  const { refetchInventory } = useInventory();
   const [isProcessing, setIsProcessing] = useState(false); // New state for processing
 
   const fetchProducts = async () => {
@@ -261,6 +265,7 @@ const SalesPage = () => {
 
   const handlePrint = async () => {
     setIsProcessing(true);
+    setCompletedSale(null);
     try {
       const saleData = {
         customerId,
@@ -272,6 +277,7 @@ const SalesPage = () => {
           salePrice: item.price,
         })),
         discount: parseFloat(discount) || 0,
+        paymentMethod,
       };
 
       const response = await axios.post(
@@ -285,7 +291,13 @@ const SalesPage = () => {
       );
 
       if (response.status === 201 || response.status === 200) {
+        const created = response.data;
+        setCompletedSale({
+          invoiceNumber: created.invoiceNumber ?? "",
+          paymentMethod: created.paymentMethod ?? paymentMethod,
+        });
         toast.success("Sale recorded successfully!");
+        refetchInventory(); // Keep inventory quantities in sync (e.g. View Inventory)
         setTimeout(() => {
           window.print();
           setCart([]);
@@ -293,6 +305,7 @@ const SalesPage = () => {
           setCustomerId(undefined);
           setCustomerName("");
           setCustomerPhone("");
+          setCompletedSale(null);
           setIsReceiptModalOpen(false);
           fetchProducts();
         }, 100);
@@ -454,6 +467,25 @@ const SalesPage = () => {
               <ShoppingCart className="mr-2" /> Cart
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4 relative">
+              <div>
+                <Label className="text-gray-600">Payment method</Label>
+                <select
+                  value={paymentMethod}
+                  onChange={(e) => setPaymentMethod(e.target.value as "CASH" | "CARD" | "ONLINE" | "DONATION" | "CREDIT")}
+                  className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-gray-900 focus:border-red-800 focus:ring-red-800"
+                >
+                  <option value="CASH">Cash</option>
+                  <option value="CARD">Card</option>
+                  <option value="ONLINE">Online</option>
+                  <option value="DONATION">Donation</option>
+                  <option value="CREDIT">Credit</option>
+                </select>
+              </div>
+              {paymentMethod === "CREDIT" && (
+                <div className="sm:col-span-2 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+                  Select a customer (by phone) so the sale is added to their credit balance.
+                </div>
+              )}
               <div>
                 <Label className="text-gray-600">Phone (search customer)</Label>
                 <Input
@@ -662,6 +694,8 @@ const SalesPage = () => {
               discount={discount}
               totalBill={totalBill}
               discountedTotal={discountedTotal}
+              invoiceNumber={completedSale?.invoiceNumber}
+              paymentMethod={completedSale?.paymentMethod ?? paymentMethod}
             />
           </div>
           <DialogFooter className="px-6 pb-6 print:hidden">
