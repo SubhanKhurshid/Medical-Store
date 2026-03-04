@@ -20,18 +20,12 @@ import {
   MapPin,
   Mail,
   Eye,
-  Mail,
+  
   Banknote,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import ManufacturerModal from "./Modal";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 
 interface ManufacturerRow {
   id: string;
@@ -66,7 +60,7 @@ const Manufacturer = () => {
   const [manufacturersRaw, setManufacturersRaw] = useState<ManufacturerRaw[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedManufacturer, setSelectedManufacturer] = useState<Manufacturer | null>(null);
+  const [selectedManufacturer, setSelectedManufacturer] = useState<ManufacturerRow | null>(null);
   const [viewManufacturer, setViewManufacturer] = useState<ManufacturerRaw | null>(null);
 
   const fetchManufacturers = async () => {

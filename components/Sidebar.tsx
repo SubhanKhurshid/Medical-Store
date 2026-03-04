@@ -88,8 +88,8 @@ const Sidebar = () => {
   const currentNavItems = navItems[role as keyof typeof navItems] || [];
 
   const SidebarContent = () => (
-    <div className="flex flex-col h-full ">
-      <div className="flex items-center justify-center p-6 bg-white shadow-md">
+    <div className="flex flex-col h-full overflow-hidden">
+      <div className="flex shrink-0 items-center justify-center p-6 bg-white shadow-md">
         <Link href={`/${role}`}>
           <Image
             src={logo || "/placeholder.svg"}
@@ -100,9 +100,9 @@ const Sidebar = () => {
           />
         </Link>
       </div>
-      <div className="flex-grow bg-gradient-to-b from-red-600 to-red-800 text-white pt-6">
-        <Separator className="mb-4 bg-red-400" />
-        <ScrollArea className="px-4 h-[calc(100vh-200px)]">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-gradient-to-b from-red-600 to-red-800 pt-6 text-white">
+        <Separator className="mb-4 shrink-0 bg-red-400" />
+        <ScrollArea className="flex-1 px-4">
           <div className="space-y-2">
             {currentNavItems.map((item) => {
               const showBadge =
@@ -129,7 +129,7 @@ const Sidebar = () => {
 
   return (
     <>
-      <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 ">
+      <aside className="fixed inset-y-0 left-0 z-50 hidden h-screen flex-col overflow-hidden lg:flex lg:w-64">
         <SidebarContent />
       </aside>
       <div className="lg:hidden ">
