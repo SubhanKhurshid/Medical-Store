@@ -5,7 +5,9 @@ import { usePathname, useRouter } from "next/navigation";
 import type React from "react";
 import Image from "next/image";
 import { useAuth } from "@/app/providers/AuthProvider";
+import { useInventory } from "@/app/context/InventoryContext";
 import { Button } from "@/components/ui/button";
+import { useEffect, useState } from "react";
 import logo from "@/public/Ibrahim Clinic.png";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -22,6 +24,13 @@ const Sidebar = () => {
   const pathname = usePathname();
   const role = user?.role;
   const router = useRouter();
+  const { getLowStockItems } = useInventory();
+  const [lowStockCount, setLowStockCount] = useState(0);
+
+  useEffect(() => {
+    if (role !== "pharmacist") return;
+    getLowStockItems().then((items) => setLowStockCount(items.length));
+  }, [role, pathname]);
 
   const handleLogout = (event: React.MouseEvent) => {
     event.preventDefault();
@@ -79,8 +88,8 @@ const Sidebar = () => {
   const currentNavItems = navItems[role as keyof typeof navItems] || [];
 
   const SidebarContent = () => (
-    <div className="flex flex-col h-full ">
-      <div className="flex items-center justify-center p-6 bg-white shadow-md">
+    <div className="flex flex-col h-full overflow-hidden">
+      <div className="flex shrink-0 items-center justify-center p-6 bg-white shadow-md">
         <Link href={`/${role}`}>
           <Image
             src={logo || "/placeholder.svg"}
@@ -91,33 +100,36 @@ const Sidebar = () => {
           />
         </Link>
       </div>
-      <div className="flex-grow bg-gradient-to-b from-red-600 to-red-800 text-white pt-6">
-        <Separator className="mb-4 bg-red-400" />
-        <ScrollArea className="px-4 h-[calc(100vh-200px)]">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-gradient-to-b from-red-600 to-red-800 pt-6 text-white">
+        <Separator className="mb-4 shrink-0 bg-red-400" />
+        <ScrollArea className="flex-1 px-4">
           <div className="space-y-2">
-            {currentNavItems.map((item) => (
-              <NavLink key={item.href} href={item.href} currentPath={pathname}>
-                {item.label}
-              </NavLink>
-            ))}
+            {currentNavItems.map((item) => {
+              const showBadge =
+                role === "pharmacist" &&
+                lowStockCount > 0 &&
+                (item.href === "/pharmacist" ||
+                  item.href === "/pharmacist/purchase-orders/create");
+              return (
+                <NavLink
+                  key={item.href}
+                  href={item.href}
+                  currentPath={pathname}
+                  {...(showBadge ? { badge: lowStockCount } : {})}
+                >
+                  {item.label}
+                </NavLink>
+              );
+            })}
           </div>
         </ScrollArea>
-        {/* <Separator className="mt-4 bg-red-400" />
-        <div className="p-4">
-          <Button
-            onClick={handleLogout}
-            className="w-full bg-white text-red-600 hover:bg-red-100 transition-colors duration-200"
-          >
-            <LogOut className="mr-2 h-4 w-4" /> Logout
-          </Button>
-        </div> */}
       </div>
     </div>
   );
 
   return (
     <>
-      <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 ">
+      <aside className="fixed inset-y-0 left-0 z-50 hidden h-screen flex-col overflow-hidden lg:flex lg:w-64">
         <SidebarContent />
       </aside>
       <div className="lg:hidden ">
@@ -145,19 +157,26 @@ const NavLink = ({
   href,
   currentPath,
   children,
+  badge,
 }: {
   href: string;
   currentPath: string;
   children: React.ReactNode;
+  badge?: number;
 }) => (
   <Link
     href={href}
-    className={`block px-4 py-2 rounded-md text-sm font-medium ${currentPath === href
+    className={`flex items-center justify-between px-4 py-2 rounded-md text-sm font-medium ${currentPath === href
       ? "text-red-800 bg-white"
       : "text-white hover:text-red-800 hover:bg-red-100"
       } transition-all duration-200 ease-in-out`}
   >
-    {children}
+    <span>{children}</span>
+    {badge !== undefined && badge > 0 && (
+      <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-500 px-1.5 text-xs font-bold text-white animate-pulse">
+        {badge}
+      </span>
+    )}
   </Link>
 );
 

@@ -235,7 +235,9 @@ const SalesPage = () => {
     (sum, item) => sum + item.price * item.quantity,
     0
   );
-  const discountedTotal = totalBill - (parseFloat(discount) || 0);
+  const discountPercent = parseFloat(discount) || 0;
+  const discountAmount = totalBill * (discountPercent / 100);
+  const discountedTotal = totalBill - discountAmount;
 
   const handleCheckout = () => {
     if (cart.length === 0) {
@@ -255,8 +257,9 @@ const SalesPage = () => {
   };
 
   const handleDiscountSubmit = () => {
-    if (isNaN(parseFloat(discount)) || parseFloat(discount) < 0) {
-      toast.error("Please enter a valid discount amount.");
+    const discountVal = parseFloat(discount);
+    if (isNaN(discountVal) || discountVal < 0 || discountVal > 100) {
+      toast.error("Please enter a valid discount percentage (0-100).");
       return;
     }
     setIsDiscountInputOpen(false);
@@ -276,7 +279,7 @@ const SalesPage = () => {
           quantity: item.quantity,
           salePrice: item.price,
         })),
-        discount: parseFloat(discount) || 0,
+        discount: discountPercent,
         paymentMethod,
       };
 
@@ -656,20 +659,25 @@ const SalesPage = () => {
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle className="text-red-800">
-              Enter Discount Amount
+              Enter Discount Percentage
             </DialogTitle>
           </DialogHeader>
-          <div className="py-4">
-            <Label htmlFor="discount">Discount Amount (Rs)</Label>
-            <Input
-              id="discount"
-              type="number"
-              value={discount}
-              onChange={(e) => setDiscount(e.target.value)}
-              placeholder="Enter discount amount"
-              className="border-red-800 focus:ring-red-800"
-              min="0"
-            />
+          <div className="py-4 space-y-2">
+            <Label htmlFor="discount">Discount (%)</Label>
+            <div className="flex items-center gap-2">
+              <Input
+                id="discount"
+                type="number"
+                value={discount}
+                onChange={(e) => setDiscount(e.target.value)}
+                placeholder="e.g. 10"
+                className="border-red-800 focus:ring-red-800"
+                min={0}
+                max={100}
+                step={1}
+              />
+              <span className="text-lg font-medium text-gray-600">%</span>
+            </div>
           </div>
           <DialogFooter>
             <Button
@@ -691,7 +699,7 @@ const SalesPage = () => {
           <div className="p-4 print:p-0 print-content ">
             <Receipt
               cart={cart}
-              discount={discount}
+              discount={discountAmount.toString()}
               totalBill={totalBill}
               discountedTotal={discountedTotal}
               invoiceNumber={completedSale?.invoiceNumber}

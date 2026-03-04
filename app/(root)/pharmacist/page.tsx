@@ -150,16 +150,18 @@ const PharmacistPage = () => {
         earnedLastMonth={earnedLastMonth}
       />
 
-      <div className="">
+      <div className="space-y-6">
         <motion.div
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.5, delay: 0.2 }}
         >
-          {/* <Card className="p-4 shadow-md">
-            <h2 className="text-lg font-semibold mb-4 text-red-700">Low Stock Items</h2>
+          <Card className="p-4 shadow-md">
+            <h2 className="text-lg font-semibold mb-4 text-red-700">
+              Low Stock Items
+            </h2>
             <DataTable columns={inventoryColumns} data={lowStockItems} />
-          </Card> */}
+          </Card>
         </motion.div>
         <motion.div
           initial={{ opacity: 0, x: 20 }}

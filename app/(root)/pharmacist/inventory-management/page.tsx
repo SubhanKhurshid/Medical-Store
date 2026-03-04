@@ -39,7 +39,8 @@ const baseSchema = z.object({
   description: z.string().optional(),
   manufacturerDiscount: z
     .number()
-    .min(0, "Manufacturer discount must be positive"),
+    .min(0, "Manufacturer discount must be between 0 and 100")
+    .max(100, "Manufacturer discount must be between 0 and 100"),
 });
 
 const medicineSchema = baseSchema.extend({
@@ -309,18 +310,24 @@ export default function InventoryManagement() {
               </div>
               <div className="flex flex-col gap-2">
                 <Label htmlFor="manufacturerDiscount">
-                  Manufacturer Discount
+                  Manufacturer Discount (%)
                 </Label>
-                <Input
-                  id="manufacturerDiscount"
-                  placeholder="Manufacturer Discount"
-                  type="number"
-                  className="text-lg p-4"
-                  {...form.register("manufacturerDiscount", {
-                    valueAsNumber: true,
-                    setValueAs: (value) => Number(value) || 0, // Convert empty string to 0
-                  })}
-                />
+                <div className="flex items-center gap-2">
+                  <Input
+                    id="manufacturerDiscount"
+                    placeholder="e.g. 10"
+                    type="number"
+                    min={0}
+                    max={100}
+                    step={1}
+                    className="text-lg p-4"
+                    {...form.register("manufacturerDiscount", {
+                      valueAsNumber: true,
+                      setValueAs: (value) => Number(value) || 0, // Convert empty string to 0
+                    })}
+                  />
+                  <span className="text-lg font-medium text-gray-600">%</span>
+                </div>
                 {form.formState.errors.manufacturerDiscount && (
                   <span className="text-red-500 text-sm">
                     {form.formState.errors.manufacturerDiscount.message}

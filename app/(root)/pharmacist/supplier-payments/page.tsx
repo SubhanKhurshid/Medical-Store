@@ -5,9 +5,15 @@ import { DataTable } from "@/components/shared/DataTable";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, PlusCircle, Loader2, Building2, Calendar } from "lucide-react";
+import { Search, PlusCircle, Loader2, Building2, Calendar, Receipt } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import PaymentModal from "./Modal";
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
 
 interface Payment {
     id: string;
@@ -22,6 +28,7 @@ const SupplierPayments = () => {
     const [payments, setPayments] = useState<Payment[]>([]);
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
 
     const fetchPayments = async () => {
         setLoading(true);
@@ -154,6 +161,7 @@ const SupplierPayments = () => {
                                             p.manufacturer?.toLowerCase().includes(search?.toLowerCase()) ||
                                             p.reference?.toLowerCase().includes(search?.toLowerCase())
                                     )}
+                                    onRowClick={(p) => setSelectedPayment(p)}
                                 />
                             </motion.div>
                         )}
@@ -168,6 +176,50 @@ const SupplierPayments = () => {
                     fetchPayments(); // Refresh the list
                 }}
             />
+
+            {/* Payment Details Modal */}
+            <Dialog open={!!selectedPayment} onOpenChange={() => setSelectedPayment(null)}>
+                <DialogContent className="sm:max-w-[500px]">
+                    <DialogHeader>
+                        <DialogTitle className="text-red-800 flex items-center gap-2">
+                            <Receipt className="h-5 w-5" />
+                            Payment Details
+                        </DialogTitle>
+                    </DialogHeader>
+                    {selectedPayment && (
+                        <div className="space-y-4">
+                            <div className="grid grid-cols-2 gap-4 text-sm">
+                                <div>
+                                    <span className="text-muted-foreground">Supplier</span>
+                                    <p className="font-medium text-foreground flex items-center gap-2 mt-1">
+                                        <Building2 className="h-4 w-4 text-gray-500" />
+                                        {selectedPayment.manufacturer}
+                                    </p>
+                                </div>
+                                <div>
+                                    <span className="text-muted-foreground">Amount</span>
+                                    <p className="font-semibold text-foreground mt-1">
+                                        {selectedPayment.amount.toLocaleString()} Rs
+                                    </p>
+                                </div>
+                                <div>
+                                    <span className="text-muted-foreground">Date</span>
+                                    <p className="font-medium text-foreground flex items-center gap-2 mt-1">
+                                        <Calendar className="h-4 w-4 text-gray-500" />
+                                        {selectedPayment.date}
+                                    </p>
+                                </div>
+                                <div>
+                                    <span className="text-muted-foreground">Reference</span>
+                                    <p className="font-medium text-foreground mt-1">
+                                        {selectedPayment.reference || "—"}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </DialogContent>
+            </Dialog>
         </motion.div>
     );
 };
