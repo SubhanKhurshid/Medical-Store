@@ -18,6 +18,7 @@ import {
   Building2,
   Phone,
   MapPin,
+  Mail,
   Eye,
   Mail,
   Banknote,
@@ -25,6 +26,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import ManufacturerModal from "./Modal";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface ManufacturerRow {
   id: string;
@@ -33,8 +40,13 @@ interface ManufacturerRow {
   city: string;
   country: string;
   balance: string;
+  balanceRaw?: number;
   status: "Active" | "Inactive";
+  email?: string;
+  address?: string;
+  province?: string;
 }
+
 
 interface ManufacturerRaw {
   id: string;
@@ -54,44 +66,46 @@ const Manufacturer = () => {
   const [manufacturersRaw, setManufacturersRaw] = useState<ManufacturerRaw[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedManufacturer, setSelectedManufacturer] = useState<Manufacturer | null>(null);
   const [viewManufacturer, setViewManufacturer] = useState<ManufacturerRaw | null>(null);
 
-  useEffect(() => {
-    const fetchManufacturers = async () => {
-      setLoading(true);
-      try {
-        const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/manufacturer`
-        );
-        if (!response.ok) {
-          throw new Error("Failed to fetch manufacturers");
-        }
-
-        const data = await response.json();
-        const manufacturersArray = Array.isArray(data) ? data : [data];
-
-        setManufacturersRaw(manufacturersArray);
-
-        const mappedData: ManufacturerRow[] = manufacturersArray.map(
-          (item: any, index: number) => ({
-            id: item.id ?? `#M-${index + 1}`,
-            name: item.companyName,
-            phone: item.phone,
-            city: item.city,
-            country: item.country,
-            balance: `Rs ${Number(item.balance ?? 0).toLocaleString()}`,
-            status: "Active" as "Active" | "Inactive",
-          })
-        );
-
-        setManufacturers(mappedData);
-      } catch (error) {
-        console.error("Error fetching manufacturers:", error);
-      } finally {
-        setLoading(false);
+  const fetchManufacturers = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/manufacturer`
+      );
+      if (!response.ok) {
+        throw new Error("Failed to fetch manufacturers");
       }
-    };
 
+      const data = await response.json();
+
+      const manufacturersArray = Array.isArray(data) ? data : [data];
+
+      const mappedData = manufacturersArray.map((item: any) => ({
+        id: item.id,
+        name: item.companyName,
+        phone: item.phone,
+        city: item.city,
+        country: item.country,
+        balance: `${item.balance?.toLocaleString() ?? 0} Rs`,
+        balanceRaw: item.balance ?? 0,
+        status: "Active" as "Active" | "Inactive",
+        email: item.email,
+        address: item.address,
+        province: item.province,
+      }));
+
+      setManufacturers(mappedData);
+    } catch (error) {
+      console.error("Error fetching manufacturers:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchManufacturers();
   }, []);
 
@@ -225,7 +239,7 @@ const Manufacturer = () => {
                       m.city?.toLowerCase().includes(search?.toLowerCase()) ||
                       m.country?.toLowerCase().includes(search?.toLowerCase())
                   )}
-                  disableRowClick={true}
+                  onRowClick={(m) => setSelectedManufacturer(m)}
                 />
               </motion.div>
             )}
@@ -236,52 +250,63 @@ const Manufacturer = () => {
       <ManufacturerModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        onSave={(newManufacturer: any) => {
-          const row: ManufacturerRow = {
-            id: newManufacturer.id,
-            name: newManufacturer.companyName,
-            phone: newManufacturer.phone,
-            city: newManufacturer.city,
-            country: newManufacturer.country,
-            balance: `Rs ${Number(newManufacturer.balance ?? 0).toLocaleString()}`,
-            status: "Active",
-          };
-          setManufacturers([row, ...manufacturers]);
-          setManufacturersRaw([newManufacturer, ...manufacturersRaw]);
+        onSave={() => {
+          fetchManufacturers();
         }}
       />
 
-      <Dialog open={!!viewManufacturer} onOpenChange={() => setViewManufacturer(null)}>
-        <DialogContent className="sm:max-w-md">
+      {/* Manufacturer Details Modal */}
+      <Dialog
+        open={!!selectedManufacturer}
+        onOpenChange={() => setSelectedManufacturer(null)}
+      >
+        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-red-800 flex items-center gap-2">
               <Building2 className="h-5 w-5" />
-              {viewManufacturer?.companyName}
+              {selectedManufacturer?.name}
             </DialogTitle>
           </DialogHeader>
-          {viewManufacturer && (
-            <div className="space-y-4 pt-2">
-              <div className="flex items-center gap-3 text-gray-700">
-                <Phone className="h-4 w-4 text-gray-400" />
-                <span>{viewManufacturer.phone}</span>
-              </div>
-              {viewManufacturer.email && (
-                <div className="flex items-center gap-3 text-gray-700">
-                  <Mail className="h-4 w-4 text-gray-400" />
-                  <span>{viewManufacturer.email}</span>
+          {selectedManufacturer && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="text-muted-foreground">Phone</span>
+                  <p className="font-medium text-foreground flex items-center gap-2 mt-1">
+                    <Phone className="h-4 w-4 text-gray-500" />
+                    {selectedManufacturer.phone}
+                  </p>
                 </div>
-              )}
-              <div className="flex items-center gap-3 text-gray-700">
-                <MapPin className="h-4 w-4 text-gray-400" />
-                <span>
-                  {[viewManufacturer.address, viewManufacturer.city, viewManufacturer.province, viewManufacturer.country]
-                    .filter(Boolean)
-                    .join(", ")}
-                </span>
-              </div>
-              <div className="flex items-center gap-3 text-gray-700 font-medium">
-                <Banknote className="h-4 w-4 text-gray-400" />
-                <span>Balance: Rs {Number(viewManufacturer.balance ?? 0).toLocaleString()}</span>
+                {selectedManufacturer.email && (
+                  <div>
+                    <span className="text-muted-foreground">Email</span>
+                    <p className="font-medium text-foreground flex items-center gap-2 mt-1">
+                      <Mail className="h-4 w-4 text-gray-500" />
+                      {selectedManufacturer.email}
+                    </p>
+                  </div>
+                )}
+                <div className="col-span-2">
+                  <span className="text-muted-foreground">Location</span>
+                  <p className="font-medium text-foreground flex items-center gap-2 mt-1">
+                    <MapPin className="h-4 w-4 text-gray-500" />
+                    {[selectedManufacturer.city, selectedManufacturer.province, selectedManufacturer.country]
+                      .filter(Boolean)
+                      .join(", ") || "—"}
+                  </p>
+                </div>
+                {selectedManufacturer.address && (
+                  <div className="col-span-2">
+                    <span className="text-muted-foreground">Address</span>
+                    <p className="font-medium text-foreground mt-1">{selectedManufacturer.address}</p>
+                  </div>
+                )}
+                <div>
+                  <span className="text-muted-foreground">Balance</span>
+                  <p className="font-semibold text-foreground mt-1">
+                    {selectedManufacturer.balance}
+                  </p>
+                </div>
               </div>
             </div>
           )}

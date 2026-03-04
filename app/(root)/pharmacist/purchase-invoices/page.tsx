@@ -8,6 +8,21 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Search, PlusCircle, Loader2, FileText, Calendar, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
+
+interface InvoiceItem {
+    id: string;
+    quantity: number;
+    unitCost: number;
+    discount: number;
+    totalCost: number;
+    inventoryItem?: { name: string };
+}
 
 interface Invoice {
     id: string;
@@ -16,12 +31,14 @@ interface Invoice {
     totalAmount: number;
     date: string;
     status: string;
+    items?: InvoiceItem[];
 }
 
 export default function PurchaseInvoicesPage() {
     const [search, setSearch] = useState("");
     const [invoices, setInvoices] = useState<Invoice[]>([]);
     const [loading, setLoading] = useState(true);
+    const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
 
     useEffect(() => {
         const fetchInvoices = async () => {
@@ -40,6 +57,7 @@ export default function PurchaseInvoicesPage() {
                     totalAmount: item.totalAmount,
                     date: new Date(item.date).toLocaleDateString(),
                     status: item.status,
+                    items: item.items || [],
                 }));
                 setInvoices(mappedData);
             } catch (error) {
@@ -163,12 +181,64 @@ export default function PurchaseInvoicesPage() {
                                             i.invoiceNumber.toLowerCase().includes(search.toLowerCase()) ||
                                             i.manufacturer.toLowerCase().includes(search.toLowerCase())
                                     )}
+                                    onRowClick={(inv) => setSelectedInvoice(inv)}
                                 />
                             </motion.div>
                         )}
                     </AnimatePresence>
                 </CardContent>
             </Card>
+
+            {/* Invoice Details Modal with Line Items */}
+            <Dialog open={!!selectedInvoice} onOpenChange={() => setSelectedInvoice(null)}>
+                <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle className="text-red-800">
+                            Invoice #{selectedInvoice?.invoiceNumber} – {selectedInvoice?.manufacturer}
+                        </DialogTitle>
+                    </DialogHeader>
+                    {selectedInvoice && (
+                        <div className="space-y-4">
+                            <div className="grid grid-cols-2 gap-2 text-sm text-muted-foreground">
+                                <span>Date:</span>
+                                <span className="font-medium text-foreground">{selectedInvoice.date}</span>
+                                <span>Total:</span>
+                                <span className="font-medium text-foreground">{selectedInvoice.totalAmount.toLocaleString()} Rs</span>
+                                <span>Status:</span>
+                                <span className="font-medium text-foreground">{selectedInvoice.status}</span>
+                            </div>
+                            <div className="border rounded-lg overflow-hidden">
+                                <table className="w-full text-sm">
+                                    <thead className="bg-gray-100">
+                                        <tr>
+                                            <th className="p-3 text-left font-semibold">Product</th>
+                                            <th className="p-3 text-right font-semibold">Qty</th>
+                                            <th className="p-3 text-right font-semibold">Unit Cost</th>
+                                            <th className="p-3 text-right font-semibold">Discount (%)</th>
+                                            <th className="p-3 text-right font-semibold">Line Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y">
+                                        {(selectedInvoice.items || []).map((item) => {
+                                            const lineSubtotal = item.quantity * item.unitCost;
+                                            const discountPct = lineSubtotal > 0 ? ((item.discount / lineSubtotal) * 100).toFixed(1) : "0";
+                                            return (
+                                                <tr key={item.id}>
+                                                    <td className="p-3">{item.inventoryItem?.name || "—"}</td>
+                                                    <td className="p-3 text-right">{item.quantity}</td>
+                                                    <td className="p-3 text-right">{item.unitCost.toLocaleString()} Rs</td>
+                                                    <td className="p-3 text-right">{discountPct}%</td>
+                                                    <td className="p-3 text-right font-medium">{item.totalCost.toLocaleString()} Rs</td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
+                </DialogContent>
+            </Dialog>
         </motion.div>
     );
 }

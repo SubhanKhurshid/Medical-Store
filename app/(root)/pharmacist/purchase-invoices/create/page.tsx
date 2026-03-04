@@ -65,6 +65,15 @@ export default function CreatePurchaseInvoicePage() {
             return;
         }
 
+        const invalidDiscount = invoiceItems.some((item) => {
+            const d = Number(item.discount);
+            return isNaN(d) || d < 0 || d > 100;
+        });
+        if (invalidDiscount) {
+            toast.error("Discount must be between 0 and 100%");
+            return;
+        }
+
         setIsLoading(true);
         try {
             const payload = {
@@ -97,7 +106,9 @@ export default function CreatePurchaseInvoicePage() {
 
     const calculateTotal = () => {
         return invoiceItems.reduce((total, item) => {
-            return total + (Number(item.quantity) * Number(item.unitCost) - Number(item.discount));
+            const lineSubtotal = Number(item.quantity) * Number(item.unitCost);
+            const discountPct = Number(item.discount) || 0;
+            return total + (lineSubtotal - lineSubtotal * (discountPct / 100));
         }, 0);
     };
 
@@ -166,14 +177,16 @@ export default function CreatePurchaseInvoicePage() {
                                         <th className="p-4 font-semibold w-1/3">Product</th>
                                         <th className="p-4 font-semibold w-32">Quantity</th>
                                         <th className="p-4 font-semibold w-32">Unit Cost (Rs)</th>
-                                        <th className="p-4 font-semibold w-32">Discount (Rs)</th>
+                                        <th className="p-4 font-semibold w-32">Discount (%)</th>
                                         <th className="p-4 font-semibold text-right w-32">Line Total</th>
                                         <th className="p-4 font-semibold w-16 text-center">Action</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100">
                                     {invoiceItems.map((item, index) => {
-                                        const lineTotal = (Number(item.quantity) * Number(item.unitCost)) - Number(item.discount);
+                                        const lineSubtotal = Number(item.quantity) * Number(item.unitCost);
+                                        const discountPct = Number(item.discount) || 0;
+                                        const lineTotal = lineSubtotal - (lineSubtotal * (discountPct / 100));
                                         return (
                                             <tr key={index} className="hover:bg-gray-50 transition-colors">
                                                 <td className="p-4">
@@ -211,14 +224,19 @@ export default function CreatePurchaseInvoicePage() {
                                                     />
                                                 </td>
                                                 <td className="p-4">
-                                                    <Input
-                                                        type="number"
-                                                        min="0"
-                                                        step="0.01"
-                                                        value={item.discount}
-                                                        onChange={(e) => handleItemChange(index, "discount", e.target.value)}
-                                                        className="w-full text-right text-red-600"
-                                                    />
+                                                    <div className="flex items-center gap-1">
+                                                        <Input
+                                                            type="number"
+                                                            min={0}
+                                                            max={100}
+                                                            step={1}
+                                                            placeholder="e.g. 10"
+                                                            value={item.discount}
+                                                            onChange={(e) => handleItemChange(index, "discount", e.target.value)}
+                                                            className="w-full text-right text-red-600"
+                                                        />
+                                                        <span className="text-red-600 font-medium">%</span>
+                                                    </div>
                                                 </td>
                                                 <td className="p-4 text-right font-semibold text-gray-800">
                                                     {lineTotal > 0 ? lineTotal.toLocaleString() : "0"} Rs

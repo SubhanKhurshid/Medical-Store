@@ -127,6 +127,14 @@ export const inventoryColumns: ColumnDef<InventoryItem>[] = [
     cell: ({ row }) => (row.getValue("barcode") as string) || "—",
   },
   {
+    accessorKey: "manufacturerDiscount",
+    header: "Mfr. Discount",
+    cell: ({ row }) => {
+      const val = row.original.manufacturerDiscount ?? 0;
+      return <span>{val}%</span>;
+    },
+  },
+  {
     id: "actions",
     cell: ({ row }) => {
       const item = row.original;

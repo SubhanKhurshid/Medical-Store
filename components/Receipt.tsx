@@ -150,7 +150,7 @@ export function Receipt({
 
         {parseFloat(discount) > 0 && (
           <div style={{ display: "flex", justifyContent: "space-between" }}>
-            <span>Discount</span>
+            <span>Discount ({totalBill > 0 ? ((parseFloat(discount) / totalBill) * 100).toFixed(1) : 0}%)</span>
             <span style={{ fontWeight: "bold", color: "red" }}>
               - Rs {parseFloat(discount).toFixed(2)}
             </span>
