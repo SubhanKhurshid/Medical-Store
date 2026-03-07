@@ -1,6 +1,7 @@
 "use client";
 
 import { LowStockReminderBanner } from "@/components/LowStockReminderBanner";
+import { ExpiringSoonBanner } from "@/components/ExpiringSoonBanner";
 
 export default function PharmacistLayout({
   children,
@@ -10,6 +11,7 @@ export default function PharmacistLayout({
   return (
     <>
       <LowStockReminderBanner />
+      <ExpiringSoonBanner />
       {children}
     </>
   );

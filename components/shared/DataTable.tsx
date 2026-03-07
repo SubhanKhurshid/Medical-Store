@@ -26,7 +26,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Package2, AlertCircle, X, Pill } from "lucide-react";
+import { Calendar, Package2, AlertCircle, X, Pill, Inbox } from "lucide-react";
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
@@ -77,17 +77,14 @@ export function DataTable<TData extends Record<string, any>, TValue>({
 
   return (
     <div className="w-full">
-      <div className="rounded-md border-none">
-        <Table className="min-h-[400px]">
-          {" "}
-          {/* Ensuring consistent table height */}
+      <Table wrapperClassName={data.length > 0 ? "min-h-[260px]" : undefined}>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
                   <TableHead
                     key={header.id}
-                    className="px-3 py-4 text-left text-lg font-semibold"
+                    className="text-left text-sm"
                   >
                     {header.isPlaceholder
                       ? null
@@ -113,12 +110,12 @@ export function DataTable<TData extends Record<string, any>, TValue>({
                       handleRowClick(row.original);
                     }
                   }}
-                  className={disableRowClick ? "" : "cursor-pointer hover:bg-muted/50"}
+                  className={disableRowClick ? "" : "cursor-pointer"}
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell
                       key={cell.id}
-                      className="px-3 py-4 text-base font-medium"
+                      className="text-sm"
                     >
                       {flexRender(
                         cell.column.columnDef.cell,
@@ -129,18 +126,27 @@ export function DataTable<TData extends Record<string, any>, TValue>({
                 </TableRow>
               ))
             ) : (
-              <TableRow>
+              <TableRow className="hover:bg-transparent">
                 <TableCell
                   colSpan={columns.length}
-                  className="h-24 text-center text-lg font-semibold"
+                  className="h-64 py-12"
                 >
-                  No results.
+                  <div className="flex flex-col items-center justify-center gap-3 text-center">
+                    <div className="rounded-full bg-muted p-4">
+                      <Inbox className="h-10 w-10 text-muted-foreground" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-foreground">No items to show</p>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        There are no records matching this list yet.
+                      </p>
+                    </div>
+                  </div>
                 </TableCell>
               </TableRow>
             )}
           </TableBody>
         </Table>
-      </div>
       <div className="flex flex-col sm:flex-row items-center justify-between space-y-2 sm:space-y-0 py-4">
         <div className="text-sm text-muted-foreground">
           Page {table.getState().pagination.pageIndex + 1} of{" "}

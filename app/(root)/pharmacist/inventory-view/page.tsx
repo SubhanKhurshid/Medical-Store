@@ -136,15 +136,13 @@ const Inventory = () => {
                     </Select>
                   </div>
                   <div className="sm:col-span-2 lg:col-span-2 flex items-center justify-end space-x-2">
-                    <div className="text-sm text-gray-500">
-                      Showing {filteredItems.length} items
+                    <div className="text-sm text-muted-foreground font-medium">
+                      Showing {filteredItems.length} item{filteredItems.length !== 1 ? "s" : ""}
                     </div>
                   </div>
                 </div>
 
-                <div className="rounded-lg border border-gray-200 bg-white overflow-hidden [&_th]:bg-gray-50 [&_th]:text-red-700 [&_th]:font-medium [&_tr:hover]:bg-red-50/50">
-                  <DataTable columns={inventoryColumns} data={filteredItems} />
-                </div>
+                <DataTable columns={inventoryColumns} data={filteredItems} />
               </>
             )}
             {filteredItems.length === 0 && !loading && (

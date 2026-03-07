@@ -38,6 +38,9 @@ import {
 } from "@tanstack/react-table";
 import type { ColumnDef } from "@tanstack/react-table";
 import axios from "axios";
+import { dispatchLowStockInvalidated } from "@/lib/low-stock-events";
+import { TableEmptyState } from "@/components/shared/TableEmptyState";
+import { FileText } from "lucide-react";
 
 interface PurchaseOrder {
   id: string;
@@ -104,6 +107,10 @@ export default function ViewPurchaseOrdersPage() {
         )
       );
 
+      if (newStatus === "DELIVERED") {
+        dispatchLowStockInvalidated();
+      }
+
       toast.success("Status Updated", {
         description: `Purchase order has been marked as ${newStatus.toLowerCase()}.`,
       });
@@ -126,7 +133,7 @@ export default function ViewPurchaseOrdersPage() {
       header: "Item",
     },
     {
-      accessorKey: "quantity",
+      accessorKey: "quantityOrdered",
       header: "Quantity",
     },
     {
@@ -151,29 +158,31 @@ export default function ViewPurchaseOrdersPage() {
         if (order.status !== "PENDING") return null;
 
         return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm">
-                Actions
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              <DropdownMenuItem
-                onClick={() => handleStatusChange(order.id, "DELIVERED")}
-                className="text-green-600"
-              >
-                <CheckCircle className="mr-2 h-4 w-4" />
-                Mark as Delivered
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => handleStatusChange(order.id, "CANCELLED")}
-                className="text-red-600"
-              >
-                <XCircle className="mr-2 h-4 w-4" />
-                Cancel Order
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <div onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" type="button">
+                  Actions
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                <DropdownMenuItem
+                  onSelect={() => handleStatusChange(order.id, "DELIVERED")}
+                  className="text-green-600 focus:bg-green-50"
+                >
+                  <CheckCircle className="mr-2 h-4 w-4" />
+                  Mark as Delivered
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onSelect={() => handleStatusChange(order.id, "CANCELLED")}
+                  className="text-red-600 focus:bg-red-50"
+                >
+                  <XCircle className="mr-2 h-4 w-4" />
+                  Cancel Order
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         );
       },
     },
@@ -271,16 +280,15 @@ export default function ViewPurchaseOrdersPage() {
               </motion.div>
             ) : (
               <div className="w-full">
-                <div className="rounded-md border-none">
-                  <Table className="min-h-[400px]">
-                    <TableHeader>
-                      {table.getHeaderGroups().map((headerGroup) => (
-                        <TableRow key={headerGroup.id}>
-                          {headerGroup.headers.map((header) => (
-                            <TableHead
-                              key={header.id}
-                              className="px-3 py-4 text-left text-lg font-semibold"
-                            >
+                <Table wrapperClassName={purchaseOrders.length > 0 ? "min-h-[260px]" : undefined}>
+                  <TableHeader>
+                    {table.getHeaderGroups().map((headerGroup) => (
+                      <TableRow key={headerGroup.id}>
+                        {headerGroup.headers.map((header) => (
+                          <TableHead
+                            key={header.id}
+                            className="text-left"
+                          >
                               {header.isPlaceholder
                                 ? null
                                 : flexRender(
@@ -288,23 +296,22 @@ export default function ViewPurchaseOrdersPage() {
                                     header.getContext()
                                   )}
                             </TableHead>
-                          ))}
-                        </TableRow>
-                      ))}
-                    </TableHeader>
-                    <TableBody>
-                      {table.getRowModel().rows?.length ? (
-                        table.getRowModel().rows.map((row) => (
-                          <TableRow
-                            key={row.id}
-                            onClick={() => handleRowClick(row.original)}
-                            className="cursor-pointer hover:bg-muted/50"
-                          >
-                            {row.getVisibleCells().map((cell) => (
-                              <TableCell
-                                key={cell.id}
-                                className="px-3 py-4 text-base font-medium"
-                              >
+                            ))}
+                          </TableRow>
+                        ))}
+                      </TableHeader>
+                  <TableBody>
+                    {table.getRowModel().rows?.length ? (
+                      table.getRowModel().rows.map((row) => (
+                        <TableRow
+                          key={row.id}
+                          onClick={() => handleRowClick(row.original)}
+                          className="cursor-pointer"
+                        >
+                          {row.getVisibleCells().map((cell) => (
+                            <TableCell
+                              key={cell.id}
+                            >
                                 {flexRender(
                                   cell.column.columnDef.cell,
                                   cell.getContext()
@@ -314,18 +321,15 @@ export default function ViewPurchaseOrdersPage() {
                           </TableRow>
                         ))
                       ) : (
-                        <TableRow>
-                          <TableCell
-                            colSpan={columns.length}
-                            className="h-24 text-center text-lg font-semibold"
-                          >
-                            No results.
-                          </TableCell>
-                        </TableRow>
+                        <TableEmptyState
+                          icon={FileText}
+                          title="No purchase orders"
+                          description="There are no purchase orders yet. Create one from the low stock page."
+                          colSpan={columns.length}
+                        />
                       )}
                     </TableBody>
                   </Table>
-                </div>
                 <div className="flex flex-col sm:flex-row items-center justify-between space-y-2 sm:space-y-0 py-4">
                   <div className="text-sm text-muted-foreground">
                     Page {table.getState().pagination.pageIndex + 1} of{" "}
@@ -414,6 +418,7 @@ export default function ViewPurchaseOrdersPage() {
               {selectedRow.status === "PENDING" && (
                 <div className="flex justify-end space-x-4 pt-6">
                   <Button
+                    type="button"
                     variant="outline"
                     onClick={() => {
                       handleStatusChange(selectedRow.id, "CANCELLED");
@@ -425,6 +430,7 @@ export default function ViewPurchaseOrdersPage() {
                     Cancel Order
                   </Button>
                   <Button
+                    type="button"
                     onClick={() => {
                       handleStatusChange(selectedRow.id, "DELIVERED");
                       closeModal();
