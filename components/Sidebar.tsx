@@ -6,6 +6,8 @@ import type React from "react";
 import Image from "next/image";
 import { useAuth } from "@/app/providers/AuthProvider";
 import { useInventory } from "@/app/context/InventoryContext";
+import { LOW_STOCK_INVALIDATED_EVENT } from "@/lib/low-stock-events";
+import { EXPIRING_INVALIDATED_EVENT } from "@/lib/expiring-events";
 import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 import logo from "@/public/Ibrahim Clinic.png";
@@ -24,13 +26,26 @@ const Sidebar = () => {
   const pathname = usePathname();
   const role = user?.role;
   const router = useRouter();
-  const { getLowStockItems } = useInventory();
+  const { getLowStockItems, getExpiringItems } = useInventory();
   const [lowStockCount, setLowStockCount] = useState(0);
+  const [expiringCount, setExpiringCount] = useState(0);
 
   useEffect(() => {
     if (role !== "pharmacist") return;
-    getLowStockItems().then((items) => setLowStockCount(items.length));
-  }, [role, pathname]);
+    const refreshLow = () => getLowStockItems().then((items) => setLowStockCount(items.length));
+    const refreshExpiring = () => getExpiringItems().then((items) => setExpiringCount(items.length));
+    const refresh = () => {
+      refreshLow();
+      refreshExpiring();
+    };
+    refresh();
+    window.addEventListener(LOW_STOCK_INVALIDATED_EVENT, refreshLow);
+    window.addEventListener(EXPIRING_INVALIDATED_EVENT, refreshExpiring);
+    return () => {
+      window.removeEventListener(LOW_STOCK_INVALIDATED_EVENT, refreshLow);
+      window.removeEventListener(EXPIRING_INVALIDATED_EVENT, refreshExpiring);
+    };
+  }, [role, pathname, getLowStockItems, getExpiringItems]);
 
   const handleLogout = (event: React.MouseEvent) => {
     event.preventDefault();
@@ -82,6 +97,7 @@ const Sidebar = () => {
       { href: "/pharmacist/sales", label: "Sales" },
       { href: "/pharmacist/sales-history", label: "Sales History" },
       { href: "/pharmacist/history", label: "View Sales" },
+      { href: "/pharmacist/reports", label: "Reports & Accounts" },
     ],
   };
 
@@ -105,9 +121,10 @@ const Sidebar = () => {
         <ScrollArea className="flex-1 px-4">
           <div className="space-y-2">
             {currentNavItems.map((item) => {
+              const attentionCount = lowStockCount + expiringCount;
               const showBadge =
                 role === "pharmacist" &&
-                lowStockCount > 0 &&
+                attentionCount > 0 &&
                 (item.href === "/pharmacist" ||
                   item.href === "/pharmacist/purchase-orders/create");
               return (
@@ -115,7 +132,7 @@ const Sidebar = () => {
                   key={item.href}
                   href={item.href}
                   currentPath={pathname}
-                  {...(showBadge ? { badge: lowStockCount } : {})}
+                  {...(showBadge ? { badge: attentionCount } : {})}
                 >
                   {item.label}
                 </NavLink>

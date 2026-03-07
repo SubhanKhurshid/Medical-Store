@@ -29,6 +29,8 @@ export interface InventoryItem {
   createdAt: string;
   updatedAt: string;
   image?: string;
+  /** When true, item is hidden from low-stock list; don't show "Low" badge so count matches dashboard. */
+  excludeFromLowStockAlerts?: boolean;
 }
 
 interface InventoryState {
@@ -152,15 +154,20 @@ export const InventoryProvider = ({
   };
 
   const deleteItem = async (id: string) => {
-    await axios.delete(
-      `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/${id}`,
-      {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      }
-    );
     dispatch({ type: "DELETE_ITEM", payload: id });
+    try {
+      await axios.delete(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/${id}`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+    } catch (err) {
+      refetchInventory();
+      throw err;
+    }
   };
 
   const getLowStockItems = async (): Promise<InventoryItem[]> => {

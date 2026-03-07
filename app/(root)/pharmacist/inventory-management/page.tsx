@@ -19,28 +19,52 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ItemType, useInventory } from "@/app/context/InventoryContext";
+import { Calendar } from "lucide-react";
 import { toast } from "sonner";
 import { Separator } from "@/components/ui/separator";
 
+// Coerce empty string to number; used for optional numeric fields (default 0)
+const optionalNum = (min = 0) =>
+  z
+    .union([z.string(), z.number()])
+    .optional()
+    .transform((v) => (v === "" || v === undefined || v === null ? 0 : Number(v)))
+    .pipe(z.number().min(min));
+
+// Required numeric field: must not be empty, then coerce to number
+const requiredNum = (min = 0, msg = "This field is required") =>
+  z
+    .string()
+    .min(1, msg)
+    .transform(Number)
+    .pipe(z.number().min(min, `Must be ${min} or more`));
+
 const baseSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
-  quantity: z.number().min(0, "Quantity must be positive"),
+  quantity: requiredNum(0, "Quantity is required"),
   batchNumber: z.string().min(1, "Batch number is required"),
   expiryDate: z.string().min(1, "Expiry date is required"),
   manufacturer: z.string().min(1, "Manufacturer is required"),
-  price: z.number().min(0, "Selling price must be positive"),
-  purchasePrice: z.number().min(0, "Purchase price must be positive").optional(),
-  sellingPrice: z.number().min(0, "Selling price must be positive").optional(),
+  price: requiredNum(0, "Selling price is required"),
+  purchasePrice: optionalNum(0),
+  sellingPrice: optionalNum(0),
   barcode: z.string().optional(),
   category: z.string().optional(),
-  minimumStock: z.number().min(0, "Minimum stock must be positive"),
+  minimumStock: requiredNum(0, "Minimum stock is required"),
   description: z.string().optional(),
   manufacturerDiscount: z
-    .number()
-    .min(0, "Manufacturer discount must be between 0 and 100")
-    .max(100, "Manufacturer discount must be between 0 and 100"),
+    .union([z.string(), z.number()])
+    .optional()
+    .transform((v) => (v === "" || v === undefined || v === null ? 0 : Number(v)))
+    .pipe(z.number().min(0).max(100)),
+  dosage: z.string().optional(),
+  activeIngredient: z.string().optional(),
+  volume: optionalNum(0),
+  route: z.enum(["Intramuscular", "Intravenous", "Subcutaneous"]).optional(),
+  sterilizationMethod: z.string().optional(),
+  size: z.string().optional(),
+  unit: optionalNum(0),
 });
 
 const medicineSchema = baseSchema.extend({
@@ -49,7 +73,11 @@ const medicineSchema = baseSchema.extend({
 });
 
 const injectionSchema = baseSchema.extend({
-  volume: z.number().min(0, "Volume must be positive"),
+  volume: z
+    .union([z.string(), z.number()])
+    .optional()
+    .transform((v) => (v === "" || v === undefined || v === null ? 0 : Number(v)))
+    .pipe(z.number().min(0)),
   route: z.enum(["Intramuscular", "Intravenous", "Subcutaneous"]),
 });
 
@@ -59,8 +87,12 @@ const surgeryItemSchema = baseSchema.extend({
 });
 
 const generalItemSchema = baseSchema.extend({
-  category: z.string().min(1, "Category is required").optional(),
-  unit: z.number().min(0, "Unit must be positive"), // Removed .optional()
+  category: z.string().optional(),
+  unit: z
+    .union([z.string(), z.number()])
+    .optional()
+    .transform((v) => (v === "" || v === undefined || v === null ? 0 : Number(v)))
+    .pipe(z.number().min(0)),
 });
 
 type FormValues = z.infer<typeof medicineSchema> &
@@ -75,8 +107,7 @@ export default function InventoryManagement() {
   const [itemType, setItemType] = useState<ItemType>(ItemType.MEDICINE);
   const [manufacturers, setManufacturers] = useState<
     { id: string; companyName: string }[]
-  >([]); // State to store manufacturers
-
+  >([]);
   const form = useForm<FormValues>({
     resolver: zodResolver(
       itemType === ItemType.MEDICINE
@@ -89,26 +120,26 @@ export default function InventoryManagement() {
     ),
     defaultValues: {
       name: "",
-      quantity: 0,
+      quantity: "",
       batchNumber: "",
       expiryDate: "",
       manufacturer: "",
-      price: 0,
-      purchasePrice: 0,
-      sellingPrice: 0,
+      price: "",
+      purchasePrice: "",
+      sellingPrice: "",
       barcode: "",
       category: "",
-      minimumStock: 0,
-      manufacturerDiscount: 0,
+      minimumStock: "",
+      manufacturerDiscount: "",
       description: "",
       dosage: "",
       activeIngredient: "",
-      volume: 0,
+      volume: "",
       route: "Intramuscular",
       sterilizationMethod: "",
       size: "",
-      unit: 0,
-    },
+      unit: "",
+    } as unknown as FormValues,
   });
 
   useEffect(() => {
@@ -143,9 +174,32 @@ export default function InventoryManagement() {
       reader.readAsDataURL(file);
     }
   };
+  const emptyDefaults = {
+    name: "",
+    quantity: "",
+    batchNumber: "",
+    expiryDate: "",
+    manufacturer: "",
+    price: "",
+    purchasePrice: "",
+    sellingPrice: "",
+    barcode: "",
+    category: "",
+    minimumStock: "",
+    manufacturerDiscount: "",
+    description: "",
+    dosage: "",
+    activeIngredient: "",
+    volume: "",
+    route: "Intramuscular" as const,
+    sterilizationMethod: "",
+    size: "",
+    unit: "",
+  };
+
   const onSubmit = async (data: FormValues) => {
-    const sellingPrice = data.sellingPrice ?? data.price;
-    const purchasePrice = data.purchasePrice ?? 0;
+    const sellingPrice = Number(data.price) || 0;
+    const purchasePrice = Number(data.purchasePrice) ?? 0;
     const formattedData = {
       ...data,
       price: sellingPrice,
@@ -182,7 +236,7 @@ export default function InventoryManagement() {
         const base64Image = reader.result as string;
         await addItem({ ...formattedData, image: base64Image });
         toast.success(`${itemType} has been added successfully`);
-        form.reset();
+        form.reset(emptyDefaults as unknown as FormValues);
         setImage(null);
         setImagePreview(null);
       };
@@ -190,7 +244,7 @@ export default function InventoryManagement() {
     } else {
       await addItem(formattedData);
       toast.success(`${itemType} has been added successfully`);
-      form.reset();
+      form.reset(emptyDefaults as unknown as FormValues);
       setImage(null);
       setImagePreview(null);
     }
@@ -214,38 +268,41 @@ export default function InventoryManagement() {
       <Card className="backdrop-blur-lg bg-card/50">
         <Separator />
         <CardContent className="mt-10">
-          <Tabs
-            value={itemType.toLowerCase()}
-            onValueChange={(value) => {
-              switch (value) {
-                case "medicine":
-                  setItemType(ItemType.MEDICINE);
-                  break;
-                case "injection":
-                  setItemType(ItemType.INJECTION);
-                  break;
-                case "surgery":
-                  setItemType(ItemType.SURGERY);
-                  break;
-                case "general":
-                  setItemType(ItemType.GENERAL);
-                  break;
-                default:
-                  break;
-              }
-            }}
+          {/* Item type: plain buttons so every tab (including Medicine) works on mobile */}
+          <div
+            role="tablist"
+            aria-label="Item type"
+            className="flex flex-wrap gap-2 mb-6"
           >
-            <TabsList className="grid w-full grid-cols-4 mb-6">
-              <TabsTrigger value="medicine">Medicine</TabsTrigger>
-              <TabsTrigger value="injection">Injection</TabsTrigger>
-              <TabsTrigger value="surgery">Surgery Item</TabsTrigger>
-              <TabsTrigger value="general">General Item</TabsTrigger>
-            </TabsList>
-          </Tabs>
+            {[
+              { value: ItemType.MEDICINE, label: "Medicine" },
+              { value: ItemType.INJECTION, label: "Injection" },
+              { value: ItemType.SURGERY, label: "Surgery" },
+              { value: ItemType.GENERAL, label: "General" },
+            ].map(({ value, label }) => {
+              const isActive = itemType === value;
+              return (
+                <button
+                  key={value}
+                  type="button"
+                  role="tab"
+                  aria-selected={isActive}
+                  onClick={() => setItemType(value)}
+                  className={`min-h-[48px] min-w-[100px] flex-1 rounded-lg border px-4 py-3 text-sm font-medium touch-manipulation transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
+                    isActive
+                      ? "bg-background text-foreground shadow-sm border-border"
+                      : "bg-muted/50 text-muted-foreground hover:bg-muted border-transparent"
+                  }`}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="flex flex-col gap-2">
-                <Label htmlFor="name">Item Name</Label>
+                <Label htmlFor="name">Item Name <span className="text-red-500">*</span></Label>
                 <Input
                   id="name"
                   placeholder="Item name"
@@ -259,12 +316,14 @@ export default function InventoryManagement() {
                 )}
               </div>
               <div className="flex flex-col gap-2">
-                <Label htmlFor="quantity">Quantity</Label>
+                <Label htmlFor="quantity">Quantity <span className="text-red-500">*</span></Label>
                 <Input
                   id="quantity"
                   type="number"
-                  className="text-lg p-4"
-                  {...form.register("quantity", { valueAsNumber: true })}
+                  inputMode="numeric"
+                  placeholder="e.g. 100"
+                  className="text-lg p-4 min-h-[48px] touch-manipulation"
+                  {...form.register("quantity")}
                 />
                 {form.formState.errors.quantity && (
                   <span className="text-red-500 text-sm">
@@ -281,7 +340,7 @@ export default function InventoryManagement() {
                 />
               </div> */}
               <div className="flex flex-col gap-2">
-                <Label htmlFor="batchNumber">Batch Number</Label>
+                <Label htmlFor="batchNumber">Batch Number <span className="text-red-500">*</span></Label>
                 <Input
                   id="batchNumber"
                   placeholder="Batch number"
@@ -295,13 +354,38 @@ export default function InventoryManagement() {
                 )}
               </div>
               <div className="flex flex-col gap-2">
-                <Label htmlFor="expiryDate">Expiry Date</Label>
-                <Input
-                  id="expiryDate"
-                  type="date"
-                  className="text-lg p-4"
-                  {...form.register("expiryDate")}
-                />
+                <Label htmlFor="expiryDate">Expiry Date <span className="text-red-500">*</span></Label>
+                <div
+                  className="flex rounded-md border border-input bg-background overflow-hidden min-h-[48px] [color-scheme:light] cursor-pointer active:bg-muted/50"
+                  onClick={() => {
+                    const el = document.getElementById("expiryDate") as HTMLInputElement | null;
+                    el?.focus();
+                    el?.click();
+                  }}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      const el = document.getElementById("expiryDate") as HTMLInputElement | null;
+                      el?.focus();
+                      el?.click();
+                    }
+                  }}
+                  aria-label="Open expiry date picker"
+                >
+                  <Input
+                    id="expiryDate"
+                    type="date"
+                    className="flex-1 min-w-0 text-lg py-3 px-4 touch-manipulation cursor-pointer border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 min-h-[48px]"
+                    style={{ minHeight: "48px" }}
+                    {...form.register("expiryDate")}
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                  <span className="flex items-center px-3 py-2 text-muted-foreground pointer-events-none shrink-0">
+                    <Calendar className="h-5 w-5" />
+                  </span>
+                </div>
                 {form.formState.errors.expiryDate && (
                   <span className="text-red-500 text-sm">
                     {form.formState.errors.expiryDate.message}
@@ -317,14 +401,12 @@ export default function InventoryManagement() {
                     id="manufacturerDiscount"
                     placeholder="e.g. 10"
                     type="number"
+                    inputMode="numeric"
                     min={0}
                     max={100}
                     step={1}
-                    className="text-lg p-4"
-                    {...form.register("manufacturerDiscount", {
-                      valueAsNumber: true,
-                      setValueAs: (value) => Number(value) || 0, // Convert empty string to 0
-                    })}
+                    className="text-lg p-4 min-h-[48px] touch-manipulation"
+                    {...form.register("manufacturerDiscount")}
                   />
                   <span className="text-lg font-medium text-gray-600">%</span>
                 </div>
@@ -335,7 +417,7 @@ export default function InventoryManagement() {
                 )}
               </div>
               <div className="flex flex-col gap-2">
-                <Label htmlFor="manufacturer">Manufacturer</Label>
+                <Label htmlFor="manufacturer">Manufacturer <span className="text-red-500">*</span></Label>
                 <Controller
                   name="manufacturer"
                   control={form.control}
@@ -377,10 +459,12 @@ export default function InventoryManagement() {
                 <Input
                   id="purchasePrice"
                   type="number"
+                  inputMode="decimal"
                   step="0.01"
                   min={0}
-                  className="text-lg p-4"
-                  {...form.register("purchasePrice", { valueAsNumber: true })}
+                  placeholder="e.g. 250"
+                  className="text-lg p-4 min-h-[48px] touch-manipulation"
+                  {...form.register("purchasePrice")}
                 />
                 {form.formState.errors.purchasePrice && (
                   <span className="text-red-500 text-sm">
@@ -389,14 +473,16 @@ export default function InventoryManagement() {
                 )}
               </div>
               <div className="flex flex-col gap-2">
-                <Label htmlFor="price">Selling Price</Label>
+                <Label htmlFor="price">Selling Price <span className="text-red-500">*</span></Label>
                 <Input
                   id="price"
                   type="number"
+                  inputMode="decimal"
                   step="0.01"
                   min={0}
-                  className="text-lg p-4"
-                  {...form.register("price", { valueAsNumber: true })}
+                  placeholder="e.g. 300"
+                  className="text-lg p-4 min-h-[48px] touch-manipulation"
+                  {...form.register("price")}
                 />
                 {form.formState.errors.price && (
                   <span className="text-red-500 text-sm">
@@ -423,12 +509,14 @@ export default function InventoryManagement() {
                 />
               </div>
               <div className="flex flex-col gap-2">
-                <Label htmlFor="minimumStock">Minimum Stock</Label>
+                <Label htmlFor="minimumStock">Minimum Stock <span className="text-red-500">*</span></Label>
                 <Input
                   id="minimumStock"
                   type="number"
-                  className="text-lg p-4"
-                  {...form.register("minimumStock", { valueAsNumber: true })}
+                  inputMode="numeric"
+                  placeholder="e.g. 20"
+                  className="text-lg p-4 min-h-[48px] touch-manipulation"
+                  {...form.register("minimumStock")}
                 />
                 {form.formState.errors.minimumStock && (
                   <span className="text-red-500 text-sm">
@@ -440,7 +528,7 @@ export default function InventoryManagement() {
               {itemType === ItemType.MEDICINE && (
                 <>
                   <div className="flex flex-col gap-2">
-                    <Label htmlFor="dosage">Dosage</Label>
+                    <Label htmlFor="dosage">Dosage <span className="text-red-500">*</span></Label>
                     <Input
                       id="dosage"
                       placeholder="Dosage"
@@ -454,7 +542,7 @@ export default function InventoryManagement() {
                     )}
                   </div>
                   <div className="flex flex-col gap-2">
-                    <Label htmlFor="activeIngredient">Active Ingredient</Label>
+                    <Label htmlFor="activeIngredient">Active Ingredient <span className="text-red-500">*</span></Label>
                     <Input
                       id="activeIngredient"
                       placeholder="Active ingredient"
@@ -477,8 +565,10 @@ export default function InventoryManagement() {
                     <Input
                       id="volume"
                       type="number"
-                      className="text-lg p-4"
-                      {...form.register("volume", { valueAsNumber: true })}
+                      inputMode="decimal"
+                      placeholder="e.g. 5"
+                      className="text-lg p-4 min-h-[48px] touch-manipulation"
+                      {...form.register("volume")}
                     />
                     {form.formState.errors.volume && (
                       <span className="text-red-500 text-sm">
@@ -487,7 +577,7 @@ export default function InventoryManagement() {
                     )}
                   </div>
                   <div className="flex flex-col gap-2">
-                    <Label htmlFor="route">Route of Administration</Label>
+                    <Label htmlFor="route">Route of Administration <span className="text-red-500">*</span></Label>
                     <Controller
                       name="route"
                       control={form.control}
@@ -535,7 +625,7 @@ export default function InventoryManagement() {
                 <>
                   <div className="flex flex-col gap-2">
                     <Label htmlFor="sterilizationMethod">
-                      Sterilization Method
+                      Sterilization Method <span className="text-red-500">*</span>
                     </Label>
                     <Input
                       id="sterilizationMethod"
@@ -550,7 +640,7 @@ export default function InventoryManagement() {
                     )}
                   </div>
                   <div className="flex flex-col gap-2">
-                    <Label htmlFor="size">Size</Label>
+                    <Label htmlFor="size">Size <span className="text-red-500">*</span></Label>
                     <Input
                       id="size"
                       placeholder="Size"
@@ -587,9 +677,10 @@ export default function InventoryManagement() {
                     <Input
                       id="unit"
                       type="number"
-                      className="text-lg p-4"
-                      placeholder="Unit"
-                      {...form.register("unit", { valueAsNumber: true })}
+                      inputMode="numeric"
+                      placeholder="e.g. 1"
+                      className="text-lg p-4 min-h-[48px] touch-manipulation"
+                      {...form.register("unit")}
                     />
                     {form.formState.errors.unit && (
                       <span className="text-red-500 text-sm">

@@ -2,11 +2,11 @@
 
 import { useAuth } from "@/app/providers/AuthProvider";
 import { useInventory } from "@/app/context/InventoryContext";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { LOW_STOCK_INVALIDATED_EVENT } from "@/lib/low-stock-events";
 import { Button } from "@/components/ui/button";
-import { Package, ArrowRight } from "lucide-react";
+import { Package, ArrowRight, ChevronRight } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { toast } from "sonner";
 
@@ -20,7 +20,7 @@ export function LowStockReminderBanner() {
   const [lowStockCount, setLowStockCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
 
-  const fetchLowStock = async () => {
+  const fetchLowStock = useCallback(async () => {
     if (user?.role !== "pharmacist") return;
     try {
       const items = await getLowStockItems();
@@ -32,12 +32,19 @@ export function LowStockReminderBanner() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [user?.role, getLowStockItems]);
 
   useEffect(() => {
     if (user?.role !== "pharmacist") return;
     fetchLowStock();
-  }, [user?.role]);
+  }, [user?.role, fetchLowStock]);
+
+  useEffect(() => {
+    if (user?.role !== "pharmacist") return;
+    const onInvalidated = () => fetchLowStock();
+    window.addEventListener(LOW_STOCK_INVALIDATED_EVENT, onInvalidated);
+    return () => window.removeEventListener(LOW_STOCK_INVALIDATED_EVENT, onInvalidated);
+  }, [user?.role, fetchLowStock]);
 
   useEffect(() => {
     if (user?.role !== "pharmacist") return;
@@ -46,13 +53,13 @@ export function LowStockReminderBanner() {
     };
     document.addEventListener("visibilitychange", onVisibilityChange);
     return () => document.removeEventListener("visibilitychange", onVisibilityChange);
-  }, [user?.role]);
+  }, [user?.role, fetchLowStock]);
 
   useEffect(() => {
     if (user?.role !== "pharmacist") return;
     const interval = setInterval(fetchLowStock, 2 * 60 * 1000);
     return () => clearInterval(interval);
-  }, [user?.role]);
+  }, [user?.role, fetchLowStock]);
 
   useEffect(() => {
     if (user?.role !== "pharmacist" || lowStockCount === 0 || isLoading) return;
@@ -82,36 +89,36 @@ export function LowStockReminderBanner() {
   }
 
   return (
-    <Alert
-      variant="destructive"
-      className="sticky top-0 z-40 mb-4 border-2 border-red-500 bg-red-100 text-red-900 shadow-[0_0_0_3px_rgba(239,68,68,0.3)]"
+    <div
+      role="alert"
+      className="mb-4 w-full min-w-0 max-w-full rounded-xl border border-amber-200/80 bg-gradient-to-r from-amber-50 to-orange-50/80 px-4 py-3 shadow-sm"
     >
-      <div className="relative shrink-0">
-        <Package className="h-4 w-4 text-red-600" />
-        <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-red-600 animate-ping" />
-      </div>
-      <AlertTitle className="text-red-800 font-semibold flex items-center gap-2">
-        Low Stock Alert — {lowStockCount} item{lowStockCount !== 1 ? "s" : ""} need
-        restocking
-        <span className="inline-flex h-2 w-2 rounded-full bg-red-600 animate-pulse" aria-hidden />
-      </AlertTitle>
-      <AlertDescription className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mt-2">
-        <span>
-          These items are below the minimum stock level. Restock to avoid
-          running out.
-        </span>
-        <div className="flex gap-2 shrink-0">
-          <Button asChild size="sm" variant="destructive">
-            <Link href="/pharmacist/purchase-orders/create">
-              Create Purchase Order
-              <ArrowRight className="ml-1 h-3 w-3" />
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+        <div className="flex min-w-0 flex-1 items-center gap-3">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-100">
+            <Package className="h-4 w-4 text-amber-700" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold text-amber-900">
+              Low stock — {lowStockCount} item{lowStockCount !== 1 ? "s" : ""} need restocking
+            </p>
+            <p className="mt-0.5 truncate text-xs text-amber-800/90">
+              Below minimum level. Restock to avoid running out.
+            </p>
+          </div>
+        </div>
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
+          <Button asChild size="sm" className="h-8 rounded-lg bg-amber-600 text-white hover:bg-amber-700">
+            <Link href="/pharmacist/purchase-orders/create" className="inline-flex items-center gap-1">
+              Create order
+              <ChevronRight className="h-3.5 w-3.5" />
             </Link>
           </Button>
-          <Button asChild size="sm" variant="outline" className="border-red-300 text-red-800 hover:bg-red-100">
-            <Link href="/pharmacist/inventory-view">View Inventory</Link>
+          <Button asChild size="sm" variant="outline" className="h-8 rounded-lg border-amber-300 text-amber-800 hover:bg-amber-100">
+            <Link href="/pharmacist/inventory-view">View inventory</Link>
           </Button>
         </div>
-      </AlertDescription>
-    </Alert>
+      </div>
+    </div>
   );
 }
