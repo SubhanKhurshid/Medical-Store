@@ -33,6 +33,7 @@ import { useAuth } from "@/app/providers/AuthProvider";
 import { useInventory } from "@/app/context/InventoryContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { Receipt } from "@/components/Receipt";
+import Loading from "@/components/shared/Loading";
 
 interface Product {
   id: string;
@@ -67,6 +68,7 @@ const SalesPage = () => {
   const accessToken = user?.access_token;
   const { refetchInventory } = useInventory();
   const [isProcessing, setIsProcessing] = useState(false);
+  const [loading, setLoading] = useState(true);
   const barcodeInputRef = useRef<HTMLInputElement>(null);
 
   const focusBarcodeInput = useCallback(() => {
@@ -78,6 +80,7 @@ const SalesPage = () => {
   }, [focusBarcodeInput]);
 
   const fetchProducts = async () => {
+    setLoading(true);
     try {
       const response = await axios.get(
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist`,
@@ -97,6 +100,8 @@ const SalesPage = () => {
     } catch (error) {
       console.error("Failed to fetch products", error);
       toast.error("Failed to fetch products");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -363,436 +368,465 @@ const SalesPage = () => {
         </header>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4 }}
-            className="space-y-5"
-          >
-            <Card className="overflow-hidden border border-gray-100 rounded-xl shadow-sm bg-white">
-              <div className="border-l-4 border-l-red-500 bg-red-50/40 px-4 py-3">
-                <h2 className="text-sm font-semibold text-red-800 flex items-center gap-2">
-                  <ScanLine className="h-4 w-4" />
-                  Barcode
-                </h2>
-                <p className="text-xs text-gray-500 mt-0.5">
-                  Scan with your barcode scanner, or type the code and press Enter.
-                </p>
-              </div>
-              <CardContent className="p-4">
-                <div className="flex gap-2">
-                  <div className="relative flex-1">
-                    <Barcode className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
-                    <Input
-                      ref={barcodeInputRef}
-                      type="text"
-                      placeholder="Scan or type barcode..."
-                      value={barcodeInput}
-                      onChange={(e) => setBarcodeInput(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                          addByBarcode();
-                        }
-                      }}
-                      className="pl-9 h-11 border-gray-200 focus:border-red-500 focus:ring-red-500/20"
-                      autoComplete="off"
-                    />
+          {loading ? (
+            <div className="lg:col-span-2 py-20 bg-white/50 backdrop-blur-sm rounded-xl border border-gray-100 flex items-center justify-center shadow-sm">
+              <Loading />
+            </div>
+          ) : (
+            <>
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4 }}
+                className="space-y-5"
+              >
+                <Card className="overflow-hidden border border-gray-100 rounded-xl shadow-sm bg-white">
+                  <div className="border-l-4 border-l-red-500 bg-red-50/40 px-4 py-3">
+                    <h2 className="text-sm font-semibold text-red-800 flex items-center gap-2">
+                      <ScanLine className="h-4 w-4" />
+                      Barcode
+                    </h2>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      Scan with your barcode scanner, or type the code and press Enter.
+                    </p>
                   </div>
-                  <Button
-                    type="button"
-                    onClick={addByBarcode}
-                    className="bg-red-800 hover:bg-red-700 text-white shrink-0 px-4"
-                  >
-                    Add
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="overflow-hidden border border-gray-100 rounded-xl shadow-sm bg-white">
-              <div className="border-l-4 border-l-gray-300 bg-gray-50/60 px-4 py-3">
-                <h2 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
-                  <Search className="h-4 w-4" />
-                  Search by name
-                </h2>
-                <p className="text-xs text-gray-500 mt-0.5">
-                  Find items by product name, then add to cart.
-                </p>
-              </div>
-              <CardContent className="p-4">
-                <div className="relative mb-4">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <Input
-                    type="text"
-                    placeholder="Search product by name..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-9 h-11 border-gray-200 focus:border-red-500 focus:ring-red-500/20"
-                  />
-                </div>
-                <div className="space-y-3 max-h-[calc(100vh-420px)] overflow-y-auto">
-                <AnimatePresence>
-                  {searchResults.length === 0 ? (
-                    <motion.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      className="flex flex-col items-center justify-center py-10 px-4 rounded-lg bg-gray-50/80"
-                    >
-                      <div className="h-14 w-14 rounded-full bg-gray-100 flex items-center justify-center mb-3">
-                        <Search className="h-7 w-7 text-gray-400" />
+                  <CardContent className="p-4">
+                    <div className="flex gap-2">
+                      <div className="relative flex-1">
+                        <Barcode className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                        <Input
+                          ref={barcodeInputRef}
+                          type="text"
+                          placeholder="Scan or type barcode..."
+                          value={barcodeInput}
+                          onChange={(e) => setBarcodeInput(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              addByBarcode();
+                            }
+                          }}
+                          className="pl-9 h-11 border-gray-200 focus:border-red-500 focus:ring-red-500/20"
+                          autoComplete="off"
+                        />
                       </div>
-                      <p className="text-sm font-medium text-gray-600">No items found</p>
-                      <p className="text-xs text-gray-500 mt-0.5">Search by name or scan barcode above.</p>
-                    </motion.div>
-                  ) : (
-                    searchResults.map((product) => (
-                      <motion.div
-                        key={product.id}
-                        initial={{ opacity: 0, y: 8 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0 }}
-                        transition={{ duration: 0.2 }}
+                      <Button
+                        type="button"
+                        onClick={addByBarcode}
+                        className="bg-red-800 hover:bg-red-700 text-white shrink-0 px-4"
                       >
-                        <Card className="border-gray-100 hover:border-gray-200 transition-colors">
-                          <CardContent className="flex items-center gap-4 p-3">
-                            <div className="w-12 h-12 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center">
-                              {product.imageUrl ? (
-                                <img src={product.imageUrl} alt={product.name} className="w-12 h-12 object-cover" />
-                              ) : (
-                                getProductIcon(product.type)
-                              )}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <h3 className="font-medium text-gray-900 truncate">{product.name}</h3>
-                              <p className="text-xs text-gray-500">Rs {product.price} · Stock: {product.quantity}</p>
-                            </div>
-                            <Button type="button" onClick={() => addToCart(product)} size="sm" className="bg-red-800 hover:bg-red-700 shrink-0">
-                              <Plus className="h-4 w-4" />
-                            </Button>
-                          </CardContent>
-                        </Card>
-                      </motion.div>
-                    ))
-                  )}
-                </AnimatePresence>
-              </div>
-              </CardContent>
-            </Card>
-          </motion.div>
+                        Add
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
 
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: 0.1 }}
-            className="space-y-5"
-          >
-            <Card className="overflow-hidden border border-gray-100 rounded-xl shadow-sm bg-white">
-              <div className="border-l-4 border-l-red-500 bg-red-50/40 px-4 py-3">
-                <h2 className="text-sm font-semibold text-red-800 flex items-center gap-2">
-                  <ShoppingCart className="h-4 w-4" />
-                  Cart
-                </h2>
-                <p className="text-xs text-gray-500 mt-0.5">
-                  Payment method and customer (for credit).
-                </p>
-              </div>
-              <CardContent className="p-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-              <div>
-                <Label className="text-xs font-medium text-gray-600">Payment method</Label>
-                <select
-                  value={paymentMethod}
-                  onChange={(e) => setPaymentMethod(e.target.value as "CASH" | "CARD" | "ONLINE" | "DONATION" | "CREDIT")}
-                  className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-red-500 focus:ring-red-500/20"
-                >
-                  <option value="CASH">Cash</option>
-                  <option value="CARD">Card</option>
-                  <option value="ONLINE">Online</option>
-                  <option value="DONATION">Donation</option>
-                  <option value="CREDIT">Credit</option>
-                </select>
-              </div>
-              {paymentMethod === "CREDIT" && (
-                <div className="sm:col-span-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-                  Select a customer by phone so the sale is added to their credit balance.
-                </div>
-              )}
-              <div>
-                <Label className="text-xs font-medium text-gray-600">Phone (search customer)</Label>
-                <Input
-                  placeholder="Phone number"
-                  value={customerPhone}
-                  onChange={async (e) => {
-                    const val = e.target.value;
-                    setCustomerPhone(val);
-                    setCustomerId(undefined);
-                    if (val.length >= 7) {
-                      try {
-                        const { data } = await axios.get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/customer?phone=${val}`, { headers: { Authorization: `Bearer ${accessToken}` } });
-                        if (data && data.length > 0) {
-                          const customer = data.find((c: any) => c.phone === val);
-                          if (customer) {
-                            setCustomerId(customer.id);
-                            setCustomerName(customer.name);
-                            toast.success(`Customer ${customer.name} selected`);
-                          }
-                        }
-                      } catch (err) { console.error(err); }
-                    }
-                  }}
-                  className="mt-1 h-10 border-gray-200 focus:border-red-500 focus:ring-red-500/20"
-                />
-              </div>
-              <div>
-                <Label className="text-xs font-medium text-gray-600">Customer name {customerId && <span className="text-red-600">(linked)</span>}</Label>
-                <Input
-                  placeholder="Customer name"
-                  value={customerName}
-                  onChange={(e) => setCustomerName(e.target.value)}
-                  className="mt-1 h-10 border-gray-200 focus:border-red-500 focus:ring-red-500/20"
-                  readOnly={!!customerId}
-                />
-              </div>
-            </div>
-            <div className="space-y-3 max-h-[calc(100vh-480px)] overflow-y-auto mb-4">
-              <AnimatePresence>
-                {cart.length === 0 ? (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="flex flex-col items-center justify-center py-10 px-4 rounded-lg bg-gray-50/80 border border-dashed border-gray-200"
-                  >
-                    <ShoppingCart className="h-10 w-10 text-gray-300 mb-2" />
-                    <p className="text-sm text-gray-500">Cart is empty</p>
-                    <p className="text-xs text-gray-400 mt-0.5">Scan or search to add items.</p>
-                  </motion.div>
-                ) : (
-                  cart.map((item) => (
-                    <motion.div
-                      key={item.id}
-                      initial={{ opacity: 0, x: -8 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: 8 }}
-                      transition={{ duration: 0.2 }}
-                    >
-                      <Card className="border-gray-100">
-                        <CardContent className="flex justify-between items-center gap-3 p-3">
-                          <div className="min-w-0 flex-1">
-                            <h3 className="font-medium text-gray-900 truncate">{item.name}</h3>
-                            <p className="text-xs text-gray-500">Rs {item.price} × {item.quantity} = Rs {(item.price * item.quantity).toFixed(2)}</p>
-                          </div>
-                          <div className="flex items-center gap-1 shrink-0">
-                            <Button size="icon" variant="outline" className="h-8 w-8 border-gray-200" onClick={() => removeFromCart(item.id)}>
-                              <Minus className="h-3.5 w-3.5" />
-                            </Button>
-                            <Input
-                              type="number"
-                              value={item.quantity}
-                              onChange={(e) => updateCartItemQuantity(item.id, parseInt(e.target.value) || 1)}
-                              className="w-12 h-8 text-center text-sm border-gray-200 focus:ring-red-500/20"
-                              min={1}
-                            />
-                            <Button size="icon" className="h-8 w-8 bg-red-800 hover:bg-red-700" onClick={() => addToCart(item)}>
-                              <Plus className="h-3.5 w-3.5" />
-                            </Button>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </motion.div>
-                  ))
-                )}
-              </AnimatePresence>
-            </div>
-            <div className="border-t border-gray-100 pt-4 mt-4">
-              <p className="text-lg font-semibold text-red-800">Total: Rs {totalBill.toFixed(2)}</p>
-              <Button onClick={handleCheckout} className="mt-3 w-full bg-red-800 hover:bg-red-700 h-11" size="lg">
-                Proceed to Checkout
-              </Button>
-            </div>
-              </CardContent>
-            </Card>
-          </motion.div>
+                <Card className="overflow-hidden border border-gray-100 rounded-xl shadow-sm bg-white">
+                  <div className="border-l-4 border-l-gray-300 bg-gray-50/60 px-4 py-3">
+                    <h2 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
+                      <Search className="h-4 w-4" />
+                      Search by name
+                    </h2>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      Find items by product name, then add to cart.
+                    </p>
+                  </div>
+                  <CardContent className="p-4">
+                    <div className="relative mb-4">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <Input
+                        type="text"
+                        placeholder="Search product by name..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pl-9 h-11 border-gray-200 focus:border-red-500 focus:ring-red-500/20"
+                      />
+                    </div>
+                    <div className="space-y-3 max-h-[calc(100vh-420px)] overflow-y-auto">
+                      <AnimatePresence>
+                        {searchResults.length === 0 ? (
+                          <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            className="flex flex-col items-center justify-center py-10 px-4 rounded-lg bg-gray-50/80"
+                          >
+                            <div className="h-14 w-14 rounded-full bg-gray-100 flex items-center justify-center mb-3">
+                              <Search className="h-7 w-7 text-gray-400" />
+                            </div>
+                            <p className="text-sm font-medium text-gray-600">No items found</p>
+                            <p className="text-xs text-gray-500 mt-0.5">Search by name or scan barcode above.</p>
+                          </motion.div>
+                        ) : (
+                          searchResults.map((product) => (
+                            <motion.div
+                              key={product.id}
+                              initial={{ opacity: 0, y: 8 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{ opacity: 0 }}
+                              transition={{ duration: 0.2 }}
+                            >
+                              <Card className="border-gray-100 hover:border-gray-200 transition-colors">
+                                <CardContent className="flex items-center gap-4 p-3">
+                                  <div className="w-12 h-12 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center">
+                                    {product.imageUrl ? (
+                                      <img src={product.imageUrl} alt={product.name} className="w-12 h-12 object-cover" />
+                                    ) : (
+                                      getProductIcon(product.type)
+                                    )}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <h3 className="font-medium text-gray-900 truncate">{product.name}</h3>
+                                    <p className="text-xs text-gray-500">Rs {product.price} · Stock: {product.quantity}</p>
+                                  </div>
+                                  <Button type="button" onClick={() => addToCart(product)} size="sm" className="bg-red-800 hover:bg-red-700 shrink-0">
+                                    <Plus className="h-4 w-4" />
+                                  </Button>
+                                </CardContent>
+                              </Card>
+                            </motion.div>
+                          ))
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: 0.1 }}
+                className="space-y-5"
+              >
+                <Card className="overflow-hidden border border-gray-100 rounded-xl shadow-sm bg-white">
+                  <div className="border-l-4 border-l-red-500 bg-red-50/40 px-4 py-3">
+                    <h2 className="text-sm font-semibold text-red-800 flex items-center gap-2">
+                      <ShoppingCart className="h-4 w-4" />
+                      Cart
+                    </h2>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      Payment method and customer (for credit).
+                    </p>
+                  </div>
+                  <CardContent className="p-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                      <div>
+                        <Label className="text-xs font-medium text-gray-600">Payment method</Label>
+                        <select
+                          value={paymentMethod}
+                          onChange={(e) => setPaymentMethod(e.target.value as "CASH" | "CARD" | "ONLINE" | "DONATION" | "CREDIT")}
+                          className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-red-500 focus:ring-red-500/20"
+                        >
+                          <option value="CASH">Cash</option>
+                          <option value="CARD">Card</option>
+                          <option value="ONLINE">Online</option>
+                          <option value="DONATION">Donation</option>
+                          <option value="CREDIT">Credit</option>
+                        </select>
+                      </div>
+                      {paymentMethod === "CREDIT" && (
+                        <div className="sm:col-span-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                          Select a customer by phone so the sale is added to their credit balance.
+                        </div>
+                      )}
+                      <div>
+                        <Label className="text-xs font-medium text-gray-600">Phone (search customer)</Label>
+                        <Input
+                          placeholder="Phone number"
+                          value={customerPhone}
+                          onChange={async (e) => {
+                            const val = e.target.value;
+                            setCustomerPhone(val);
+                            setCustomerId(undefined);
+                            if (val.length >= 7) {
+                              try {
+                                const { data } = await axios.get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/customer?phone=${val}`, { headers: { Authorization: `Bearer ${accessToken}` } });
+                                if (data && data.length > 0) {
+                                  const customer = data.find((c: any) => c.phone === val);
+                                  if (customer) {
+                                    setCustomerId(customer.id);
+                                    setCustomerName(customer.name);
+                                    toast.success(`Customer ${customer.name} selected`);
+                                  }
+                                }
+                              } catch (err) { console.error(err); }
+                            }
+                          }}
+                          className="mt-1 h-10 border-gray-200 focus:border-red-500 focus:ring-red-500/20"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs font-medium text-gray-600">Customer name {customerId && <span className="text-red-600">(linked)</span>}</Label>
+                        <Input
+                          placeholder="Customer name"
+                          value={customerName}
+                          onChange={(e) => setCustomerName(e.target.value)}
+                          className="mt-1 h-10 border-gray-200 focus:border-red-500 focus:ring-red-500/20"
+                          readOnly={!!customerId}
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-3 max-h-[calc(100vh-480px)] overflow-y-auto mb-4">
+                      <AnimatePresence>
+                        {cart.length === 0 ? (
+                          <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            className="flex flex-col items-center justify-center py-10 px-4 rounded-lg bg-gray-50/80 border border-dashed border-gray-200"
+                          >
+                            <ShoppingCart className="h-10 w-10 text-gray-300 mb-2" />
+                            <p className="text-sm text-gray-500">Cart is empty</p>
+                            <p className="text-xs text-gray-400 mt-0.5">Scan or search to add items.</p>
+                          </motion.div>
+                        ) : (
+                          cart.map((item) => (
+                            <motion.div
+                              key={item.id}
+                              initial={{ opacity: 0, x: -8 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              exit={{ opacity: 0, x: 8 }}
+                              transition={{ duration: 0.2 }}
+                            >
+                              <Card className="border-gray-100">
+                                <CardContent className="flex justify-between items-center gap-3 p-3">
+                                  <div className="min-w-0 flex-1">
+                                    <h3 className="font-medium text-gray-900 truncate">{item.name}</h3>
+                                    <p className="text-xs text-gray-500">Rs {item.price} × {item.quantity} = Rs {(item.price * item.quantity).toFixed(2)}</p>
+                                  </div>
+                                  <div className="flex items-center gap-1 shrink-0">
+                                    <Button size="icon" variant="outline" className="h-8 w-8 border-gray-200" onClick={() => removeFromCart(item.id)}>
+                                      <Minus className="h-3.5 w-3.5" />
+                                    </Button>
+                                    <Input
+                                      type="number"
+                                      value={item.quantity}
+                                      onChange={(e) => updateCartItemQuantity(item.id, parseInt(e.target.value) || 1)}
+                                      className="w-12 h-8 text-center text-sm border-gray-200 focus:ring-red-500/20"
+                                      min={1}
+                                    />
+                                    <Button size="icon" className="h-8 w-8 bg-red-800 hover:bg-red-700" onClick={() => addToCart(item)}>
+                                      <Plus className="h-3.5 w-3.5" />
+                                    </Button>
+                                  </div>
+                                </CardContent>
+                              </Card>
+                            </motion.div>
+                          ))
+                        )}
+                      </AnimatePresence>
+                    </div>
+                    <div className="border-t border-gray-100 pt-4 mt-4">
+                      <p className="text-lg font-semibold text-red-800">Total: Rs {totalBill.toFixed(2)}</p>
+                      <Button onClick={handleCheckout} className="mt-3 w-full bg-red-800 hover:bg-red-700 h-11" size="lg">
+                        Proceed to Checkout
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            </>
+          )}
         </div>
-      </div>
 
-      {/* Stock Error Dialog */}
-      <Dialog open={isStockErrorOpen} onOpenChange={setIsStockErrorOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle className="text-red-800">
-              Stock Limit Exceeded
-            </DialogTitle>
-          </DialogHeader>
-          <div className="py-4">
-            <p>You cannot add more items than are available in stock.</p>
-          </div>
-          <DialogFooter>
-            <Button
-              onClick={() => setIsStockErrorOpen(false)}
-              className="bg-red-800 hover:bg-red-800/80"
-            >
-              OK
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Discount Prompt Dialog */}
-      <Dialog
-        open={isDiscountPromptOpen}
-        onOpenChange={setIsDiscountPromptOpen}
-      >
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle className="text-red-800">Apply Discount?</DialogTitle>
-          </DialogHeader>
-          <div className="py-4">
-            <p>Would you like to apply a discount to this purchase?</p>
-          </div>
-          <DialogFooter>
-            <Button
-              onClick={() => handleDiscountPromptResponse(false)}
-              variant="outline"
-            >
-              No Discount
-            </Button>
-            <Button
-              onClick={() => handleDiscountPromptResponse(true)}
-              className="bg-red-800 hover:bg-red-800/80"
-            >
-              Apply Discount
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Discount Input Dialog */}
-      <Dialog open={isDiscountInputOpen} onOpenChange={setIsDiscountInputOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle className="text-red-800">
-              Enter Discount Percentage
-            </DialogTitle>
-          </DialogHeader>
-          <div className="py-4 space-y-2">
-            <Label htmlFor="discount">Discount (%)</Label>
-            <div className="flex items-center gap-2">
-              <Input
-                id="discount"
-                type="number"
-                value={discount}
-                onChange={(e) => setDiscount(e.target.value)}
-                placeholder="e.g. 10"
-                className="border-red-800 focus:ring-red-800"
-                min={0}
-                max={100}
-                step={1}
-              />
-              <span className="text-lg font-medium text-gray-600">%</span>
+        {/* Stock Error Dialog */}
+        <Dialog open={isStockErrorOpen} onOpenChange={setIsStockErrorOpen}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle className="text-red-800">
+                Stock Limit Exceeded
+              </DialogTitle>
+            </DialogHeader>
+            <div className="py-4">
+              <p>You cannot add more items than are available in stock.</p>
             </div>
-          </div>
-          <DialogFooter>
-            <Button
-              onClick={handleDiscountSubmit}
-              className="bg-red-800 hover:bg-red-800/80"
-            >
-              Apply Discount
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            <DialogFooter>
+              <Button
+                onClick={() => setIsStockErrorOpen(false)}
+                className="bg-red-800 hover:bg-red-800/80"
+              >
+                OK
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
-      {/* Receipt Modal Dialog */}
-      <Dialog open={isReceiptModalOpen} onOpenChange={setIsReceiptModalOpen}>
-        <DialogContent className="sm:max-w-[500px] p-0">
-          <DialogHeader className="px-4 pt-2 print:hidden">
-            <DialogTitle className="text-red-800">Receipt</DialogTitle>
-          </DialogHeader>
-          <div className="p-4 print:p-0 print-content ">
-            <Receipt
-              cart={cart}
-              discount={discountAmount.toString()}
-              totalBill={totalBill}
-              discountedTotal={discountedTotal}
-              invoiceNumber={completedSale?.invoiceNumber}
-              paymentMethod={completedSale?.paymentMethod ?? paymentMethod}
-            />
-          </div>
-          <DialogFooter className="px-6 pb-6 print:hidden">
-            <Button
-              onClick={() => setIsReceiptModalOpen(false)}
-              variant="outline"
-            >
-              Close
-            </Button>
-            <Button
-              onClick={handlePrint}
-              className="bg-red-800 hover:bg-red-800/80"
-              disabled={isProcessing}
-            >
-              <Printer className="mr-2 h-4 w-4" />
-              {isProcessing ? "Processing..." : "Print Bill"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        {/* Discount Prompt Dialog */}
+        <Dialog
+          open={isDiscountPromptOpen}
+          onOpenChange={setIsDiscountPromptOpen}
+        >
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle className="text-red-800">Apply Discount?</DialogTitle>
+            </DialogHeader>
+            <div className="py-4">
+              <p>Would you like to apply a discount to this purchase?</p>
+            </div>
+            <DialogFooter>
+              <Button
+                onClick={() => handleDiscountPromptResponse(false)}
+                variant="outline"
+              >
+                No Discount
+              </Button>
+              <Button
+                onClick={() => handleDiscountPromptResponse(true)}
+                className="bg-red-800 hover:bg-red-800/80"
+              >
+                Apply Discount
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
-      <style jsx global>{`
+        {/* Discount Input Dialog */}
+        <Dialog open={isDiscountInputOpen} onOpenChange={setIsDiscountInputOpen}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle className="text-red-800">
+                Enter Discount Percentage
+              </DialogTitle>
+            </DialogHeader>
+            <div className="py-4 space-y-2">
+              <Label htmlFor="discount">Discount (%)</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  id="discount"
+                  type="number"
+                  value={discount}
+                  onChange={(e) => setDiscount(e.target.value)}
+                  placeholder="e.g. 10"
+                  className="border-red-800 focus:ring-red-800"
+                  min={0}
+                  max={100}
+                  step="any"
+                />
+                <span className="text-lg font-medium text-gray-600">%</span>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                onClick={handleDiscountSubmit}
+                className="bg-red-800 hover:bg-red-800/80"
+              >
+                Apply Discount
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Receipt Modal Dialog */}
+        <Dialog open={isReceiptModalOpen} onOpenChange={setIsReceiptModalOpen}>
+          <DialogContent className="sm:max-w-[500px] p-0">
+            <DialogHeader className="px-4 pt-2 print:hidden">
+              <DialogTitle className="text-red-800">Receipt</DialogTitle>
+            </DialogHeader>
+            <div className="p-4 print:p-0 print-content" id="receipt-print-area">
+              <Receipt
+                cart={cart}
+                discount={discountAmount.toString()}
+                totalBill={totalBill}
+                discountedTotal={discountedTotal}
+                invoiceNumber={completedSale?.invoiceNumber}
+                paymentMethod={completedSale?.paymentMethod ?? paymentMethod}
+              />
+            </div>
+            <DialogFooter className="px-6 pb-6 print:hidden">
+              <Button
+                onClick={() => setIsReceiptModalOpen(false)}
+                variant="outline"
+              >
+                Close
+              </Button>
+              <Button
+                onClick={handlePrint}
+                className="bg-red-800 hover:bg-red-800/80"
+                disabled={isProcessing}
+              >
+                <Printer className="mr-2 h-4 w-4" />
+                {isProcessing ? "Processing..." : "Print Bill"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <style jsx global>{`
         @media print {
           @page {
             size: 80mm auto;
             margin: 0;
           }
 
-          body > *:not(.print-content) {
-            display: none !important;
+          /* Hide everything by default */
+          body {
+            visibility: hidden !important;
+            background: white !important;
           }
 
-          .print-content {
-            display: block !important;
+          /* Show the receipt area and its ancestors sparingly */
+          #receipt-print-area,
+          #receipt-print-area * {
+            visibility: visible !important;
+          }
+
+          /* Position the receipt at the top left of the actual paper */
+          #receipt-print-area {
             position: absolute !important;
             left: 0 !important;
             top: 0 !important;
             width: 80mm !important;
             margin: 0 !important;
             padding: 0 !important;
-            font-size: 16px !important; /* Increase the font size */
+            z-index: 99999 !important;
+            border: none !important;
+            background: white !important;
           }
 
-          .print\\:hidden {
-            display: none !important;
-          }
-
-          * {
-            background-color: white !important;
-            -webkit-print-color-adjust: exact !important;
-            color-adjust: exact !important;
-          }
-
+          /* Force ancestors to be invisible but background-less */
+          div[data-radix-portal],
+          div[data-radix-portal] *,
           [role="dialog"] {
+            visibility: visible !important;
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
             position: absolute !important;
-            padding: 0 !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 80mm !important;
+            transform: none !important;
             margin: 0 !important;
-            border: 0 !important;
+            padding: 0 !important;
+          }
+
+          /* Hide the semi-transparent black overlay and modal shadows */
+          div[class*="fixed inset-0"],
+          .shadcn-dialog-overlay,
+          [data-state="open"] {
+            display: none !important;
+            visibility: hidden !important;
             background: none !important;
             box-shadow: none !important;
           }
 
-          /* Customize specific elements in the receipt */
-          .print-content h1,
-          .print-content h2,
-          .print-content p {
-            font-size: 20px !important; /* You can customize specific headings here */
+          /* Hide UI elements */
+          .print\:hidden {
+            display: none !important;
           }
 
-          .print-content .receipt-item {
-            font-size: 20px !important; /* Customize font size for receipt items */
+          /* Ensure text is sharp for thermal printers */
+          * {
+            -webkit-print-color-adjust: exact !important;
+            color-adjust: exact !important;
+            box-shadow: none !important;
+            text-shadow: none !important;
           }
         }
       `}</style>
+      </div>
     </div>
   );
 };
 
 export default SalesPage;
+

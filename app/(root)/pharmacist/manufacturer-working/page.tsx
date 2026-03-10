@@ -20,10 +20,18 @@ import {
   MapPin,
   Mail,
   Eye,
-  
+
   Banknote,
+  Trash2,
 } from "lucide-react";
+import { toast } from "sonner";
+import axios from "axios";
+import { useAuth } from "@/app/providers/AuthProvider";
 import { Button } from "@/components/ui/button";
+import {
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import ManufacturerModal from "./Modal";
 
@@ -62,6 +70,10 @@ const Manufacturer = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedManufacturer, setSelectedManufacturer] = useState<ManufacturerRow | null>(null);
   const [viewManufacturer, setViewManufacturer] = useState<ManufacturerRaw | null>(null);
+  const [itemToDelete, setItemToDelete] = useState<ManufacturerRow | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const { user } = useAuth();
+  const accessToken = user?.access_token;
 
   const fetchManufacturers = async () => {
     setLoading(true);
@@ -92,6 +104,7 @@ const Manufacturer = () => {
       }));
 
       setManufacturers(mappedData);
+      setManufacturersRaw(manufacturersArray);
     } catch (error) {
       console.error("Error fetching manufacturers:", error);
     } finally {
@@ -102,6 +115,36 @@ const Manufacturer = () => {
   useEffect(() => {
     fetchManufacturers();
   }, []);
+
+  const handleDelete = async () => {
+    if (!itemToDelete) return;
+    setIsDeleting(true);
+    try {
+      await axios.delete(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/manufacturer/${itemToDelete.id}`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+      toast.success("Manufacturer deleted successfully");
+      fetchManufacturers();
+      setItemToDelete(null);
+    } catch (error: any) {
+      console.error("Error deleting manufacturer:", error);
+      const errorMessage =
+        (Array.isArray(error.response?.data?.message)
+          ? error.response.data.message[0]
+          : error.response?.data?.message) || "Failed to delete manufacturer";
+
+      toast.error(errorMessage, {
+        duration: 5000,
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   const columns = [
     {
@@ -158,15 +201,28 @@ const Manufacturer = () => {
       cell: ({ row }: any) => {
         const raw = manufacturersRaw.find((m) => m.id === row.original.id || m.companyName === row.original.name);
         return (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-red-700 hover:text-red-900 hover:bg-red-50"
-            onClick={() => raw && setViewManufacturer(raw)}
-          >
-            <Eye className="h-4 w-4 mr-2" />
-            View
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-red-700 hover:text-red-900 hover:bg-red-50"
+              onClick={() => raw && setViewManufacturer(raw)}
+            >
+              <Eye className="h-4 w-4 mr-2" />
+              View
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-red-600 hover:text-red-800 hover:bg-red-50"
+              onClick={(e) => {
+                e.stopPropagation();
+                setItemToDelete(row.original);
+              }}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
         );
       },
     },
@@ -304,6 +360,42 @@ const Manufacturer = () => {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={!!itemToDelete} onOpenChange={(open) => !open && setItemToDelete(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-red-800">Delete Manufacturer?</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete <strong>{itemToDelete?.name}</strong>? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setItemToDelete(null)}
+              disabled={isDeleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={isDeleting}
+              className="bg-red-700 hover:bg-red-800"
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                "Delete Manufacturer"
+              )}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </motion.div>
