@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { format } from "date-fns";
 import Barcode from "react-barcode";
 
@@ -37,10 +38,14 @@ export function Receipt({
   invoiceNumber,
   paymentMethod,
 }: ReceiptProps) {
-  const orderNumber = invoiceNumber ?? Math.floor(Math.random() * 1000000000)
+  const randomId = useMemo(() => Math.floor(Math.random() * 1000000000)
     .toString()
-    .padStart(11, "0");
-  const now = new Date();
+    .padStart(11, "0"), []);
+
+  const orderNumber = invoiceNumber ?? randomId;
+
+  const now = useMemo(() => new Date(), []);
+
   const paymentLabel = paymentMethod ? (PAYMENT_LABELS[String(paymentMethod)] ?? String(paymentMethod)) : "Cash";
 
   return (
@@ -185,6 +190,25 @@ export function Receipt({
             <span>Rs 0.00</span>
           </div>
         )}
+      </div>
+
+      {/* Footer in Urdu */}
+      <div
+        style={{
+          marginTop: "2.5rem",
+          paddingTop: "1rem",
+          borderTop: "1px solid black",
+          textAlign: "center",
+          direction: "rtl",
+          fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+        }}
+      >
+        <p style={{ margin: "4px 0", fontSize: "16px", fontWeight: "bold" }}>
+          ادویات ڈاکٹر کے مشورے سے استعمال کریں۔
+        </p>
+        <p style={{ margin: "6px 0", fontSize: "13px" }}>
+          گاہک میڈیکل اسٹور کے خلاف قانونی چارہ جوئی کا حق نہیں رکھتا۔
+        </p>
       </div>
     </div>
   );

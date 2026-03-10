@@ -709,7 +709,7 @@ const SalesPage = () => {
           <DialogHeader className="px-4 pt-2 print:hidden">
             <DialogTitle className="text-red-800">Receipt</DialogTitle>
           </DialogHeader>
-          <div className="p-4 print:p-0 print-content ">
+          <div className="p-4 print:p-0 print-content" id="receipt-print-area">
             <Receipt
               cart={cart}
               discount={discountAmount.toString()}
@@ -741,53 +741,62 @@ const SalesPage = () => {
       <style jsx global>{`
         @media print {
           @page {
-            size: 80mm auto;
+            size: 120mm auto;
             margin: 0;
           }
 
-          body > *:not(.print-content) {
-            display: none !important;
+          /* Hide everything by default */
+          body {
+            visibility: hidden !important;
+            background: white !important;
           }
 
-          .print-content {
-            display: block !important;
+          /* Show the receipt area and its ancestors */
+          #receipt-print-area,
+          #receipt-print-area * {
+            visibility: visible !important;
+          }
+
+          /* Position the receipt at the top left of the actual paper */
+          #receipt-print-area {
             position: absolute !important;
             left: 0 !important;
             top: 0 !important;
-            width: 80mm !important;
+            width: 120mm !important;
             margin: 0 !important;
             padding: 0 !important;
-            font-size: 16px !important; /* Increase the font size */
+            z-index: 99999 !important;
           }
 
-          .print\\:hidden {
+          /* Force ancestors to be visible but background-less */
+          div[data-radix-portal],
+          div[data-radix-portal] *,
+          [role="dialog"] {
+            visibility: visible !important;
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            transform: none !important;
+          }
+
+          /* Hide the semi-transparent black overlay */
+          div[class*="fixed inset-0"] {
+            display: none !important;
+            visibility: hidden !important;
+          }
+
+          /* Hide UI elements */
+          .print\:hidden {
             display: none !important;
           }
 
           * {
-            background-color: white !important;
             -webkit-print-color-adjust: exact !important;
             color-adjust: exact !important;
-          }
-
-          [role="dialog"] {
-            position: absolute !important;
-            padding: 0 !important;
-            margin: 0 !important;
-            border: 0 !important;
-            background: none !important;
-            box-shadow: none !important;
-          }
-
-          /* Customize specific elements in the receipt */
-          .print-content h1,
-          .print-content h2,
-          .print-content p {
-            font-size: 20px !important; /* You can customize specific headings here */
-          }
-
-          .print-content .receipt-item {
-            font-size: 20px !important; /* Customize font size for receipt items */
           }
         }
       `}</style>

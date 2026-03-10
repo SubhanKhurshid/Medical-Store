@@ -82,10 +82,10 @@ export default function InventoryManagement() {
       itemType === ItemType.MEDICINE
         ? medicineSchema
         : itemType === ItemType.INJECTION
-        ? injectionSchema
-        : itemType === ItemType.SURGERY
-        ? surgeryItemSchema
-        : generalItemSchema
+          ? injectionSchema
+          : itemType === ItemType.SURGERY
+            ? surgeryItemSchema
+            : generalItemSchema
     ),
     defaultValues: {
       name: "",
@@ -319,7 +319,7 @@ export default function InventoryManagement() {
                     type="number"
                     min={0}
                     max={100}
-                    step={1}
+                    step="any"
                     className="text-lg p-4"
                     {...form.register("manufacturerDiscount", {
                       valueAsNumber: true,
