@@ -17,6 +17,7 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useMediaQuery } from "react-responsive";
 import { motion } from "framer-motion";
+import Loading from "@/components/shared/Loading";
 
 type WeeklySalesData = {
   day: string;
@@ -233,20 +234,20 @@ function SalesChart({ data, period }: SalesChartProps) {
           {period === "weekly"
             ? "Weekly Sales"
             : period === "monthly"
-            ? "Monthly Sales"
-            : period === "daily"
-            ? "Daily Sales"
-            : "Yearly Sales"}
+              ? "Monthly Sales"
+              : period === "daily"
+                ? "Daily Sales"
+                : "Yearly Sales"}
         </CardTitle>
         <CardDescription className="text-sm sm:text-base">
           Overview of sales for the past{" "}
           {period === "weekly"
             ? "week"
             : period === "monthly"
-            ? "year"
-            : period === "daily"
-            ? "day"
-            : "year"}
+              ? "year"
+              : period === "daily"
+                ? "day"
+                : "year"}
         </CardDescription>
       </CardHeader>
       <CardContent className="h-[250px] sm:h-[300px] md:h-[400px] p-2 sm:p-4 md:p-6">
@@ -261,6 +262,7 @@ function SalesChart({ data, period }: SalesChartProps) {
 export default function SalesHistory() {
   const [tab, setTab] = useState("weekly");
   const [salesData, setSalesData] = useState<ChartData>([]);
+  const [loading, setLoading] = useState(true);
 
   const formatMonthlyData = (data: any[]): MonthlySalesData[] => {
     const months = [
@@ -287,9 +289,9 @@ export default function SalesHistory() {
         const existingWeek =
           monthData.weekSales && Array.isArray(monthData.weekSales)
             ? monthData.weekSales.find(
-                (w: { week: string; totalSales: number }) =>
-                  w.week === `Week ${weekNumber}`
-              )
+              (w: { week: string; totalSales: number }) =>
+                w.week === `Week ${weekNumber}`
+            )
             : null;
         return existingWeek && typeof existingWeek.totalSales === "number"
           ? existingWeek
@@ -377,8 +379,10 @@ export default function SalesHistory() {
   };
 
   const fetchData = useCallback(async () => {
+    setLoading(true);
     const formattedSales = await fetchAndFormatSalesData(tab);
     setSalesData(formattedSales);
+    setLoading(false);
   }, [tab]); // Only re-run when `tab` changes
 
   useEffect(() => {
@@ -421,18 +425,26 @@ export default function SalesHistory() {
               Yearly
             </TabsTrigger>
           </TabsList>
-          <TabsContent value="daily" className="mt-0">
-            <SalesChart data={salesData} period="daily" />
-          </TabsContent>
-          <TabsContent value="weekly" className="mt-0">
-            <SalesChart data={salesData} period="weekly" />
-          </TabsContent>
-          <TabsContent value="monthly" className="mt-0">
-            <SalesChart data={salesData} period="monthly" />
-          </TabsContent>
-          <TabsContent value="yearly" className="mt-0">
-            <SalesChart data={salesData} period="yearly" />
-          </TabsContent>
+          {loading ? (
+            <div className="py-20 bg-white rounded-lg shadow-sm">
+              <Loading />
+            </div>
+          ) : (
+            <>
+              <TabsContent value="daily" className="mt-0">
+                <SalesChart data={salesData} period="daily" />
+              </TabsContent>
+              <TabsContent value="weekly" className="mt-0">
+                <SalesChart data={salesData} period="weekly" />
+              </TabsContent>
+              <TabsContent value="monthly" className="mt-0">
+                <SalesChart data={salesData} period="monthly" />
+              </TabsContent>
+              <TabsContent value="yearly" className="mt-0">
+                <SalesChart data={salesData} period="yearly" />
+              </TabsContent>
+            </>
+          )}
         </Tabs>
         <div className="mt-4 sm:mt-6 text-center">
           {tab === "daily" && totalSales === 0 ? (

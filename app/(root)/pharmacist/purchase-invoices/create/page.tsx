@@ -229,8 +229,8 @@ export default function CreatePurchaseInvoicePage() {
                                                             type="number"
                                                             min={0}
                                                             max={100}
-                                                            step={1}
-                                                            placeholder="e.g. 10"
+                                                            step="any"
+                                                            placeholder="e.g. 10.5"
                                                             value={item.discount}
                                                             onChange={(e) => handleItemChange(index, "discount", e.target.value)}
                                                             className="w-full text-right text-red-600"

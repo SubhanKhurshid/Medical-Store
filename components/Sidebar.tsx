@@ -81,7 +81,7 @@ const Sidebar = () => {
       },
       { href: "/pharmacist/sales", label: "Sales" },
       { href: "/pharmacist/sales-history", label: "Sales History" },
-      { href: "/pharmacist/history", label: "View Sales" },
+      { href: "/pharmacist/history", label: "View Sales / Refund Sale" },
     ],
   };
 

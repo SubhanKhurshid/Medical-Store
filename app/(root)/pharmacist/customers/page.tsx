@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Search, PlusCircle, Loader2, User, Phone, Eye, Pencil, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import CustomerModal from "./Modal";
+import Loading from "@/components/shared/Loading";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/providers/AuthProvider";
 
@@ -170,9 +171,9 @@ const CustomersPage = () => {
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
                                 exit={{ opacity: 0 }}
-                                className="flex justify-center items-center py-20"
+                                className="py-20"
                             >
-                                <Loader2 className="animate-spin h-8 w-8 text-red-600" />
+                                <Loading />
                             </motion.div>
                         ) : (
                             <motion.div

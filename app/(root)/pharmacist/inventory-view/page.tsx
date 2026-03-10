@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { motion } from "framer-motion";
 import { Search, Filter, Loader } from "lucide-react";
+import Loading from "@/components/shared/Loading";
 import {
   Select,
   SelectContent,
@@ -85,8 +86,8 @@ const Inventory = () => {
         <CardContent className="mt-5">
           <div className="space-y-6">
             {loading ? (
-              <div className="flex justify-center items-center">
-                <Loader className="animate-spin h-5 w-5 text-red-800" />
+              <div className="py-20">
+                <Loading />
               </div>
             ) : (
               <>
@@ -97,7 +98,7 @@ const Inventory = () => {
                       placeholder="Search items..."
                       value={search}
                       onChange={(e) => setSearch(e.target.value)}
-                        className="pl-10 pr-4 py-2 bg-white border border-gray-300 rounded-md text-lg"
+                      className="pl-10 pr-4 py-2 bg-white border border-gray-300 rounded-md text-lg"
                     />
                   </div>
                   <div className="relative">
@@ -109,11 +110,11 @@ const Inventory = () => {
                         <SelectValue placeholder="Filter by type" className="pl-10 pr-4 py-2" />
                       </SelectTrigger>
                       <SelectContent>
-                          <SelectItem className="text-lg" value="all">All types</SelectItem>
-                          <SelectItem className="text-lg" value="MEDICINE">Medicine</SelectItem>
-                          <SelectItem className="text-lg" value="SURGERY">Surgery</SelectItem>
-                          <SelectItem className="text-lg" value="INJECTION">Injection</SelectItem>
-                          <SelectItem className="text-lg" value="GENERAL">General</SelectItem>
+                        <SelectItem className="text-lg" value="all">All types</SelectItem>
+                        <SelectItem className="text-lg" value="MEDICINE">Medicine</SelectItem>
+                        <SelectItem className="text-lg" value="SURGERY">Surgery</SelectItem>
+                        <SelectItem className="text-lg" value="INJECTION">Injection</SelectItem>
+                        <SelectItem className="text-lg" value="GENERAL">General</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

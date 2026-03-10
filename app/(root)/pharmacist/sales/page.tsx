@@ -36,6 +36,7 @@ import { useAuth } from "@/app/providers/AuthProvider";
 import { useInventory } from "@/app/context/InventoryContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { Receipt } from "@/components/Receipt";
+import Loading from "@/components/shared/Loading";
 
 interface Product {
   id: string;
@@ -70,8 +71,10 @@ const SalesPage = () => {
   const accessToken = user?.access_token;
   const { refetchInventory } = useInventory();
   const [isProcessing, setIsProcessing] = useState(false); // New state for processing
+  const [loading, setLoading] = useState(true);
 
   const fetchProducts = async () => {
+    setLoading(true);
     try {
       const response = await axios.get(
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist`,
@@ -91,6 +94,8 @@ const SalesPage = () => {
     } catch (error) {
       console.error("Failed to fetch products", error);
       toast.error("Failed to fetch products");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -353,253 +358,261 @@ const SalesPage = () => {
           </Button>
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="bg-white p-6 rounded-lg shadow-lg"
-          >
-            <h2 className="text-3xl font-semibold mb-6 text-red-800">
-              Product Search
-            </h2>
-            <div className="flex gap-4 mb-6">
-              <div className="relative flex-grow">
-                <Input
-                  type="text"
-                  placeholder="Search product by name or code"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 border-red-800 text-lg"
-                />
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-red-800" />
-              </div>
-              <div className="relative flex gap-2 flex-shrink-0">
-                <Input
-                  type="text"
-                  placeholder="Scan barcode"
-                  value={barcodeInput}
-                  onChange={(e) => setBarcodeInput(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && addByBarcode()}
-                  className="pl-10 border-red-800 focus:ring-red-800 w-48"
-                />
-                <Barcode className="absolute left-3 top-1/2 transform -translate-y-1/2 text-red-800 pointer-events-none" />
-                <Button
-                  type="button"
-                  onClick={addByBarcode}
-                  className="bg-red-800 hover:bg-red-900"
-                >
-                  Add
-                </Button>
-              </div>
+          {loading ? (
+            <div className="lg:col-span-2 py-20 bg-white rounded-lg shadow-lg">
+              <Loading />
             </div>
-            <div className="space-y-4 max-h-[calc(100vh-300px)] overflow-y-auto">
-              <AnimatePresence>
-                {searchResults.length === 0 ? (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="flex flex-col items-center justify-center py-12 px-4"
-                  >
-                    <div className="h-20 w-20 rounded-full bg-red-50 flex items-center justify-center mb-4">
-                      <Search className="h-10 w-10 text-red-700" />
-                    </div>
-                    <h3 className="text-lg font-medium text-gray-900 mb-1">
-                      No items found
-                    </h3>
-                    <p className="text-sm text-gray-500">
-                      Try adjusting your search or filter to find what you're
-                      looking for.
-                    </p>
-                  </motion.div>
-                ) : (
-                  searchResults.map((product) => (
-                    <motion.div
-                      key={product.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -20 }}
-                      transition={{ duration: 0.3 }}
-                    >
-                      <Card key={product.id}>
-                        <CardContent className="flex items-center p-4">
-                          <div className="w-16 h-16 flex-shrink-0 flex items-center justify-center">
-                            {product.imageUrl ? (
-                              <img
-                                src={product.imageUrl}
-                                alt={product.name}
-                                className="w-16 h-16 object-cover rounded-md"
-                              />
-                            ) : (
-                              getProductIcon(product.type)
-                            )}
-                          </div>
-                          <div className="flex-grow mx-6">
-                            <h3 className="font-semibold text-lg">
-                              {product.name}
-                            </h3>
-                            <p className="text-sm text-gray-600">
-                              Price: Rs {product.price}
-                            </p>
-                            <p className="text-sm text-gray-600">
-                              Stock: {product.quantity}
-                            </p>
-                          </div>
-                          <Button
-                            onClick={() => addToCart(product)}
-                            className="bg-red-800 flex-shrink-0"
-                          >
-                            <Plus className="h-4 w-4" />
-                          </Button>
-                        </CardContent>
-                      </Card>
-                    </motion.div>
-                  ))
-                )}
-              </AnimatePresence>
-            </div>
-          </motion.div>
-
-          {/* Cart Section */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-            className="bg-white p-6 rounded-lg shadow-lg"
-          >
-            <h2 className="text-3xl font-semibold mb-6 text-red-800 flex items-center">
-              <ShoppingCart className="mr-2" /> Cart
-            </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4 relative">
-              <div>
-                <Label className="text-gray-600">Payment method</Label>
-                <select
-                  value={paymentMethod}
-                  onChange={(e) => setPaymentMethod(e.target.value as "CASH" | "CARD" | "ONLINE" | "DONATION" | "CREDIT")}
-                  className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-gray-900 focus:border-red-800 focus:ring-red-800"
-                >
-                  <option value="CASH">Cash</option>
-                  <option value="CARD">Card</option>
-                  <option value="ONLINE">Online</option>
-                  <option value="DONATION">Donation</option>
-                  <option value="CREDIT">Credit</option>
-                </select>
-              </div>
-              {paymentMethod === "CREDIT" && (
-                <div className="sm:col-span-2 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
-                  Select a customer (by phone) so the sale is added to their credit balance.
-                </div>
-              )}
-              <div>
-                <Label className="text-gray-600">Phone (search customer)</Label>
-                <Input
-                  placeholder="Phone number"
-                  value={customerPhone}
-                  onChange={async (e) => {
-                    const val = e.target.value;
-                    setCustomerPhone(val);
-                    setCustomerId(undefined);
-                    if (val.length >= 7) {
-                      try {
-                        const { data } = await axios.get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/customer?phone=${val}`, { headers: { Authorization: `Bearer ${accessToken}` } });
-                        if (data && data.length > 0) {
-                          const customer = data.find((c: any) => c.phone === val);
-                          if (customer) {
-                            setCustomerId(customer.id);
-                            setCustomerName(customer.name);
-                            toast.success(`Customer ${customer.name} selected automatically`);
-                          }
-                        }
-                      } catch (err) { console.error(err); }
-                    }
-                  }}
-                  className="mt-1 border-gray-300 focus:ring-red-800"
-                />
-              </div>
-              <div>
-                <Label className="text-gray-600">Customer name {customerId && <span className="text-red-700 text-xs">(Linked)</span>}</Label>
-                <Input
-                  placeholder="Customer name"
-                  value={customerName}
-                  onChange={(e) => setCustomerName(e.target.value)}
-                  className="mt-1 border-gray-300 focus:ring-red-800"
-                  readOnly={!!customerId}
-                />
-              </div>
-            </div>
-            <div className="space-y-4 max-h-[calc(100vh-400px)] overflow-y-auto mb-4">
-              <AnimatePresence>
-                {cart.map((item) => (
-                  <motion.div
-                    key={item.id}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: 20 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <Card className="hover:shadow-lg transition-shadow duration-200">
-                      <CardContent className="flex justify-between items-center p-4">
-                        <div>
-                          <h3 className="font-semibold text-gray-800">
-                            {item.name}
-                          </h3>
-                          <p className="text-sm text-gray-600">
-                            Price: Rs {item.price} each
-                          </p>
-                          <p className="text-sm text-gray-600">
-                            Total: Rs {(item.price * item.quantity).toFixed(2)}
-                          </p>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Button
-                            size="icon"
-                            onClick={() => removeFromCart(item.id)}
-                            className="bg-red-500 hover:bg-red-600 transition-colors duration-200"
-                          >
-                            <Minus className="h-4 w-4" />
-                          </Button>
-                          <Input
-                            type="number"
-                            value={item.quantity}
-                            onChange={(e) =>
-                              updateCartItemQuantity(
-                                item.id,
-                                parseInt(e.target.value)
-                              )
-                            }
-                            className="w-16 text-center border-red-800 focus:ring-red-800"
-                            min="1"
-                          />
-                          <Button
-                            size="icon"
-                            onClick={() => addToCart(item)}
-                            className="bg-red-800 hover:bg-red-800/80 transition-colors duration-200"
-                          >
-                            <Plus className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </motion.div>
-                ))}
-              </AnimatePresence>
-            </div>
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.4 }}
-              className="mt-6 bg-gray-100 p-4 rounded-lg"
-            >
-              <p className="text-xl font-semibold text-red-800">
-                Total: Rs {totalBill.toFixed(2)}
-              </p>
-              <Button
-                onClick={handleCheckout}
-                className="mt-4 text-lg w-full bg-red-800 hover:bg-red-800/80 transition-colors duration-200"
+          ) : (
+            <>
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+                className="bg-white p-6 rounded-lg shadow-lg"
               >
-                Proceed to Checkout
-              </Button>
-            </motion.div>
-          </motion.div>
+                <h2 className="text-3xl font-semibold mb-6 text-red-800">
+                  Product Search
+                </h2>
+                <div className="flex gap-4 mb-6">
+                  <div className="relative flex-grow">
+                    <Input
+                      type="text"
+                      placeholder="Search product by name or code"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10 border-red-800 text-lg"
+                    />
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-red-800" />
+                  </div>
+                  <div className="relative flex gap-2 flex-shrink-0">
+                    <Input
+                      type="text"
+                      placeholder="Scan barcode"
+                      value={barcodeInput}
+                      onChange={(e) => setBarcodeInput(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && addByBarcode()}
+                      className="pl-10 border-red-800 focus:ring-red-800 w-48"
+                    />
+                    <Barcode className="absolute left-3 top-1/2 transform -translate-y-1/2 text-red-800 pointer-events-none" />
+                    <Button
+                      type="button"
+                      onClick={addByBarcode}
+                      className="bg-red-800 hover:bg-red-900"
+                    >
+                      Add
+                    </Button>
+                  </div>
+                </div>
+                <div className="space-y-4 max-h-[calc(100vh-300px)] overflow-y-auto">
+                  <AnimatePresence>
+                    {searchResults.length === 0 ? (
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="flex flex-col items-center justify-center py-12 px-4"
+                      >
+                        <div className="h-20 w-20 rounded-full bg-red-50 flex items-center justify-center mb-4">
+                          <Search className="h-10 w-10 text-red-700" />
+                        </div>
+                        <h3 className="text-lg font-medium text-gray-900 mb-1">
+                          No items found
+                        </h3>
+                        <p className="text-sm text-gray-500">
+                          Try adjusting your search or filter to find what you're
+                          looking for.
+                        </p>
+                      </motion.div>
+                    ) : (
+                      searchResults.map((product) => (
+                        <motion.div
+                          key={product.id}
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -20 }}
+                          transition={{ duration: 0.3 }}
+                        >
+                          <Card key={product.id}>
+                            <CardContent className="flex items-center p-4">
+                              <div className="w-16 h-16 flex-shrink-0 flex items-center justify-center">
+                                {product.imageUrl ? (
+                                  <img
+                                    src={product.imageUrl}
+                                    alt={product.name}
+                                    className="w-16 h-16 object-cover rounded-md"
+                                  />
+                                ) : (
+                                  getProductIcon(product.type)
+                                )}
+                              </div>
+                              <div className="flex-grow mx-6">
+                                <h3 className="font-semibold text-lg">
+                                  {product.name}
+                                </h3>
+                                <p className="text-sm text-gray-600">
+                                  Price: Rs {product.price}
+                                </p>
+                                <p className="text-sm text-gray-600">
+                                  Stock: {product.quantity}
+                                </p>
+                              </div>
+                              <Button
+                                onClick={() => addToCart(product)}
+                                className="bg-red-800 flex-shrink-0"
+                              >
+                                <Plus className="h-4 w-4" />
+                              </Button>
+                            </CardContent>
+                          </Card>
+                        </motion.div>
+                      ))
+                    )}
+                  </AnimatePresence>
+                </div>
+              </motion.div>
+
+              {/* Cart Section */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.2 }}
+                className="bg-white p-6 rounded-lg shadow-lg"
+              >
+                <h2 className="text-3xl font-semibold mb-6 text-red-800 flex items-center">
+                  <ShoppingCart className="mr-2" /> Cart
+                </h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4 relative">
+                  <div>
+                    <Label className="text-gray-600">Payment method</Label>
+                    <select
+                      value={paymentMethod}
+                      onChange={(e) => setPaymentMethod(e.target.value as "CASH" | "CARD" | "ONLINE" | "DONATION" | "CREDIT")}
+                      className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-gray-900 focus:border-red-800 focus:ring-red-800"
+                    >
+                      <option value="CASH">Cash</option>
+                      <option value="CARD">Card</option>
+                      <option value="ONLINE">Online</option>
+                      <option value="DONATION">Donation</option>
+                      <option value="CREDIT">Credit</option>
+                    </select>
+                  </div>
+                  {paymentMethod === "CREDIT" && (
+                    <div className="sm:col-span-2 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+                      Select a customer (by phone) so the sale is added to their credit balance.
+                    </div>
+                  )}
+                  <div>
+                    <Label className="text-gray-600">Phone (search customer)</Label>
+                    <Input
+                      placeholder="Phone number"
+                      value={customerPhone}
+                      onChange={async (e) => {
+                        const val = e.target.value;
+                        setCustomerPhone(val);
+                        setCustomerId(undefined);
+                        if (val.length >= 7) {
+                          try {
+                            const { data } = await axios.get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/customer?phone=${val}`, { headers: { Authorization: `Bearer ${accessToken}` } });
+                            if (data && data.length > 0) {
+                              const customer = data.find((c: any) => c.phone === val);
+                              if (customer) {
+                                setCustomerId(customer.id);
+                                setCustomerName(customer.name);
+                                toast.success(`Customer ${customer.name} selected automatically`);
+                              }
+                            }
+                          } catch (err) { console.error(err); }
+                        }
+                      }}
+                      className="mt-1 border-gray-300 focus:ring-red-800"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-gray-600">Customer name {customerId && <span className="text-red-700 text-xs">(Linked)</span>}</Label>
+                    <Input
+                      placeholder="Customer name"
+                      value={customerName}
+                      onChange={(e) => setCustomerName(e.target.value)}
+                      className="mt-1 border-gray-300 focus:ring-red-800"
+                      readOnly={!!customerId}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-4 max-h-[calc(100vh-400px)] overflow-y-auto mb-4">
+                  <AnimatePresence>
+                    {cart.map((item) => (
+                      <motion.div
+                        key={item.id}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: 20 }}
+                        transition={{ duration: 0.3 }}
+                      >
+                        <Card className="hover:shadow-lg transition-shadow duration-200">
+                          <CardContent className="flex justify-between items-center p-4">
+                            <div>
+                              <h3 className="font-semibold text-gray-800">
+                                {item.name}
+                              </h3>
+                              <p className="text-sm text-gray-600">
+                                Price: Rs {item.price} each
+                              </p>
+                              <p className="text-sm text-gray-600">
+                                Total: Rs {(item.price * item.quantity).toFixed(2)}
+                              </p>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <Button
+                                size="icon"
+                                onClick={() => removeFromCart(item.id)}
+                                className="bg-red-500 hover:bg-red-600 transition-colors duration-200"
+                              >
+                                <Minus className="h-4 w-4" />
+                              </Button>
+                              <Input
+                                type="number"
+                                value={item.quantity}
+                                onChange={(e) =>
+                                  updateCartItemQuantity(
+                                    item.id,
+                                    parseInt(e.target.value)
+                                  )
+                                }
+                                className="w-16 text-center border-red-800 focus:ring-red-800"
+                                min="1"
+                              />
+                              <Button
+                                size="icon"
+                                onClick={() => addToCart(item)}
+                                className="bg-red-800 hover:bg-red-800/80 transition-colors duration-200"
+                              >
+                                <Plus className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </motion.div>
+                    ))}
+                  </AnimatePresence>
+                </div>
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.4 }}
+                  className="mt-6 bg-gray-100 p-4 rounded-lg"
+                >
+                  <p className="text-xl font-semibold text-red-800">
+                    Total: Rs {totalBill.toFixed(2)}
+                  </p>
+                  <Button
+                    onClick={handleCheckout}
+                    className="mt-4 text-lg w-full bg-red-800 hover:bg-red-800/80 transition-colors duration-200"
+                  >
+                    Proceed to Checkout
+                  </Button>
+                </motion.div>
+              </motion.div>
+            </>
+          )}
         </div>
       </div>
 
@@ -674,7 +687,7 @@ const SalesPage = () => {
                 className="border-red-800 focus:ring-red-800"
                 min={0}
                 max={100}
-                step={1}
+                step="any"
               />
               <span className="text-lg font-medium text-gray-600">%</span>
             </div>

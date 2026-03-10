@@ -9,6 +9,8 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -20,12 +22,13 @@ import {
   MapPin,
   Mail,
   Eye,
-  
+  Trash2,
   Banknote,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import ManufacturerModal from "./Modal";
+import Loading from "@/components/shared/Loading";
 
 interface ManufacturerRow {
   id: string;
@@ -62,6 +65,10 @@ const Manufacturer = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedManufacturer, setSelectedManufacturer] = useState<ManufacturerRow | null>(null);
   const [viewManufacturer, setViewManufacturer] = useState<ManufacturerRaw | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const fetchManufacturers = async () => {
     setLoading(true);
@@ -96,6 +103,34 @@ const Manufacturer = () => {
       console.error("Error fetching manufacturers:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteConfirmId) return;
+
+    setDeleting(true);
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/manufacturer/${deleteConfirmId}`,
+        {
+          method: "DELETE",
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to delete manufacturer");
+      }
+
+      setDeleteConfirmId(null);
+      setSuccessMessage("Manufacturer deleted successfully.");
+      fetchManufacturers();
+    } catch (error) {
+      console.error("Error deleting manufacturer:", error);
+      setDeleteConfirmId(null);
+      setErrorMessage("Failed to delete manufacturer. It might have linked records (like inventory items or purchase orders).");
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -158,15 +193,32 @@ const Manufacturer = () => {
       cell: ({ row }: any) => {
         const raw = manufacturersRaw.find((m) => m.id === row.original.id || m.companyName === row.original.name);
         return (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-red-700 hover:text-red-900 hover:bg-red-50"
-            onClick={() => raw && setViewManufacturer(raw)}
-          >
-            <Eye className="h-4 w-4 mr-2" />
-            View
-          </Button>
+          <div className="flex items-center space-x-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-red-700 hover:text-red-900 hover:bg-red-50"
+              onClick={(e) => {
+                e.stopPropagation();
+                setSelectedManufacturer(row.original);
+              }}
+            >
+              <Eye className="h-4 w-4 mr-2" />
+              View
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-red-600 hover:text-red-800 hover:bg-red-50"
+              onClick={(e) => {
+                e.stopPropagation();
+                setDeleteConfirmId(row.original.id);
+              }}
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete
+            </Button>
+          </div>
         );
       },
     },
@@ -214,9 +266,9 @@ const Manufacturer = () => {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="flex justify-center items-center py-20"
+                className="py-20"
               >
-                <Loader2 className="animate-spin h-8 w-8 text-red-600" />
+                <Loading />
               </motion.div>
             ) : (
               <motion.div
@@ -304,6 +356,94 @@ const Manufacturer = () => {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={!!deleteConfirmId}
+        onOpenChange={() => setDeleteConfirmId(null)}
+      >
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle className="text-red-800 flex items-center gap-2">
+              <Trash2 className="h-5 w-5" />
+              Confirm Deletion
+            </DialogTitle>
+            <DialogDescription className="text-xl mt-2 text-gray-400">
+              Are you sure you want to delete this manufacturer? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="mt-6 flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setDeleteConfirmId(null)}
+              className="text-xl"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={deleting}
+              className="bg-red-800 hover:bg-red-900 text-xl"
+            >
+              {deleting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                "Delete Manufacturer"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Error Message Dialog */}
+      <Dialog
+        open={!!errorMessage}
+        onOpenChange={() => setErrorMessage(null)}
+      >
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle className="text-red-800">Error</DialogTitle>
+            <DialogDescription className="text-xl mt-2">
+              {errorMessage}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="mt-4">
+            <Button
+              onClick={() => setErrorMessage(null)}
+              className="bg-red-800 hover:bg-red-900 text-xl"
+            >
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Success Message Dialog */}
+      <Dialog
+        open={!!successMessage}
+        onOpenChange={() => setSuccessMessage(null)}
+      >
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle className="text-green-700">Success</DialogTitle>
+            <DialogDescription className="text-xl mt-2">
+              {successMessage}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="mt-4">
+            <Button
+              onClick={() => setSuccessMessage(null)}
+              className="bg-green-700 hover:bg-green-800 text-xl"
+            >
+              Close
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </motion.div>

@@ -10,6 +10,7 @@ import { inventoryColumns } from "@/components/shared/columns";
 import { useInventory } from "@/app/context/InventoryContext";
 import { InventoryItem } from "@/app/context/InventoryContext";
 import PharmacyStats from "./pharmacy-stats";
+import Loading from "@/components/shared/Loading";
 
 function getMonthRange(monthOffset: number) {
   const d = new Date();
@@ -32,6 +33,7 @@ const PharmacistPage = () => {
   const [expiringCount, setExpiringCount] = useState(0);
   const [earnedThisMonth, setEarnedThisMonth] = useState(0);
   const [earnedLastMonth, setEarnedLastMonth] = useState(0);
+  const [loading, setLoading] = useState(true);
 
   const { user } = useAuth();
 
@@ -43,12 +45,14 @@ const PharmacistPage = () => {
 
   useEffect(() => {
     const fetchData = async () => {
+      setLoading(true);
       const lowStock = await getLowStockItems();
       const expiring = await getExpiringItems();
       setLowStockItems(lowStock);
       setExpiringItems(expiring);
       setLowStockCount(lowStock.length);
       setExpiringCount(expiring.length);
+      setLoading(false);
     };
     fetchData();
   }, []);
@@ -150,32 +154,38 @@ const PharmacistPage = () => {
         earnedLastMonth={earnedLastMonth}
       />
 
-      <div className="space-y-6">
-        <motion.div
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.5, delay: 0.2 }}
-        >
-          <Card className="p-4 shadow-md">
-            <h2 className="text-lg font-semibold mb-4 text-red-700">
-              Low Stock Items
-            </h2>
-            <DataTable columns={inventoryColumns} data={lowStockItems} />
-          </Card>
-        </motion.div>
-        <motion.div
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.5, delay: 0.2 }}
-        >
-          <Card className="p-4 shadow-md">
-            <h2 className="text-lg font-semibold mb-4 text-red-700">
-              Expiring Soon
-            </h2>
-            <DataTable columns={inventoryColumns} data={expiringItems} />
-          </Card>
-        </motion.div>
-      </div>
+      {loading ? (
+        <div className="py-20">
+          <Loading />
+        </div>
+      ) : (
+        <div className="space-y-6">
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+          >
+            <Card className="p-4 shadow-md">
+              <h2 className="text-lg font-semibold mb-4 text-red-700">
+                Low Stock Items
+              </h2>
+              <DataTable columns={inventoryColumns} data={lowStockItems} />
+            </Card>
+          </motion.div>
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+          >
+            <Card className="p-4 shadow-md">
+              <h2 className="text-lg font-semibold mb-4 text-red-700">
+                Expiring Soon
+              </h2>
+              <DataTable columns={inventoryColumns} data={expiringItems} />
+            </Card>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 };

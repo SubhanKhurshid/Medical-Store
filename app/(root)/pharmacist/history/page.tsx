@@ -19,6 +19,7 @@ import { useAuth } from "@/app/providers/AuthProvider";
 import { useInventory } from "@/app/context/InventoryContext";
 import axios from "axios";
 import { toast } from "sonner";
+import Loading from "@/components/shared/Loading";
 
 const PAYMENT_LABELS: Record<string, string> = {
   CASH: "Cash",
@@ -285,18 +286,24 @@ const SalesTable = () => {
           </div>
 
           <AnimatePresence>
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-              className="rounded-lg border border-gray-200 bg-white overflow-hidden"
-            >
-              <DataTable
-                columns={columns}
-                data={Array.isArray(filteredSales) ? filteredSales : []}
-                disableRowClick={true}
-              />
-            </motion.div>
+            {loading ? (
+              <div className="py-20">
+                <Loading />
+              </div>
+            ) : (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+                className="rounded-lg border border-gray-200 bg-white overflow-hidden"
+              >
+                <DataTable
+                  columns={columns}
+                  data={Array.isArray(filteredSales) ? filteredSales : []}
+                  disableRowClick={true}
+                />
+              </motion.div>
+            )}
           </AnimatePresence>
         </CardContent>
       </Card>
