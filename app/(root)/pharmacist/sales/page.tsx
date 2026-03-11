@@ -601,7 +601,7 @@ const SalesPage = () => {
                                       type="number"
                                       value={item.quantity}
                                       onChange={(e) => updateCartItemQuantity(item.id, parseInt(e.target.value) || 1)}
-                                      className="w-12 h-8 text-center text-sm border-gray-200 focus:ring-red-500/20"
+                                      className="w-20 min-w-[4rem] h-8 text-center text-sm border-gray-200 focus:ring-red-500/20 tabular-nums"
                                       min={1}
                                     />
                                     <Button size="icon" className="h-8 w-8 bg-red-800 hover:bg-red-700" onClick={() => addToCart(item)}>
@@ -715,13 +715,13 @@ const SalesPage = () => {
           </DialogContent>
         </Dialog>
 
-        {/* Receipt Modal Dialog */}
+        {/* Receipt Modal Dialog – no modal chrome: transparent container, receipt is the only white surface */}
         <Dialog open={isReceiptModalOpen} onOpenChange={setIsReceiptModalOpen}>
-          <DialogContent className="sm:max-w-[500px] p-0">
-            <DialogHeader className="px-4 pt-2 print:hidden">
-              <DialogTitle className="text-red-800">Receipt</DialogTitle>
+          <DialogContent className="sm:max-w-[500px] w-auto max-w-[95vw] p-0 border-0 bg-transparent shadow-none rounded-none gap-0 overflow-visible">
+            <DialogHeader className="px-0 pt-0 pb-1 print:hidden">
+              <DialogTitle className="text-red-800 text-base">Receipt</DialogTitle>
             </DialogHeader>
-            <div className="p-4 print:p-0 print-content" id="receipt-print-area">
+            <div className="print:p-0 print-content" id="receipt-print-area">
               <Receipt
                 cart={cart}
                 discount={discountAmount.toString()}
@@ -731,7 +731,7 @@ const SalesPage = () => {
                 paymentMethod={completedSale?.paymentMethod ?? paymentMethod}
               />
             </div>
-            <DialogFooter className="px-6 pb-6 print:hidden">
+            <DialogFooter className="px-0 pb-0 pt-3 print:hidden">
               <Button
                 onClick={() => setIsReceiptModalOpen(false)}
                 variant="outline"
@@ -757,69 +757,54 @@ const SalesPage = () => {
             margin: 0;
           }
 
-          /* Hide everything by default */
           body {
-            visibility: hidden !important;
             background: white !important;
           }
 
-          /* Show the receipt area and its ancestors sparingly */
-          #receipt-print-area,
-          #receipt-print-area * {
-            visibility: visible !important;
+          /* Hide only the app (navbar, sidebar, sales UI). Receipt dialog is in a Radix portal outside #app-root. */
+          #app-root {
+            display: none !important;
           }
 
-          /* Position the receipt at the top left of the actual paper */
-          #receipt-print-area {
-            position: absolute !important;
-            left: 0 !important;
-            top: 0 !important;
-            width: 80mm !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            z-index: 99999 !important;
-            border: none !important;
-            background: white !important;
+          /* When dialog is open, body has #app-root, overlay portal, content portal. Hide overlay portal. */
+          body > div:nth-child(2) {
+            display: none !important;
           }
 
-          /* Force ancestors to be invisible but background-less */
-          div[data-radix-portal],
-          div[data-radix-portal] *,
-          [role="dialog"] {
-            visibility: visible !important;
-            background: transparent !important;
-            border: none !important;
-            box-shadow: none !important;
-            position: absolute !important;
-            top: 0 !important;
+          /* Content portal (last child): position receipt at top-left for 80mm paper */
+          body > div:last-child > div {
+            position: fixed !important;
             left: 0 !important;
-            width: 80mm !important;
+            top: 0 !important;
+            right: auto !important;
+            bottom: auto !important;
             transform: none !important;
+            width: 80mm !important;
+            max-width: 80mm !important;
             margin: 0 !important;
             padding: 0 !important;
-          }
-
-          /* Hide the semi-transparent black overlay and modal shadows */
-          div[class*="fixed inset-0"],
-          .shadcn-dialog-overlay,
-          [data-state="open"] {
-            display: none !important;
-            visibility: hidden !important;
-            background: none !important;
+            border: none !important;
             box-shadow: none !important;
+            background: white !important;
           }
 
-          /* Hide UI elements */
-          .print\:hidden {
+          .print\:hidden,
+          body > div:last-child button {
             display: none !important;
           }
 
-          /* Ensure text is sharp for thermal printers */
+          #receipt-print-area {
+            width: 100% !important;
+            max-width: 80mm !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            background: white !important;
+          }
+
           * {
             -webkit-print-color-adjust: exact !important;
             color-adjust: exact !important;
             box-shadow: none !important;
-            text-shadow: none !important;
           }
         }
       `}</style>

@@ -3,7 +3,8 @@
 import { useAuth } from "@/app/providers/AuthProvider";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { motion } from "framer-motion";
-import { Loader, ArrowLeft, AlertTriangle, Package } from "lucide-react";
+import { ArrowLeft, AlertTriangle, Package } from "lucide-react";
+import Loading from "@/components/shared/Loading";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -108,8 +109,8 @@ export default function IntegratedReportPage() {
 
       {loading ? (
         <Card>
-          <CardContent className="flex items-center justify-center py-12">
-            <Loader className="h-8 w-8 animate-spin text-red-600" />
+          <CardContent className="min-h-[280px] flex items-center justify-center">
+            <Loading />
           </CardContent>
         </Card>
       ) : data ? (

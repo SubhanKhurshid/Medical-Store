@@ -13,7 +13,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { motion } from "framer-motion";
-import { Loader2, ArrowLeft, User, Phone, Mail, MapPin, Calendar, Receipt, Wallet, Banknote, Bell, MessageSquare } from "lucide-react";
+import { ArrowLeft, User, Phone, Mail, MapPin, Calendar, Receipt, Wallet, Banknote, Bell, MessageSquare } from "lucide-react";
+import Loading from "@/components/shared/Loading";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { useAuth } from "@/app/providers/AuthProvider";
@@ -97,8 +98,8 @@ export default function CustomerDetailPage() {
 
     if (loading) {
         return (
-            <div className="flex justify-center items-center min-h-screen">
-                <Loader2 className="animate-spin h-10 w-10 text-red-700" />
+            <div className="min-h-screen flex items-center justify-center bg-gray-50/80">
+                <Loading />
             </div>
         );
     }

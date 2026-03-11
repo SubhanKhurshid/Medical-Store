@@ -55,14 +55,16 @@ export function Receipt({
       className="pos-receipt"
       style={{
         width: "80mm",
+        maxWidth: "80mm",
         margin: "0 auto",
-        padding: "10px",
+        padding: "8px 4px",
         backgroundColor: "white",
         fontFamily: "Arial, sans-serif",
         fontSize: "12px",
         lineHeight: "1.2",
         color: "black",
         pageBreakInside: "avoid",
+        boxSizing: "border-box",
       }}
     >
       {/* Title */}
@@ -70,7 +72,15 @@ export function Receipt({
         <h1 style={{ margin: "0", fontSize: "16px", fontWeight: "bold" }}>
           NS Ibrahim Medical
         </h1>
-        <div style={{ marginTop: "4px" }}>
+        <div
+          style={{
+            marginTop: "4px",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            width: "100%",
+          }}
+        >
           <Barcode
             value={orderNumber}
             width={1.2}
@@ -175,9 +185,6 @@ export function Receipt({
       >
         <p style={{ margin: "4px 0", fontSize: "14px", fontWeight: "bold" }}>
           ادویات ڈاکٹر کے مشورے سے استعمال کریں۔
-        </p>
-        <p style={{ margin: "4px 0", fontSize: "11px" }}>
-          گاہک میڈیکل اسٹور کے خلاف قانونی چارہ جوئی کا حق نہیں رکھتا۔
         </p>
       </div>
     </div>

@@ -84,7 +84,7 @@ export function DataTable<TData extends Record<string, any>, TValue>({
                 {headerGroup.headers.map((header) => (
                   <TableHead
                     key={header.id}
-                    className="text-left text-sm"
+                    className="text-left text-base"
                   >
                     {header.isPlaceholder
                       ? null
@@ -115,7 +115,7 @@ export function DataTable<TData extends Record<string, any>, TValue>({
                   {row.getVisibleCells().map((cell) => (
                     <TableCell
                       key={cell.id}
-                      className="text-sm"
+                      className="text-base"
                     >
                       {flexRender(
                         cell.column.columnDef.cell,

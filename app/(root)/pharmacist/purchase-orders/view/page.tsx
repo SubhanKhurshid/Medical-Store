@@ -10,7 +10,8 @@ import { Dialog } from "@/components/ui/dialog";
 
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { AlertCircle, CheckCircle, Loader, XCircle } from "lucide-react";
+import { AlertCircle, CheckCircle, XCircle } from "lucide-react";
+import Loading from "@/components/shared/Loading";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
@@ -231,31 +232,39 @@ export default function ViewPurchaseOrdersPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <Loader className="animate-spin h-5 w-5 text-red-800 mr-2" />
-        <span>Loading purchase orders...</span>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50/80">
+        <Loading />
       </div>
     );
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
-      className="p-6 md:p-8 max-w-9xl mx-auto min-h-screen bg-gray-50"
-    >
-      <Card className="bg-white/90 backdrop-blur-md shadow-lg border-0 rounded-lg">
-        <CardHeader className="border-b-2 border-red-700 p-6">
-          <CardTitle className="text-3xl md:text-4xl font-bold text-red-800">
-            View Purchase Orders
-          </CardTitle>
-          <p className="text-xl text-gray-500 mt-2">
-            Manage and track your purchase orders
-          </p>
-        </CardHeader>
-        <CardContent className="mt-5">
-          <div className="space-y-6">
+    <div className="min-h-screen bg-gray-50/80">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+        <header className="mb-6">
+          <motion.h1
+            className="text-2xl sm:text-3xl font-bold text-red-800 tracking-tight"
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+          >
+            Purchase Orders
+          </motion.h1>
+          <motion.p className="mt-1 text-sm text-gray-500" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }}>
+            View and manage purchase orders.
+          </motion.p>
+          <div className="mt-4 h-px bg-gradient-to-r from-red-200/80 via-red-100/50 to-transparent rounded-full" />
+        </header>
+
+        <Card className="overflow-hidden bg-white border border-gray-100 rounded-xl shadow-sm hover:shadow-md transition-shadow">
+          <div className="border-l-4 border-l-red-500 bg-red-50/30 px-5 py-3">
+            <h2 className="text-base font-semibold text-red-800">Purchase orders</h2>
+            <p className="text-xs text-gray-500 mt-0.5">
+              Click a row to view details and update status.
+            </p>
+          </div>
+          <CardContent className="p-4 sm:p-5">
+          <div className="space-y-4">
             {error ? (
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
@@ -266,20 +275,18 @@ export default function ViewPurchaseOrdersPage() {
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="flex flex-col items-center justify-center py-12 px-4"
+                className="flex flex-col items-center justify-center py-12 px-4 rounded-lg bg-gray-50/80"
               >
-                <div className="h-20 w-20 rounded-full bg-red-50 flex items-center justify-center mb-4">
-                  <AlertCircle className="h-10 w-10 text-red-700" />
+                <div className="h-14 w-14 rounded-full bg-gray-100 flex items-center justify-center mb-3">
+                  <AlertCircle className="h-7 w-7 text-gray-400" />
                 </div>
-                <h3 className="text-lg font-medium text-gray-900 mb-1">
-                  No Purchase Orders
-                </h3>
-                <p className="text-sm text-gray-500">
-                  There are currently no purchase orders in the system.
+                <p className="text-sm font-medium text-gray-600">No purchase orders</p>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  There are no purchase orders yet. Create one from the low stock page.
                 </p>
               </motion.div>
             ) : (
-              <div className="w-full">
+              <div className="rounded-lg border border-gray-100 overflow-hidden">
                 <Table wrapperClassName={purchaseOrders.length > 0 ? "min-h-[260px]" : undefined}>
                   <TableHeader>
                     {table.getHeaderGroups().map((headerGroup) => (
@@ -357,8 +364,8 @@ export default function ViewPurchaseOrdersPage() {
               </div>
             )}
           </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
 
       {/* Order Details Dialog - Would be expanded with more details in a real application */}
       <Dialog open={!!selectedRow} onOpenChange={closeModal}>
@@ -446,6 +453,7 @@ export default function ViewPurchaseOrdersPage() {
           )}
         </DialogContent>
       </Dialog>
-    </motion.div>
+      </div>
+    </div>
   );
 }
