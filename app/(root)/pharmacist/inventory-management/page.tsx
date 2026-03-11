@@ -112,10 +112,10 @@ export default function InventoryManagement() {
       itemType === ItemType.MEDICINE
         ? medicineSchema
         : itemType === ItemType.INJECTION
-        ? injectionSchema
-        : itemType === ItemType.SURGERY
-        ? surgeryItemSchema
-        : generalItemSchema
+          ? injectionSchema
+          : itemType === ItemType.SURGERY
+            ? surgeryItemSchema
+            : generalItemSchema
     ),
     defaultValues: {
       name: "",
@@ -295,11 +295,10 @@ export default function InventoryManagement() {
                   role="tab"
                   aria-selected={isActive}
                   onClick={() => setItemType(value)}
-                  className={`min-h-[48px] min-w-[100px] flex-1 rounded-lg border px-4 py-3 text-sm font-medium touch-manipulation transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
-                    isActive
+                  className={`min-h-[48px] min-w-[100px] flex-1 rounded-lg border px-4 py-3 text-sm font-medium touch-manipulation transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${isActive
                       ? "bg-background text-foreground shadow-sm border-border"
                       : "bg-muted/50 text-muted-foreground hover:bg-muted border-transparent"
-                  }`}
+                    }`}
                 >
                   {label}
                 </button>
@@ -408,10 +407,10 @@ export default function InventoryManagement() {
                     id="manufacturerDiscount"
                     placeholder="e.g. 10"
                     type="number"
-                    inputMode="numeric"
+                    inputMode="decimal"
                     min={0}
                     max={100}
-                    step={1}
+                    step="any"
                     className="text-lg p-4 min-h-[48px] touch-manipulation"
                     {...form.register("manufacturerDiscount")}
                   />
