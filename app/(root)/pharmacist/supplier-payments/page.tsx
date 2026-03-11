@@ -5,7 +5,8 @@ import { DataTable } from "@/components/shared/DataTable";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, PlusCircle, Loader2, Building2, Calendar, Receipt } from "lucide-react";
+import { Search, PlusCircle, Building2, Calendar, Receipt } from "lucide-react";
+import Loading from "@/components/shared/Loading";
 import { Button } from "@/components/ui/button";
 import PaymentModal from "./Modal";
 import {
@@ -102,35 +103,44 @@ const SupplierPayments = () => {
     ];
 
     return (
-        <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.5 }}
-            className="p-6 md:p-10 max-w-9xl mx-auto min-h-screen bg-gradient-to-br from-gray-50 to-gray-100"
-        >
-            <Card className="bg-white shadow-xl border-0 rounded-xl overflow-hidden">
-                <CardHeader className="text-red-800 p-6 border-b-2 border-red-700">
-                    <CardTitle className="text-3xl md:text-4xl font-bold">
+        <div className="min-h-screen bg-gray-50/80">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+                <header className="mb-6">
+                    <motion.h1
+                        className="text-2xl sm:text-3xl font-bold text-red-800 tracking-tight"
+                        initial={{ opacity: 0, y: -8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.4 }}
+                    >
                         Supplier Payments
-                    </CardTitle>
-                    <p className="text-gray-500 mt-2 text-xl">
-                        Track payments made to your manufacturers
-                    </p>
-                </CardHeader>
-                <CardContent className="p-6">
-                    <div className="flex flex-col sm:flex-row justify-between gap-4 mb-6">
-                        <div className="relative w-full sm:w-1/3">
+                    </motion.h1>
+                    <motion.p className="mt-1 text-sm text-gray-500" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }}>
+                        Track payments made to manufacturers.
+                    </motion.p>
+                    <div className="mt-4 h-px bg-gradient-to-r from-red-200/80 via-red-100/50 to-transparent rounded-full" />
+                </header>
+
+                <Card className="overflow-hidden bg-white border border-gray-100 rounded-xl shadow-sm hover:shadow-md transition-shadow">
+                    <div className="border-l-4 border-l-red-500 bg-red-50/30 px-5 py-3">
+                        <h2 className="text-base font-semibold text-red-800">Payment records</h2>
+                        <p className="text-xs text-gray-500 mt-0.5">
+                            Search by supplier or reference.
+                        </p>
+                    </div>
+                    <CardContent className="p-4 sm:p-5">
+                    <div className="flex flex-col sm:flex-row justify-between gap-4 mb-4">
+                        <div className="relative flex-1 max-w-sm">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                             <Input
-                                placeholder="Search..."
+                                placeholder="Search by supplier or reference..."
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
-                                className="pl-10 pr-4 py-2 bg-white border border-gray-200 rounded-lg text-xl"
+                                className="pl-9 h-10 border-gray-200 focus:border-red-500 focus:ring-red-500/20"
                             />
                         </div>
                         <Button
                             onClick={() => setIsModalOpen(true)}
-                            className="bg-red-800 hover:bg-red-900 text-white transition-colors duration-200 text-xl"
+                            className="bg-red-800 hover:bg-red-700 text-white shrink-0"
                         >
                             <PlusCircle className="mr-2 h-4 w-4" />
                             Record Payment
@@ -143,16 +153,16 @@ const SupplierPayments = () => {
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
                                 exit={{ opacity: 0 }}
-                                className="flex justify-center items-center py-20"
+                                className="min-h-[280px] flex items-center justify-center"
                             >
-                                <Loader2 className="animate-spin h-8 w-8 text-red-600" />
+                                <Loading />
                             </motion.div>
                         ) : (
                             <motion.div
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ duration: 0.5 }}
-                                className="rounded-lg border border-gray-200 bg-white overflow-hidden"
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                transition={{ duration: 0.2 }}
+                                className="rounded-lg border border-gray-100 overflow-hidden"
                             >
                                 <DataTable
                                     columns={columns}
@@ -166,8 +176,8 @@ const SupplierPayments = () => {
                             </motion.div>
                         )}
                     </AnimatePresence>
-                </CardContent>
-            </Card>
+                    </CardContent>
+                </Card>
 
             <PaymentModal
                 isOpen={isModalOpen}
@@ -220,7 +230,8 @@ const SupplierPayments = () => {
                     )}
                 </DialogContent>
             </Dialog>
-        </motion.div>
+            </div>
+        </div>
     );
 };
 

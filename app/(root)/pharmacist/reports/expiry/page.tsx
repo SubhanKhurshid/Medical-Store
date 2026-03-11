@@ -3,7 +3,8 @@
 import { useAuth } from "@/app/providers/AuthProvider";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { motion } from "framer-motion";
-import { Loader, Calendar, ArrowLeft } from "lucide-react";
+import { Calendar, ArrowLeft } from "lucide-react";
+import Loading from "@/components/shared/Loading";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -94,8 +95,8 @@ export default function ExpiryReportPage() {
         </CardHeader>
         <CardContent className="p-0">
           {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader className="h-8 w-8 animate-spin text-red-600" />
+            <div className="min-h-[280px] flex items-center justify-center">
+              <Loading />
             </div>
           ) : (
             <Table wrapperClassName={items.length > 0 ? "min-h-[260px]" : undefined}>

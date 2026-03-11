@@ -7,7 +7,8 @@ import { inventoryColumns } from "@/components/shared/columns";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { motion } from "framer-motion";
-import { Search, Filter, Loader } from "lucide-react";
+import { Search, Filter } from "lucide-react";
+import Loading from "@/components/shared/Loading";
 import {
   Select,
   SelectContent,
@@ -67,37 +68,46 @@ const Inventory = () => {
   });
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
-      className="p-6 md:p-8 max-w-9xl mx-auto min-h-screen bg-gray-50"
-    >
-      <Card className="bg-white/90 backdrop-blur-md shadow-lg border-0 rounded-lg">
-        <CardHeader className="border-b-2 border-red-700 p-6">
-          <CardTitle className="text-3xl md:text-4xl font-bold text-red-800">
-            Inventory Management
-          </CardTitle>
-          <p className="text-xl text-gray-500 mt-2">
-            Manage and track your medical inventory
-          </p>
-        </CardHeader>
-        <CardContent className="mt-5">
+    <div className="min-h-screen bg-gray-50/80">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+        <header className="mb-6">
+          <motion.h1
+            className="text-2xl sm:text-3xl font-bold text-red-800 tracking-tight"
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+          >
+            Inventory
+          </motion.h1>
+          <motion.p className="mt-1 text-sm text-gray-500" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }}>
+            View and filter inventory items.
+          </motion.p>
+          <div className="mt-4 h-px bg-gradient-to-r from-red-200/80 via-red-100/50 to-transparent rounded-full" />
+        </header>
+
+        <Card className="overflow-hidden bg-white border border-gray-100 rounded-xl shadow-sm hover:shadow-md transition-shadow">
+          <div className="border-l-4 border-l-red-500 bg-red-50/30 px-5 py-3">
+            <h2 className="text-base font-semibold text-red-800">Inventory list</h2>
+            <p className="text-xs text-gray-500 mt-0.5">
+              Search and filter by type or category.
+            </p>
+          </div>
+          <CardContent className="p-4 sm:p-5">
           <div className="space-y-6">
             {loading ? (
-              <div className="flex justify-center items-center">
-                <Loader className="animate-spin h-5 w-5 text-red-800" />
+              <div className="min-h-[280px] flex items-center justify-center">
+                <Loading />
               </div>
             ) : (
               <>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
                   <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 h-4 w-4" />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <Input
                       placeholder="Search items..."
                       value={search}
                       onChange={(e) => setSearch(e.target.value)}
-                        className="pl-10 pr-4 py-2 bg-white border border-gray-300 rounded-md text-lg"
+                      className="pl-9 h-10 border-gray-200 focus:border-red-500 focus:ring-red-500/20"
                     />
                   </div>
                   <div className="relative">
@@ -142,21 +152,21 @@ const Inventory = () => {
                   </div>
                 </div>
 
-                <DataTable columns={inventoryColumns} data={filteredItems} />
+                <div className="rounded-lg border border-gray-100 overflow-hidden">
+                  <DataTable columns={inventoryColumns} data={filteredItems} />
+                </div>
               </>
             )}
             {filteredItems.length === 0 && !loading && (
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="flex flex-col items-center justify-center py-12 px-4"
+                className="flex flex-col items-center justify-center py-12 px-4 rounded-lg bg-gray-50/80"
               >
-                <div className="h-20 w-20 rounded-full bg-red-50 flex items-center justify-center mb-4">
-                  <Search className="h-10 w-10 text-red-700" />
+                <div className="h-14 w-14 rounded-full bg-gray-100 flex items-center justify-center mb-3">
+                  <Search className="h-7 w-7 text-gray-400" />
                 </div>
-                <h3 className="text-lg font-medium text-gray-900 mb-1">
-                  No items found
-                </h3>
+                <p className="text-sm font-medium text-gray-600">No items found</p>
                 <p className="text-sm text-gray-500">
                   Try adjusting your search or filter to find what you're looking for.
                 </p>
@@ -165,7 +175,8 @@ const Inventory = () => {
           </div>
         </CardContent>
       </Card>
-    </motion.div>
+      </div>
+    </div>
   );
 };
 

@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { DataTable } from "@/components/shared/DataTable";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -19,6 +19,7 @@ import { useAuth } from "@/app/providers/AuthProvider";
 import { useInventory } from "@/app/context/InventoryContext";
 import axios from "axios";
 import { toast } from "sonner";
+import Loading from "@/components/shared/Loading";
 
 const PAYMENT_LABELS: Record<string, string> = {
   CASH: "Cash",
@@ -56,7 +57,7 @@ interface Sale {
 
 const SalesTable = () => {
   const [search, setSearch] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [sales, setSales] = useState<Sale[]>([]);
   const [viewSale, setViewSale] = useState<Sale | null>(null);
   const [refundSale, setRefundSale] = useState<Sale | null>(null);
@@ -168,7 +169,7 @@ const SalesTable = () => {
       id: "invoiceNumber",
       header: "Invoice #",
       cell: ({ row }: any) => (
-        <span className="text-lg font-semibold font-mono">
+        <span className="font-medium font-mono text-foreground">
           {row.original.invoiceNumber || "—"}
         </span>
       ),
@@ -177,25 +178,21 @@ const SalesTable = () => {
       id: "customerName",
       header: "Customer",
       cell: ({ row }: any) => (
-        <span className="text-lg font-semibold">
-          {row.original.customerName || "--"}
-        </span>
+        <span className="text-foreground">{row.original.customerName || "—"}</span>
       ),
     },
     {
       id: "customerPhone",
       header: "Phone",
       cell: ({ row }: any) => (
-        <span className="text-lg font-semibold">
-          {row.original.customerPhone || "--"}
-        </span>
+        <span className="text-muted-foreground">{row.original.customerPhone || "—"}</span>
       ),
     },
     {
       id: "soldAt",
       header: "Date",
       cell: ({ row }: any) => (
-        <span className="text-lg font-semibold">
+        <span className="text-muted-foreground">
           {new Date(row.original.soldAt).toLocaleDateString()}
         </span>
       ),
@@ -204,7 +201,7 @@ const SalesTable = () => {
       id: "paymentMethod",
       header: "Payment",
       cell: ({ row }: any) => (
-        <span className="text-lg font-semibold">
+        <span className="text-foreground">
           {PAYMENT_LABELS[row.original.paymentMethod as string] ?? row.original.paymentMethod ?? "—"}
         </span>
       ),
@@ -215,10 +212,10 @@ const SalesTable = () => {
       cell: ({ row }: any) => {
         const refunded = Number(row.original.refundedAmount) || 0;
         return (
-          <span className="text-lg font-semibold">
-            Rs {row.original.totalPrice}
+          <span className="font-medium text-foreground">
+            Rs {row.original.totalPrice.toLocaleString()}
             {refunded > 0 && (
-              <span className="text-amber-600 text-sm ml-1">
+              <span className="text-amber-600 text-xs ml-1 font-normal">
                 (refunded: Rs {refunded})
               </span>
             )}
@@ -230,24 +227,24 @@ const SalesTable = () => {
       id: "actions",
       header: "Actions",
       cell: ({ row }: any) => (
-        <div className="flex gap-2">
+        <div className="flex gap-1.5">
           <Button
             variant="outline"
             size="sm"
-            onClick={() => fetchSaleById(row.original.id)}
-            className="text-red-800 border-red-800 hover:bg-red-50"
+            onClick={(e) => { e.stopPropagation(); fetchSaleById(row.original.id); }}
+            className="text-red-700 border-red-200 hover:bg-red-50 h-8 text-xs"
           >
-            <Eye className="h-4 w-4 mr-1" />
+            <Eye className="h-3.5 w-3.5 mr-1" />
             View
           </Button>
           <Button
             variant="outline"
             size="sm"
-            onClick={() => openRefundModal(row.original)}
+            onClick={(e) => { e.stopPropagation(); openRefundModal(row.original); }}
             disabled={(Number(row.original.refundedAmount) || 0) >= row.original.totalPrice}
-            className="text-amber-700 border-amber-600 hover:bg-amber-50"
+            className="text-amber-700 border-amber-200 hover:bg-amber-50 h-8 text-xs"
           >
-            <RotateCcw className="h-4 w-4 mr-1" />
+            <RotateCcw className="h-3.5 w-3.5 mr-1" />
             Refund
           </Button>
         </div>
@@ -256,50 +253,67 @@ const SalesTable = () => {
   ];
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.5 }}
-      className="p-6 md:p-10 max-w-9xl mx-auto min-h-screen bg-gradient-to-br from-gray-50 to-gray-100"
-    >
-      <Card className="bg-white shadow-xl border-0 rounded-xl overflow-hidden">
-        <CardHeader className="text-red-800 p-6 border-b-2 border-red-700">
-          <CardTitle className="text-3xl md:text-4xl font-bold">
-            Sales Records
-          </CardTitle>
-          <p className="text-gray-500 mt-2 text-xl">
-            Track and manage your sales transactions efficiently
-          </p>
-        </CardHeader>
-        <CardContent className="p-6">
-          <div className="flex flex-col sm:flex-row justify-between gap-4 mb-6">
-            <div className="relative w-full sm:w-1/3">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+    <div className="min-h-screen bg-gray-50/80">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+        <header className="mb-6">
+          <motion.h1
+            className="text-2xl sm:text-3xl font-bold text-red-800 tracking-tight"
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+          >
+            Sales History
+          </motion.h1>
+          <motion.p
+            className="mt-1 text-sm text-gray-500"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.1 }}
+          >
+            Track and manage your sales transactions.
+          </motion.p>
+          <div className="mt-4 h-px bg-gradient-to-r from-red-200/80 via-red-100/50 to-transparent rounded-full" />
+        </header>
+
+        <Card className="overflow-hidden bg-white border border-gray-100 rounded-xl shadow-sm hover:shadow-md transition-shadow">
+          <div className="border-l-4 border-l-red-500 bg-red-50/30 px-5 py-3">
+            <h2 className="text-base font-semibold text-red-800">Sales Records</h2>
+            <p className="text-xs text-gray-500 mt-0.5">
+              Search by invoice, customer name, or phone.
+            </p>
+          </div>
+          <CardContent className="p-4 sm:p-5">
+            <div className="relative max-w-sm mb-4">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
                 placeholder="Search sales..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="pl-12 pr-4 py-3 bg-white border border-gray-300 rounded-lg focus:border-red-500 focus:ring focus:ring-red-200 text-lg"
+                className="pl-9 h-10 border-gray-200 focus:border-red-500 focus:ring-red-500/20"
               />
             </div>
-          </div>
-
-          <AnimatePresence>
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-              className="rounded-lg border border-gray-200 bg-white overflow-hidden"
-            >
-              <DataTable
-                columns={columns}
-                data={Array.isArray(filteredSales) ? filteredSales : []}
-                disableRowClick={true}
-              />
-            </motion.div>
-          </AnimatePresence>
-        </CardContent>
-      </Card>
+            {loading ? (
+              <div className="min-h-[280px] flex items-center justify-center">
+                <Loading />
+              </div>
+            ) : (
+              <AnimatePresence>
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.2 }}
+                  className="rounded-lg border border-gray-100 overflow-hidden"
+                >
+                  <DataTable
+                    columns={columns}
+                    data={Array.isArray(filteredSales) ? filteredSales : []}
+                    disableRowClick={true}
+                  />
+                </motion.div>
+              </AnimatePresence>
+            )}
+          </CardContent>
+        </Card>
 
       {/* View Sale Detail Dialog */}
       <Dialog open={!!viewSale} onOpenChange={() => setViewSale(null)}>
@@ -402,7 +416,8 @@ const SalesTable = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </motion.div>
+      </div>
+    </div>
   );
 };
 

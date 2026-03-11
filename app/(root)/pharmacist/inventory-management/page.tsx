@@ -22,7 +22,6 @@ import {
 import { ItemType, useInventory } from "@/app/context/InventoryContext";
 import { Calendar } from "lucide-react";
 import { toast } from "sonner";
-import { Separator } from "@/components/ui/separator";
 
 // Coerce empty string to number; used for optional numeric fields (default 0)
 const optionalNum = (min = 0) =>
@@ -251,23 +250,31 @@ export default function InventoryManagement() {
   };
 
   return (
-    <div className="p-4 md:p-8 max-w-9xl mx-auto min-h-screen">
-      <div className="flex flex-col gap-2 mb-6">
-        <motion.h1
-          className="text-3xl md:text-4xl font-bold text-red-800"
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          Add Item Here
-        </motion.h1>
-        <motion.p className="text-xl text-gray-500">
-          You can add item by filling these fields
-        </motion.p>
-      </div>
-      <Card className="backdrop-blur-lg bg-card/50">
-        <Separator />
-        <CardContent className="mt-10">
+    <div className="min-h-screen bg-gray-50/80">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+        <header className="mb-6">
+          <motion.h1
+            className="text-2xl sm:text-3xl font-bold text-red-800 tracking-tight"
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+          >
+            Add Medicine / Item
+          </motion.h1>
+          <motion.p className="mt-1 text-sm text-gray-500" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }}>
+            Add inventory by filling the fields below. Choose type: Medicine, Injection, Surgery, or General.
+          </motion.p>
+          <div className="mt-4 h-px bg-gradient-to-r from-red-200/80 via-red-100/50 to-transparent rounded-full" />
+        </header>
+
+        <Card className="overflow-hidden bg-white border border-gray-100 rounded-xl shadow-sm hover:shadow-md transition-shadow">
+          <div className="border-l-4 border-l-red-500 bg-red-50/30 px-5 py-3">
+            <h2 className="text-base font-semibold text-red-800">New item</h2>
+            <p className="text-xs text-gray-500 mt-0.5">
+              Select item type, then fill required fields (marked with *).
+            </p>
+          </div>
+          <CardContent className="p-4 sm:p-5 pt-6">
           {/* Item type: plain buttons so every tab (including Medicine) works on mobile */}
           <div
             role="tablist"
@@ -765,8 +772,9 @@ export default function InventoryManagement() {
               Item
             </Button>
           </form>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
