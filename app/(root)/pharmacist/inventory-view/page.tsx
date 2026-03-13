@@ -59,7 +59,8 @@ const Inventory = () => {
   }, [items]);
 
   const filteredItems = items.filter((item) => {
-    const matchesSearch = item.name.toLowerCase().includes(search.toLowerCase());
+    const term = search.toLowerCase();
+    const matchesSearch = item.name.toLowerCase().includes(term) || (item.genericName && item.genericName.toLowerCase().includes(term));
     const matchesType = typeFilter === "all" || item.type === typeFilter;
     const matchesCategory =
       categoryFilter === "all" ||

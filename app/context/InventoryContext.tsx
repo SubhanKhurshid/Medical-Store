@@ -13,6 +13,7 @@ export enum ItemType {
 export interface InventoryItem {
   id: string;
   name: string;
+  genericName?: string;
   type: ItemType; // Use the locally defined ItemType enum
   quantity: number;
   batchNumber: string;

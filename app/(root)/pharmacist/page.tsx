@@ -205,8 +205,8 @@ const PharmacistPage = () => {
         const dataLast = await resLast.json();
         const salesThis = dataThis?.success && Array.isArray(dataThis?.data) ? dataThis.data : [];
         const salesLast = dataLast?.success && Array.isArray(dataLast?.data) ? dataLast.data : [];
-        setEarnedThisMonth(salesThis.reduce((sum: number, s: { totalPrice?: number }) => sum + (s.totalPrice ?? 0), 0));
-        setEarnedLastMonth(salesLast.reduce((sum: number, s: { totalPrice?: number }) => sum + (s.totalPrice ?? 0), 0));
+        setEarnedThisMonth(salesThis.reduce((sum: number, s: { totalPrice?: number; refundedAmount?: number }) => sum + (s.totalPrice ?? 0) - (s.refundedAmount ?? 0), 0));
+        setEarnedLastMonth(salesLast.reduce((sum: number, s: { totalPrice?: number; refundedAmount?: number }) => sum + (s.totalPrice ?? 0) - (s.refundedAmount ?? 0), 0));
       } catch (e) {
         console.error("Error fetching sales for stats:", e);
       }
