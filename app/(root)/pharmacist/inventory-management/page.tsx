@@ -69,6 +69,7 @@ const baseSchema = z.object({
 const medicineSchema = baseSchema.extend({
   dosage: z.string().min(1, "Dosage is required"),
   activeIngredient: z.string().min(1, "Active ingredient is required"),
+  genericName: z.string().optional(),
 });
 
 const injectionSchema = baseSchema.extend({
@@ -133,6 +134,7 @@ export default function InventoryManagement() {
       description: "",
       dosage: "",
       activeIngredient: "",
+      genericName: "",
       volume: "",
       route: "Intramuscular",
       sterilizationMethod: "",
@@ -189,6 +191,7 @@ export default function InventoryManagement() {
     description: "",
     dosage: "",
     activeIngredient: "",
+    genericName: "",
     volume: "",
     route: "Intramuscular" as const,
     sterilizationMethod: "",
@@ -212,6 +215,7 @@ export default function InventoryManagement() {
       ...(itemType === ItemType.MEDICINE && {
         dosage: data.dosage,
         activeIngredient: data.activeIngredient,
+        genericName: data.genericName,
       }),
       ...(itemType === ItemType.INJECTION && {
         volume: data.volume,
@@ -558,6 +562,20 @@ export default function InventoryManagement() {
                     {form.formState.errors.activeIngredient && (
                       <span className="text-red-500 text-sm">
                         {form.formState.errors.activeIngredient.message}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <Label htmlFor="genericName">Generic Name</Label>
+                    <Input
+                      id="genericName"
+                      placeholder="Generic name (optional)"
+                      className="text-lg p-4"
+                      {...form.register("genericName")}
+                    />
+                    {form.formState.errors.genericName && (
+                      <span className="text-red-500 text-sm">
+                        {form.formState.errors.genericName.message}
                       </span>
                     )}
                   </div>

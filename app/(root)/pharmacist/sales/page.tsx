@@ -42,6 +42,7 @@ interface Product {
   quantity: number;
   imageUrl: string;
   type: string;
+  genericName?: string;
 }
 
 interface CartItem extends Product {
@@ -131,7 +132,8 @@ const SalesPage = () => {
     if (searchTerm) {
       const results = products.filter((product) => {
         const productName = product.name ? product.name.toLowerCase() : "";
-        return productName.includes(searchTerm.toLowerCase());
+        const genericName = product.genericName ? product.genericName.toLowerCase() : "";
+        return productName.includes(searchTerm.toLowerCase()) || genericName.includes(searchTerm.toLowerCase());
       });
       setSearchResults(results);
     } else {
@@ -154,6 +156,7 @@ const SalesPage = () => {
         quantity: data.quantity ?? 0,
         imageUrl: data.image ?? "",
         type: data.type ?? "GENERAL",
+        genericName: data.genericName,
       };
       setProducts((prev) => {
         if (prev.some((p) => p.id === product.id)) return prev;
@@ -739,7 +742,7 @@ const SalesPage = () => {
             <div className="print:p-0 print-content" id="receipt-print-area">
               <Receipt
                 cart={cart}
-                discount={discountAmount.toString()}
+                discount={discount || "0"}
                 totalBill={totalBill}
                 discountedTotal={discountedTotal}
                 invoiceNumber={completedSale?.invoiceNumber || sessionInvoiceNumber}
