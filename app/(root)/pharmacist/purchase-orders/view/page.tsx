@@ -241,19 +241,28 @@ export default function ViewPurchaseOrdersPage() {
   return (
     <div className="min-h-screen bg-gray-50/80">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-        <header className="mb-6">
-          <motion.h1
-            className="text-2xl sm:text-3xl font-bold text-red-800 tracking-tight"
-            initial={{ opacity: 0, y: -8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4 }}
+        <header className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <motion.h1
+              className="text-2xl sm:text-3xl font-bold text-red-800 tracking-tight"
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4 }}
+            >
+              Purchase Orders
+            </motion.h1>
+            <motion.p className="mt-1 text-sm text-gray-500" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }}>
+              View and manage purchase orders.
+            </motion.p>
+            <div className="mt-4 h-px bg-gradient-to-r from-red-200/80 via-red-100/50 to-transparent rounded-full" />
+          </div>
+          <Button
+            type="button"
+            className="bg-red-800 hover:bg-red-700 text-white shadow-sm"
+            onClick={() => window.location.assign("/pharmacist/purchase-orders/company-print")}
           >
-            Purchase Orders
-          </motion.h1>
-          <motion.p className="mt-1 text-sm text-gray-500" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }}>
-            View and manage purchase orders.
-          </motion.p>
-          <div className="mt-4 h-px bg-gradient-to-r from-red-200/80 via-red-100/50 to-transparent rounded-full" />
+            Print Company-wise Orders
+          </Button>
         </header>
 
         <Card className="overflow-hidden bg-white border border-gray-100 rounded-xl shadow-sm hover:shadow-md transition-shadow">
