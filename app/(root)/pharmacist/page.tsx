@@ -81,6 +81,11 @@ const PharmacistPage = () => {
     fetchData();
   }, [fetchData]);
 
+  // Inventory stats card uses `items.length`, so load inventory only for the dashboard route.
+  useEffect(() => {
+    void refetchInventory();
+  }, [refetchInventory]);
+
   useEffect(() => {
     const onInvalidated = () => fetchData();
     window.addEventListener(EXPIRING_INVALIDATED_EVENT, onInvalidated);
