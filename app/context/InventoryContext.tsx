@@ -119,10 +119,6 @@ export const InventoryProvider = ({
     dispatch({ type: "SET_ITEMS", payload: response.data });
   }, [accessToken]);
 
-  useEffect(() => {
-    refetchInventory();
-  }, [refetchInventory]);
-
   const addItem = async (
     item: Omit<InventoryItem, "id" | "createdAt" | "updatedAt">
   ) => {

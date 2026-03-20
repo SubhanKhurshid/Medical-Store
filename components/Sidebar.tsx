@@ -32,6 +32,18 @@ const Sidebar = () => {
 
   useEffect(() => {
     if (role !== "pharmacist") return;
+    // Avoid extra API calls on every page.
+    // Badges are only relevant when navigating around the dashboard / purchase-orders.
+    const shouldFetchBadges =
+      pathname === "/pharmacist" ||
+      pathname === "/pharmacist/purchase-orders/create";
+
+    if (!shouldFetchBadges) {
+      setLowStockCount(0);
+      setExpiringCount(0);
+      return;
+    }
+
     const refreshLow = () => getLowStockItems().then((items) => setLowStockCount(items.length));
     const refreshExpiring = () => getExpiringItems().then((items) => setExpiringCount(items.length));
     const refresh = () => {

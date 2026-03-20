@@ -236,7 +236,7 @@ export default function EditInventoryModal({
         expiryDate: new Date(data.expiryDate).toISOString(),
         manufacturerId: data.manufacturer,
         price: Number((data as any).price),
-        sellingPrice: Number((data as any).sellingPrice ?? data.price),
+        sellingPrice: Number((data as any).price),
         purchasePrice: Number((data as any).purchasePrice ?? 0),
         minimumStock: Number((data as any).minimumStock),
         manufacturerDiscount: Number((data as any).manufacturerDiscount ?? 0),
