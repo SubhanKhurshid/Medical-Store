@@ -20,6 +20,13 @@ import { useInventory } from "@/app/context/InventoryContext";
 import axios from "axios";
 import { toast } from "sonner";
 import Loading from "@/components/shared/Loading";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const PAYMENT_LABELS: Record<string, string> = {
   CASH: "Cash",
@@ -57,6 +64,9 @@ interface Sale {
 
 const SalesTable = () => {
   const [search, setSearch] = useState("");
+  const [paymentFilter, setPaymentFilter] = useState<
+    "ALL" | "CASH" | "CARD" | "ONLINE" | "DONATION" | "CREDIT"
+  >("ALL");
   const [loading, setLoading] = useState(true);
   const [sales, setSales] = useState<Sale[]>([]);
   const [viewSale, setViewSale] = useState<Sale | null>(null);
@@ -107,13 +117,23 @@ const SalesTable = () => {
   const filteredSales = useMemo(() => {
     if (!search.trim()) return sales;
     const s = search.toLowerCase();
-    return sales.filter(
+    const searched = sales.filter(
       (sale) =>
         (sale.invoiceNumber ?? "").toLowerCase().includes(s) ||
         (sale.customerName ?? "").toLowerCase().includes(s) ||
-        (sale.customerPhone ?? "").toLowerCase().includes(s)
+        (sale.customerPhone ?? "").toLowerCase().includes(s),
     );
-  }, [sales, search]);
+
+    if (paymentFilter === "ALL") return searched;
+    return searched.filter((sale) => sale.paymentMethod === paymentFilter);
+  }, [sales, search, paymentFilter]);
+
+  const salesAfterPaymentFilter = useMemo(() => {
+    if (paymentFilter === "ALL") return filteredSales;
+    return (search.trim() ? filteredSales : sales).filter(
+      (sale) => sale.paymentMethod === paymentFilter,
+    );
+  }, [filteredSales, paymentFilter, search, sales]);
 
   const fetchSaleById = async (id: string) => {
     try {
@@ -283,14 +303,43 @@ const SalesTable = () => {
             </p>
           </div>
           <CardContent className="p-4 sm:p-5">
-            <div className="relative max-w-sm mb-4">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input
-                placeholder="Search sales..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-9 h-10 border-gray-200 focus:border-red-500 focus:ring-red-500/20"
-              />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+              <div>
+                <Label className="text-xs font-medium text-gray-600">Search</Label>
+                <div className="relative max-w-sm mt-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input
+                    placeholder="Search sales..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="pl-9 h-10 border-gray-200 focus:border-red-500 focus:ring-red-500/20"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label className="text-xs font-medium text-gray-600">
+                  Payment filter
+                </Label>
+                <Select
+                  value={paymentFilter}
+                  onValueChange={(val) =>
+                    setPaymentFilter(val as typeof paymentFilter)
+                  }
+                >
+                  <SelectTrigger className="mt-1 h-10 border-gray-200 focus:border-red-500 focus:ring-red-500/20">
+                    <SelectValue placeholder="All payments" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ALL">All</SelectItem>
+                    <SelectItem value="CASH">Cash</SelectItem>
+                    <SelectItem value="CARD">Card</SelectItem>
+                    <SelectItem value="ONLINE">Online</SelectItem>
+                    <SelectItem value="DONATION">Donation</SelectItem>
+                    <SelectItem value="CREDIT">Credit</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             {loading ? (
               <div className="min-h-[280px] flex items-center justify-center">
@@ -306,7 +355,7 @@ const SalesTable = () => {
                 >
                   <DataTable
                     columns={columns}
-                    data={Array.isArray(filteredSales) ? filteredSales : []}
+                    data={Array.isArray(salesAfterPaymentFilter) ? salesAfterPaymentFilter : []}
                     disableRowClick={true}
                   />
                 </motion.div>

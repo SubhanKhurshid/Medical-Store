@@ -10,6 +10,7 @@ import {
   TrendingUp,
   AlertTriangle,
   LayoutGrid,
+  Wallet,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -61,6 +62,14 @@ const reportCards = [
     icon: AlertTriangle,
     color: "text-red-600",
     bg: "bg-red-50",
+  },
+  {
+    title: "Cash / Card / Online Totals",
+    description: "Total sales by payment method (daily / monthly / yearly).",
+    href: "/pharmacist/reports/payment-method-totals",
+    icon: Wallet,
+    color: "text-indigo-600",
+    bg: "bg-indigo-50",
   },
 ];
 

@@ -58,7 +58,8 @@ const Inventory = () => {
     fetchData();
   }, [items]);
 
-  const filteredItems = items.filter((item) => {
+  const filteredItems = items
+    .filter((item) => {
     const term = search.toLowerCase();
     const matchesSearch = item.name.toLowerCase().includes(term) || (item.genericName && item.genericName.toLowerCase().includes(term));
     const matchesType = typeFilter === "all" || item.type === typeFilter;
@@ -66,7 +67,15 @@ const Inventory = () => {
       categoryFilter === "all" ||
       (item.category && item.category === categoryFilter);
     return matchesSearch && matchesType && matchesCategory;
-  });
+    })
+    .sort((a, b) => {
+      // Newest items should appear first (user expects newly added item at top).
+      const aTime = new Date(a.createdAt).getTime();
+      const bTime = new Date(b.createdAt).getTime();
+      const aSafe = Number.isFinite(aTime) ? aTime : 0;
+      const bSafe = Number.isFinite(bTime) ? bTime : 0;
+      return bSafe - aSafe;
+    });
 
   return (
     <div className="min-h-screen bg-gray-50/80">
