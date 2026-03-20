@@ -10,6 +10,7 @@ interface AuthState {
     email: string;
     role: string;
     access_token: string;
+    refresh_token: string;
     image: string;
   } | null;
   login: (
@@ -20,7 +21,9 @@ interface AuthState {
     email: string;
     role: string;
     access_token: string;
+    refresh_token: string;
   } | null>;
+  refreshAccessToken: () => Promise<boolean>;
   logout: () => void;
 }
 
@@ -47,6 +50,37 @@ export const createAuthStore = () => {
           } catch (error) {
             console.error("Login Error: ", error);
             return null;
+          }
+        },
+        refreshAccessToken: async () => {
+          if (typeof window === "undefined") return false;
+
+          const currentUser = get().user;
+          const refreshToken = currentUser?.refresh_token;
+          if (!refreshToken) return false;
+
+          try {
+            const response = await axios.post(`${getApiBaseUrl()}/auth/refresh`, {
+              refresh_token: refreshToken,
+            });
+
+            const newAccessToken = response.data?.access_token;
+            if (!newAccessToken) return false;
+
+            set({
+              user: currentUser
+                ? {
+                    ...currentUser,
+                    access_token: newAccessToken,
+                  }
+                : null,
+            });
+
+            return true;
+          } catch (error) {
+            // If refresh fails (expired/invalid), clear user so UI can recover.
+            set({ user: null });
+            return false;
           }
         },
         logout: () => {

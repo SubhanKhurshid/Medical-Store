@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { MoreHorizontal, Pill, Syringe, Scissors } from "lucide-react";
 import { useInventory } from "@/app/context/InventoryContext";
 import { toast } from "sonner";
+import EditInventoryMenuItem from "@/components/inventory/EditInventoryMenuItem";
 
 function formatDate(date: string) {
   try {
@@ -124,14 +125,31 @@ export const inventoryColumns: ColumnDef<InventoryItem>[] = [
       return (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={(e) => {
+                e.stopPropagation();
+              }}
+              onPointerDown={(e) => {
+                e.stopPropagation();
+              }}
+            >
               <MoreHorizontal className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
+          <DropdownMenuContent
+            align="end"
+            onClick={(e) => {
+              e.stopPropagation();
+            }}
+          >
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
+            <EditInventoryMenuItem item={item} />
             <DropdownMenuItem
-              onClick={async () => {
+              onClick={async (e) => {
+                e.stopPropagation();
                 try {
                   await deleteItem(item.id);
                   toast.success(`${item.name} removed from inventory.`);

@@ -95,7 +95,9 @@ const SalesPage = () => {
       const fetchedProducts = response.data.map((product: any) => ({
         ...product,
         quantity: product.quantity || 0,
-        imageUrl: product.imageUrl || "", // Ensure each product has an imageUrl
+        // Backend stores inventory image under `image` (not `imageUrl`).
+        // Keep `imageUrl` as the UI-friendly field with backward compatibility.
+        imageUrl: product.image ?? product.imageUrl ?? "",
       }));
       console.log("Fetched products:", fetchedProducts);
       setProducts(fetchedProducts);
