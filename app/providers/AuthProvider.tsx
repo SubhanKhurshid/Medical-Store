@@ -67,10 +67,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     // Initial scheduling + reschedule when access token changes (including zustand rehydration).
     scheduleRefresh();
-    const unsubscribe = store.subscribe(
-      (state) => state.user?.access_token,
-      () => scheduleRefresh()
-    );
+    // Zustand v4 typing: subscribe only accepts a single listener argument.
+    // Listener receives (state, prevState), so we can detect token changes here.
+    const unsubscribe = store.subscribe((state, prevState) => {
+      if (state.user?.access_token !== prevState.user?.access_token) {
+        scheduleRefresh();
+      }
+    });
 
     const onFocusOrVisible = () => {
       const { user } = store.getState();
