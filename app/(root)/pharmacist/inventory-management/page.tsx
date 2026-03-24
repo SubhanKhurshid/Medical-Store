@@ -22,6 +22,17 @@ import {
 import { ItemType, useInventory } from "@/app/context/InventoryContext";
 import { Calendar } from "lucide-react";
 import { toast } from "sonner";
+import axios from "axios";
+import Link from "next/link";
+
+function apiErrorMessage(err: unknown): string {
+  if (axios.isAxiosError(err)) {
+    const m = err.response?.data?.message;
+    if (Array.isArray(m)) return m.join(" ");
+    if (typeof m === "string") return m;
+  }
+  return "Something went wrong. Please try again.";
+}
 
 // Coerce empty string to number; used for optional numeric fields (default 0)
 const optionalNum = (min = 0) =>
@@ -53,6 +64,11 @@ const baseSchema = z.object({
   minimumStock: requiredNum(0, "Minimum stock is required"),
   description: z.string().optional(),
   manufacturerDiscount: z
+    .union([z.string(), z.number()])
+    .optional()
+    .transform((v) => (v === "" || v === undefined || v === null ? 0 : Number(v)))
+    .pipe(z.number().min(0).max(100)),
+  customerDiscount: z
     .union([z.string(), z.number()])
     .optional()
     .transform((v) => (v === "" || v === undefined || v === null ? 0 : Number(v)))
@@ -131,6 +147,7 @@ export default function InventoryManagement() {
       category: "",
       minimumStock: "",
       manufacturerDiscount: "",
+      customerDiscount: "",
       description: "",
       dosage: "",
       activeIngredient: "",
@@ -188,6 +205,7 @@ export default function InventoryManagement() {
     category: "",
     minimumStock: "",
     manufacturerDiscount: "",
+    customerDiscount: "",
     description: "",
     dosage: "",
     activeIngredient: "",
@@ -207,6 +225,7 @@ export default function InventoryManagement() {
       price: sellingPrice,
       sellingPrice,
       purchasePrice,
+      customerDiscount: Number(data.customerDiscount ?? 0),
       ...(data.barcode && data.barcode.trim() && { barcode: data.barcode.trim() }),
       ...(data.category && data.category.trim() && { category: data.category.trim() }),
       manufacturerId: data.manufacturer,
@@ -231,25 +250,31 @@ export default function InventoryManagement() {
       }),
     };
 
-    console.log("Formatted data:", formattedData);
-
     if (image) {
       const reader = new FileReader();
       reader.onloadend = async () => {
-        const base64Image = reader.result as string;
-        await addItem({ ...formattedData, image: base64Image });
+        try {
+          const base64Image = reader.result as string;
+          await addItem({ ...formattedData, image: base64Image });
+          toast.success(`${itemType} has been added successfully`);
+          form.reset(emptyDefaults as unknown as FormValues);
+          setImage(null);
+          setImagePreview(null);
+        } catch (err) {
+          toast.error(apiErrorMessage(err));
+        }
+      };
+      reader.readAsDataURL(image);
+    } else {
+      try {
+        await addItem(formattedData);
         toast.success(`${itemType} has been added successfully`);
         form.reset(emptyDefaults as unknown as FormValues);
         setImage(null);
         setImagePreview(null);
-      };
-      reader.readAsDataURL(image);
-    } else {
-      await addItem(formattedData);
-      toast.success(`${itemType} has been added successfully`);
-      form.reset(emptyDefaults as unknown as FormValues);
-      setImage(null);
-      setImagePreview(null);
+      } catch (err) {
+        toast.error(apiErrorMessage(err));
+      }
     }
   };
 
@@ -266,7 +291,11 @@ export default function InventoryManagement() {
             Add Medicine / Item
           </motion.h1>
           <motion.p className="mt-1 text-sm text-gray-500" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }}>
-            Add inventory by filling the fields below. Choose type: Medicine, Injection, Surgery, or General.
+            Add inventory by filling the fields below. Choose type: Medicine, Injection, Surgery, or General.             To add more stock for a product that already exists, use{" "}
+            <Link href="/pharmacist/purchase-orders/create" className="font-medium text-red-800 underline-offset-2 hover:underline">
+              Create Purchase Order
+            </Link>{" "}
+            and search for that item—do not create a second entry with the same name.
           </motion.p>
           <div className="mt-4 h-px bg-gradient-to-r from-red-200/80 via-red-100/50 to-transparent rounded-full" />
         </header>
@@ -423,6 +452,31 @@ export default function InventoryManagement() {
                 {form.formState.errors.manufacturerDiscount && (
                   <span className="text-red-500 text-sm">
                     {form.formState.errors.manufacturerDiscount.message}
+                  </span>
+                )}
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="customerDiscount">Customer discount (%)</Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    id="customerDiscount"
+                    placeholder="e.g. 10"
+                    type="number"
+                    inputMode="decimal"
+                    min={0}
+                    max={100}
+                    step="any"
+                    className="text-lg p-4 min-h-[48px] touch-manipulation"
+                    {...form.register("customerDiscount")}
+                  />
+                  <span className="text-lg font-medium text-gray-600">%</span>
+                </div>
+                <p className="text-xs text-gray-500">
+                  For stock report: net sale = selling price after this discount.
+                </p>
+                {form.formState.errors.customerDiscount && (
+                  <span className="text-red-500 text-sm">
+                    {form.formState.errors.customerDiscount.message}
                   </span>
                 )}
               </div>

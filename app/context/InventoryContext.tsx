@@ -25,6 +25,8 @@ export interface InventoryItem {
   barcode?: string | null;
   category?: string | null;
   manufacturerDiscount: number;
+  /** Default customer discount % (0–100) for stock valuation. */
+  customerDiscount?: number;
   minimumStock: number;
   description?: string;
   createdAt: string;
