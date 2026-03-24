@@ -107,7 +107,7 @@ const Sidebar = () => {
         label: "Supplier Payments",
       },
       { href: "/pharmacist/sales", label: "Sales" },
-      { href: "/pharmacist/sales-history", label: "Sales History" },
+      // { href: "/pharmacist/sales-history", label: "Sales History" },
       { href: "/pharmacist/history", label: "View Sales / Refund Sales" },
       { href: "/pharmacist/reports", label: "Reports & Accounts" },
     ],

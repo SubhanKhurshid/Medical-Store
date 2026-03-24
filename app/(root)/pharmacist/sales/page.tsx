@@ -62,7 +62,6 @@ const SalesPage = () => {
   const [customerPhone, setCustomerPhone] = useState("");
   const [customerId, setCustomerId] = useState<string | undefined>();
   const [paymentMethod, setPaymentMethod] = useState<"CASH" | "CARD" | "ONLINE" | "DONATION" | "CREDIT">("CASH");
-  const [sessionInvoiceNumber, setSessionInvoiceNumber] = useState<string | null>(null);
   const [completedSale, setCompletedSale] = useState<{ invoiceNumber: string; paymentMethod: string } | null>(null);
   const [isStockErrorOpen, setIsStockErrorOpen] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
@@ -263,10 +262,6 @@ const SalesPage = () => {
       toast.error("Your cart is empty.");
       return;
     }
-    // Generate session ID if not exists
-    if (!sessionInvoiceNumber) {
-      setSessionInvoiceNumber(Math.floor(Math.random() * 1000000000).toString().padStart(11, "0"));
-    }
     setIsDiscountPromptOpen(true);
   };
 
@@ -275,9 +270,6 @@ const SalesPage = () => {
     if (applyDiscount) {
       setIsDiscountInputOpen(true);
     } else {
-      if (!sessionInvoiceNumber) {
-        setSessionInvoiceNumber(Math.floor(Math.random() * 1000000000).toString().padStart(11, "0"));
-      }
       setIsReceiptModalOpen(true);
     }
   };
@@ -307,7 +299,6 @@ const SalesPage = () => {
         })),
         discount: discountPercent,
         paymentMethod,
-        invoiceNumber: sessionInvoiceNumber,
       };
 
       const response = await axios.post(
@@ -335,7 +326,6 @@ const SalesPage = () => {
           setCustomerId(undefined);
           setCustomerName("");
           setCustomerPhone("");
-          setSessionInvoiceNumber(null);
           setCompletedSale(null);
           setIsReceiptModalOpen(false);
           fetchProducts();
@@ -375,9 +365,6 @@ const SalesPage = () => {
           </div>
           <Button
             onClick={() => {
-              if (!sessionInvoiceNumber) {
-                setSessionInvoiceNumber(Math.floor(Math.random() * 1000000000).toString().padStart(11, "0"));
-              }
               setIsReceiptModalOpen(true);
             }}
             className="bg-red-800 hover:bg-red-700 text-white shadow-sm shrink-0"
@@ -747,7 +734,7 @@ const SalesPage = () => {
                 discount={discount || "0"}
                 totalBill={totalBill}
                 discountedTotal={discountedTotal}
-                invoiceNumber={completedSale?.invoiceNumber || sessionInvoiceNumber}
+                invoiceNumber={completedSale?.invoiceNumber ?? undefined}
                 paymentMethod={completedSale?.paymentMethod ?? paymentMethod}
               />
             </div>

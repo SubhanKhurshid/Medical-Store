@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Building2, FileText } from "lucide-react";
+import { X, FileText, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -18,6 +18,7 @@ const PaymentModal = ({ isOpen, onClose, onSave }: PaymentModalProps) => {
         manufacturerId: "",
         amount: "",
         reference: "",
+        paymentMethod: "CASH" as "CASH" | "CARD" | "ONLINE" | "DONATION" | "CREDIT",
     });
     const [isLoading, setIsLoading] = useState(false);
 
@@ -44,6 +45,7 @@ const PaymentModal = ({ isOpen, onClose, onSave }: PaymentModalProps) => {
             manufacturerId: formData.manufacturerId,
             amount: parseFloat(formData.amount),
             reference: formData.reference,
+            paymentMethod: formData.paymentMethod,
         };
 
         try {
@@ -64,7 +66,7 @@ const PaymentModal = ({ isOpen, onClose, onSave }: PaymentModalProps) => {
             onSave(savedPayment);
             onClose();
             // Reset form
-            setFormData({ manufacturerId: "", amount: "", reference: "" });
+            setFormData({ manufacturerId: "", amount: "", reference: "", paymentMethod: "CASH" });
         } catch (error) {
             console.error("Error recording payment:", error);
             alert("Failed to record payment. Please try again.");
@@ -119,7 +121,6 @@ const PaymentModal = ({ isOpen, onClose, onSave }: PaymentModalProps) => {
                                 </div>
 
                                 <div className="relative">
-                                
                                     <Input
                                         type="number"
                                         min="0"
@@ -130,8 +131,29 @@ const PaymentModal = ({ isOpen, onClose, onSave }: PaymentModalProps) => {
                                         onChange={(e) =>
                                             setFormData({ ...formData, amount: e.target.value })
                                         }
-                                        className="pl-10 text-2xl"
+                                        className="text-2xl"
                                     />
+                                </div>
+
+                                <div className="relative">
+                                    <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none z-10" />
+                                    <select
+                                        required
+                                        value={formData.paymentMethod}
+                                        onChange={(e) =>
+                                            setFormData({
+                                                ...formData,
+                                                paymentMethod: e.target.value as typeof formData.paymentMethod,
+                                            })
+                                        }
+                                        className="w-full pl-10 pr-10 py-2 text-xl border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+                                    >
+                                        <option value="CASH">Cash</option>
+                                        <option value="CARD">Card</option>
+                                        <option value="ONLINE">Online</option>
+                                        <option value="DONATION">Donation</option>
+                                        <option value="CREDIT">Credit</option>
+                                    </select>
                                 </div>
 
                                 <div className="relative">

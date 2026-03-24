@@ -101,6 +101,16 @@ export const inventoryColumns: ColumnDef<InventoryItem>[] = [
     cell: ({ row }) => (row.getValue("category") as string) || "—",
   },
   {
+    accessorKey: "manufacturer",
+    header: "Manufacturer",
+    cell: ({ row }) => {
+      const m = row.getValue("manufacturer");
+      if (typeof m === "string") return m || "—";
+      if (m && typeof m === "object" && "companyName" in m) return (m as any).companyName || "—";
+      return "—";
+    },
+  },
+  {
     accessorKey: "purchasePrice",
     header: "Purchase",
     cell: ({ row }) => {

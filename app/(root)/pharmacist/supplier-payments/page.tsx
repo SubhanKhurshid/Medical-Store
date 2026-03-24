@@ -22,6 +22,7 @@ interface Payment {
     amount: number;
     date: string;
     reference: string;
+    paymentMethod: string;
 }
 
 const SupplierPayments = () => {
@@ -48,6 +49,7 @@ const SupplierPayments = () => {
                 amount: item.amount,
                 date: new Date(item.paymentDate).toLocaleDateString(),
                 reference: item.reference || "-",
+                paymentMethod: item.paymentMethod || "CASH",
             }));
 
             setPayments(mappedData);
@@ -81,6 +83,15 @@ const SupplierPayments = () => {
 
                     <span className="font-medium">{row.original.amount.toLocaleString()} Rs</span>
                 </div>
+            ),
+        },
+        {
+            id: "paymentMethod",
+            header: "Method",
+            cell: ({ row }: any) => (
+                <span className="text-sm text-gray-700 capitalize">
+                    {String(row.original.paymentMethod || "cash").toLowerCase()}
+                </span>
             ),
         },
         {
@@ -223,6 +234,12 @@ const SupplierPayments = () => {
                                     <span className="text-muted-foreground">Reference</span>
                                     <p className="font-medium text-foreground mt-1">
                                         {selectedPayment.reference || "—"}
+                                    </p>
+                                </div>
+                                <div>
+                                    <span className="text-muted-foreground">Payment method</span>
+                                    <p className="font-medium text-foreground mt-1 capitalize">
+                                        {String(selectedPayment.paymentMethod || "cash").toLowerCase()}
                                     </p>
                                 </div>
                             </div>

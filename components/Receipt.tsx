@@ -4,6 +4,8 @@ import { useMemo } from "react";
 import { format } from "date-fns";
 import Barcode from "react-barcode";
 
+const BARCODE_PLACEHOLDER = "00000";
+
 interface CartItem {
   id: string;
   name: string;
@@ -40,11 +42,8 @@ export function Receipt({
   invoiceNumber,
   paymentMethod,
 }: ReceiptProps) {
-  const randomId = useMemo(() => Math.floor(Math.random() * 1000000000)
-    .toString()
-    .padStart(11, "0"), []);
-
-  const orderNumber = invoiceNumber ?? randomId;
+  const orderNumber = invoiceNumber?.trim() || "— pending";
+  const barcodeValue = invoiceNumber?.trim() || BARCODE_PLACEHOLDER;
 
   const now = useMemo(() => new Date(), []);
 
@@ -82,7 +81,7 @@ export function Receipt({
           }}
         >
           <Barcode
-            value={orderNumber}
+            value={barcodeValue}
             width={1.2}
             height={40}
             fontSize={12}

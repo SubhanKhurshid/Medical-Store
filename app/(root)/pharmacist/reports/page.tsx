@@ -11,6 +11,7 @@ import {
   AlertTriangle,
   LayoutGrid,
   Wallet,
+  Building2,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -70,6 +71,14 @@ const reportCards = [
     icon: Wallet,
     color: "text-indigo-600",
     bg: "bg-indigo-50",
+  },
+  {
+    title: "Manufacturer Ledger",
+    description: "Detailed transaction history and balance for any manufacturer.",
+    href: "/pharmacist/reports/manufacturer-ledger",
+    icon: Building2,
+    color: "text-rose-600",
+    bg: "bg-rose-50",
   },
 ];
 
