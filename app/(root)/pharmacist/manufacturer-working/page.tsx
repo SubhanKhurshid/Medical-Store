@@ -22,7 +22,9 @@ import {
   Eye,
   Banknote,
   Trash2,
+  FileText,
 } from "lucide-react";
+import Link from "next/link";
 import Loading from "@/components/shared/Loading";
 import { toast } from "sonner";
 import axios from "axios";
@@ -210,6 +212,17 @@ const Manufacturer = () => {
             >
               <Eye className="h-4 w-4 mr-2" />
               View
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-indigo-700 hover:text-indigo-900 hover:bg-indigo-50"
+              asChild
+            >
+              <Link href={`/pharmacist/reports/manufacturer-ledger?id=${row.original.id}`}>
+                <FileText className="h-4 w-4 mr-2" />
+                Ledger
+              </Link>
             </Button>
             <Button
               variant="ghost"

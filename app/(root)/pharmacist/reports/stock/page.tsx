@@ -2,11 +2,19 @@
 
 import { useAuth } from "@/app/providers/AuthProvider";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { motion } from "framer-motion";
-import { Loader, Package, ArrowLeft } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Loader, Package, ArrowLeft, Search, Filter } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -33,6 +41,7 @@ interface StockReportData {
     valueAtCost: number;
     valueAtSelling: number;
     manufacturer?: string;
+    genericName?: string;
   }>;
 }
 
@@ -40,6 +49,10 @@ export default function StockReportPage() {
   const { user } = useAuth();
   const [data, setData] = useState<StockReportData | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const [searchTerm, setSearchTerm] = useState("");
+  const [typeFilter, setTypeFilter] = useState("all");
+  const [manufacturerFilter, setManufacturerFilter] = useState("all");
 
   useEffect(() => {
     if (!user?.access_token) return;
@@ -60,6 +73,39 @@ export default function StockReportPage() {
     };
     fetchData();
   }, [user?.access_token]);
+
+  const manufacturers = useMemo<string[]>(() => {
+    if (!data) return [];
+    const set = new Set(data.items.map((i) => i.manufacturer).filter((m): m is string => !!m));
+    return Array.from(set).sort();
+  }, [data]);
+
+  const types = useMemo<string[]>(() => {
+    if (!data) return [];
+    const set = new Set(data.items.map((i) => i.type).filter((t): t is string => !!t));
+    return Array.from(set).sort();
+  }, [data]);
+
+  const filteredItems = useMemo(() => {
+    if (!data) return [];
+    return data.items.filter((item) => {
+      const matchesSearch =
+        item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.genericName?.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesType = typeFilter === "all" || item.type === typeFilter;
+      const matchesManufacturer =
+        manufacturerFilter === "all" || item.manufacturer === manufacturerFilter;
+      return matchesSearch && matchesType && matchesManufacturer;
+    });
+  }, [data, searchTerm, typeFilter, manufacturerFilter]);
+
+  const dynamicSummary = useMemo(() => {
+    return {
+      totalItems: filteredItems.length,
+      totalValueAtCost: filteredItems.reduce((sum, item) => sum + item.valueAtCost, 0),
+      totalValueAtSelling: filteredItems.reduce((sum, item) => sum + item.valueAtSelling, 0),
+    };
+  }, [filteredItems]);
 
   const formatCurrency = (n: number) =>
     new Intl.NumberFormat("en-PK", {
@@ -113,8 +159,8 @@ export default function StockReportPage() {
                     <CardTitle className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Total Items</CardTitle>
                   </CardHeader>
                   <CardContent className="pt-4 pb-6">
-                    <p className="text-3xl font-bold text-gray-900">{data.summary.totalItems}</p>
-                    <p className="text-xs text-gray-400 mt-1">Unique products in stock</p>
+                    <p className="text-3xl font-bold text-gray-900">{dynamicSummary.totalItems}</p>
+                    <p className="text-xs text-gray-400 mt-1">Products in filtered list</p>
                   </CardContent>
                 </Card>
               </motion.div>
@@ -124,8 +170,8 @@ export default function StockReportPage() {
                     <CardTitle className="text-xs font-semibold text-amber-700 uppercase tracking-wider">Value at Cost</CardTitle>
                   </CardHeader>
                   <CardContent className="pt-4 pb-6">
-                    <p className="text-3xl font-bold text-amber-600">{formatCurrency(data.summary.totalValueAtCost)}</p>
-                    <p className="text-xs text-amber-500 mt-1">Investment in inventory</p>
+                    <p className="text-3xl font-bold text-amber-600">{formatCurrency(dynamicSummary.totalValueAtCost)}</p>
+                    <p className="text-xs text-amber-500 mt-1">Investment in filtered inventory</p>
                   </CardContent>
                 </Card>
               </motion.div>
@@ -135,12 +181,60 @@ export default function StockReportPage() {
                     <CardTitle className="text-xs font-semibold text-green-700 uppercase tracking-wider">Value at Selling</CardTitle>
                   </CardHeader>
                   <CardContent className="pt-4 pb-6">
-                    <p className="text-3xl font-bold text-green-600">{formatCurrency(data.summary.totalValueAtSelling)}</p>
-                    <p className="text-xs text-green-500 mt-1">Expected return on sales</p>
+                    <p className="text-3xl font-bold text-green-600">{formatCurrency(dynamicSummary.totalValueAtSelling)}</p>
+                    <p className="text-xs text-green-500 mt-1">Expected return on filtered sales</p>
                   </CardContent>
                 </Card>
               </motion.div>
             </div>
+
+            <Card className="mb-6 border-gray-100 shadow-sm">
+              <CardContent className="p-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Input
+                      placeholder="Search medicine..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-9 h-10 border-gray-200 focus:border-red-500 focus:ring-red-500/20"
+                    />
+                  </div>
+                  
+                  <Select value={typeFilter} onValueChange={setTypeFilter}>
+                    <SelectTrigger className="h-10 border-gray-200 focus:ring-red-500/20">
+                      <SelectValue placeholder="All Types" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Types</SelectItem>
+                      {types.map((type) => (
+                        <SelectItem key={type} value={type}>
+                          <span className="capitalize">{type.toLowerCase()}</span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  <Select value={manufacturerFilter} onValueChange={setManufacturerFilter}>
+                    <SelectTrigger className="h-10 border-gray-200 focus:ring-red-500/20">
+                      <SelectValue placeholder="All Manufacturers" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Manufacturers</SelectItem>
+                      {manufacturers.map((m) => (
+                        <SelectItem key={m} value={m}>
+                          {m}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  <div className="flex items-center justify-end text-sm text-gray-500 font-medium px-2">
+                    Showing {filteredItems.length} of {data.items.length} items
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
             <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
               <Card className="overflow-hidden border border-gray-100 rounded-xl shadow-sm bg-white">
@@ -163,14 +257,16 @@ export default function StockReportPage() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {data.items.length === 0 ? (
+                        {filteredItems.length === 0 ? (
                           <TableRow>
                             <TableCell colSpan={7} className="h-32 text-center text-gray-500 italic">
-                              No stock data recorded yet.
+                              {searchTerm || typeFilter !== "all" || manufacturerFilter !== "all" 
+                                ? "No items match your filters."
+                                : "No stock data recorded yet."}
                             </TableCell>
                           </TableRow>
                         ) : (
-                          data.items.map((row) => (
+                          filteredItems.map((row) => (
                             <TableRow key={row.id} className="hover:bg-gray-50/50 transition-colors">
                               <TableCell className="font-medium text-gray-900">{row.name}</TableCell>
                               <TableCell className="text-center">
