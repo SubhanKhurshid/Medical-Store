@@ -63,6 +63,11 @@ const baseSchema = z.object({
     .optional()
     .transform((v) => (v === "" || v === undefined || v === null ? 0 : Number(v)))
     .pipe(z.number().min(0).max(100)),
+  customerDiscount: z
+    .union([z.string(), z.number()])
+    .optional()
+    .transform((v) => (v === "" || v === undefined || v === null ? 0 : Number(v)))
+    .pipe(z.number().min(0).max(100)),
   dosage: z.string().optional(),
   activeIngredient: z.string().optional(),
   volume: optionalNum(0),
@@ -149,6 +154,7 @@ export default function EditInventoryModal({
       minimumStock: String((item as any).minimumStock ?? ""),
       description: (item as any).description ?? "",
       manufacturerDiscount: String((item as any).manufacturerDiscount ?? 0),
+      customerDiscount: String((item as any).customerDiscount ?? 0),
       dosage: (item as any).dosage ?? "",
       activeIngredient: (item as any).activeIngredient ?? "",
       genericName: (item as any).genericName ?? "",
@@ -177,6 +183,7 @@ export default function EditInventoryModal({
       minimumStock: String((item as any).minimumStock ?? ""),
       description: (item as any).description ?? "",
       manufacturerDiscount: String((item as any).manufacturerDiscount ?? 0),
+      customerDiscount: String((item as any).customerDiscount ?? 0),
       dosage: (item as any).dosage ?? "",
       activeIngredient: (item as any).activeIngredient ?? "",
       genericName: (item as any).genericName ?? "",
@@ -240,6 +247,7 @@ export default function EditInventoryModal({
         purchasePrice: Number((data as any).purchasePrice ?? 0),
         minimumStock: Number((data as any).minimumStock),
         manufacturerDiscount: Number((data as any).manufacturerDiscount ?? 0),
+        customerDiscount: Number((data as any).customerDiscount ?? 0),
         barcode: data.barcode || undefined,
         category: data.category || undefined,
         description: data.description || undefined,
@@ -533,6 +541,26 @@ export default function EditInventoryModal({
                       className="h-11 border-gray-200 bg-white placeholder:text-gray-400 focus:border-red-500 focus:ring-red-500/20"
                       {...form.register("manufacturerDiscount")}
                     />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="flex flex-col gap-2">
+                    <Label htmlFor="customerDiscount">Customer discount (%)</Label>
+                    <Input
+                      id="customerDiscount"
+                      type="number"
+                      inputMode="decimal"
+                      min={0}
+                      max={100}
+                      step="any"
+                      placeholder="e.g. 10"
+                      className="h-11 border-gray-200 bg-white placeholder:text-gray-400 focus:border-red-500 focus:ring-red-500/20"
+                      {...form.register("customerDiscount")}
+                    />
+                    <p className="text-xs text-gray-500">
+                      Used for stock report: net sale price = selling price × (1 − discount ÷ 100).
+                    </p>
                   </div>
                 </div>
 

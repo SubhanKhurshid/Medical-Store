@@ -33,6 +33,7 @@ interface StockReportData {
     totalItems: number;
     totalValueAtCost: number;
     totalValueAtSelling: number;
+    totalNetProfit: number;
   };
   items: Array<{
     id: string;
@@ -40,8 +41,21 @@ interface StockReportData {
     type: string;
     quantity: number;
     minimumStock: number;
+    /** List purchase cost per unit (before manufacturer discount). */
+    purchaseCostPerUnit: number;
+    manufacturerDiscountPercent: number;
+    /** Net purchase cost per unit after manufacturer discount. */
+    netPurchaseCostPerUnit: number;
+    /** List selling price per unit (before customer discount). */
+    salePricePerUnit: number;
+    customerDiscountPercent: number;
+    /** Net sale price per unit after customer discount. */
+    netSalePricePerUnit: number;
+    /** quantity × net purchase cost per unit */
     valueAtCost: number;
+    /** quantity × net sale price per unit */
     valueAtSelling: number;
+    netProfit: number;
     manufacturer?: string;
     genericName?: string;
   }>;
@@ -152,6 +166,12 @@ export default function StockReportPage() {
       totalItems: filteredItems.length,
       totalValueAtCost: filteredItems.reduce((sum, item) => sum + item.valueAtCost, 0),
       totalValueAtSelling: filteredItems.reduce((sum, item) => sum + item.valueAtSelling, 0),
+      totalNetProfit: filteredItems.reduce((sum, item) => {
+        const line =
+          item.netProfit ??
+          (item.valueAtSelling ?? 0) - (item.valueAtCost ?? 0);
+        return sum + line;
+      }, 0),
     };
   }, [filteredItems]);
 
@@ -161,6 +181,25 @@ export default function StockReportPage() {
         style: "currency",
         currency: "PKR",
         maximumFractionDigits: 0,
+      }).format(n),
+    [],
+  );
+
+  /** Unit amounts may need extra decimals (e.g. net cost after %). */
+  const formatUnitMoney = useCallback(
+    (n: number) =>
+      new Intl.NumberFormat("en-PK", {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 4,
+      }).format(n),
+    [],
+  );
+
+  const formatPct = useCallback(
+    (n: number) =>
+      new Intl.NumberFormat("en-PK", {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2,
       }).format(n),
     [],
   );
@@ -206,9 +245,11 @@ export default function StockReportPage() {
       y += 14;
       doc.text(`Summary — items: ${dynamicSummary.totalItems}`, margin, y);
       y += 12;
-      doc.text(`Value at cost: ${formatCurrency(dynamicSummary.totalValueAtCost)}`, margin, y);
+      doc.text(`Value at cost (net): ${formatCurrency(dynamicSummary.totalValueAtCost)}`, margin, y);
       y += 12;
-      doc.text(`Value at selling: ${formatCurrency(dynamicSummary.totalValueAtSelling)}`, margin, y);
+      doc.text(`Value at selling (net): ${formatCurrency(dynamicSummary.totalValueAtSelling)}`, margin, y);
+      y += 12;
+      doc.text(`Net profit (stock): ${formatCurrency(dynamicSummary.totalNetProfit)}`, margin, y);
       y += 16;
 
       const body = filteredItems.map((row) => [
@@ -216,13 +257,37 @@ export default function StockReportPage() {
         row.type,
         String(row.quantity),
         String(row.minimumStock),
+        formatUnitMoney(row.purchaseCostPerUnit ?? 0),
+        formatPct(row.manufacturerDiscountPercent ?? 0),
+        formatUnitMoney(row.netPurchaseCostPerUnit ?? 0),
+        formatUnitMoney(row.salePricePerUnit ?? 0),
+        formatPct(row.customerDiscountPercent ?? 0),
+        formatUnitMoney(row.netSalePricePerUnit ?? 0),
         formatCurrency(row.valueAtCost),
         formatCurrency(row.valueAtSelling),
+        formatCurrency(row.netProfit ?? 0),
         row.manufacturer ?? "—",
       ]);
 
       autoTable(doc, {
-        head: [["Name", "Type", "Qty", "Min", "Value (cost)", "Value (selling)", "Manufacturer"]],
+        head: [
+          [
+            "Name",
+            "Type",
+            "Qty",
+            "Min",
+            "Pur. (list)",
+            "Mfg %",
+            "Net pur/u",
+            "Sale (list)",
+            "Cust %",
+            "Net sale/u",
+            "Val @ cost",
+            "Val @ sell",
+            "Net profit",
+            "Mfg",
+          ],
+        ],
         body,
         startY: y,
         styles: { fontSize: 7, cellPadding: 4 },
@@ -237,7 +302,15 @@ export default function StockReportPage() {
     } finally {
       setExportingPdf(false);
     }
-  }, [data?.dateFilter, dynamicSummary, fetchedAt, filteredItems, formatCurrency]);
+  }, [
+    data?.dateFilter,
+    dynamicSummary,
+    fetchedAt,
+    filteredItems,
+    formatCurrency,
+    formatPct,
+    formatUnitMoney,
+  ]);
 
   const customIncomplete = stockRangeMode === "custom" && (!customFrom || !customTo);
 
@@ -266,7 +339,7 @@ export default function StockReportPage() {
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.4, delay: 0.1 }}
               >
-                Current quantities and valuation. Optional date range limits rows to items last updated in that period.
+                Purchase value uses net cost: purchase price × (1 − manufacturer discount ÷ 100) per unit. Selling value uses net price: selling price × (1 − customer discount ÷ 100) per unit. Set customer discount on each item when editing inventory.
               </motion.p>
             </div>
           </div>
@@ -356,7 +429,7 @@ export default function StockReportPage() {
           </div>
         ) : data ? (
           <>
-            <div className="grid gap-6 sm:grid-cols-3 mb-8">
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4 mb-8">
               <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
                 <Card className="border-gray-100 shadow-sm overflow-hidden bg-white">
                   <CardHeader className="pb-2 bg-gray-50/50 border-b border-gray-100">
@@ -371,22 +444,33 @@ export default function StockReportPage() {
               <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
                 <Card className="border-gray-100 shadow-sm overflow-hidden bg-white">
                   <CardHeader className="pb-2 bg-amber-50/30 border-b border-amber-100">
-                    <CardTitle className="text-xs font-semibold text-amber-700 uppercase tracking-wider">Value at Cost</CardTitle>
+                    <CardTitle className="text-xs font-semibold text-amber-700 uppercase tracking-wider">Value at cost (net)</CardTitle>
                   </CardHeader>
                   <CardContent className="pt-4 pb-6">
                     <p className="text-3xl font-bold text-amber-600">{formatCurrency(dynamicSummary.totalValueAtCost)}</p>
-                    <p className="text-xs text-amber-500 mt-1">Investment in filtered inventory</p>
+                    <p className="text-xs text-amber-500 mt-1">Qty × net purchase cost per unit</p>
                   </CardContent>
                 </Card>
               </motion.div>
               <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
                 <Card className="border-gray-100 shadow-sm overflow-hidden bg-white">
                   <CardHeader className="pb-2 bg-green-50/30 border-b border-green-100">
-                    <CardTitle className="text-xs font-semibold text-green-700 uppercase tracking-wider">Value at Selling</CardTitle>
+                    <CardTitle className="text-xs font-semibold text-green-700 uppercase tracking-wider">Value at selling (net)</CardTitle>
                   </CardHeader>
                   <CardContent className="pt-4 pb-6">
                     <p className="text-3xl font-bold text-green-600">{formatCurrency(dynamicSummary.totalValueAtSelling)}</p>
-                    <p className="text-xs text-green-500 mt-1">Expected return on filtered sales</p>
+                    <p className="text-xs text-green-500 mt-1">Qty × net sale price per unit</p>
+                  </CardContent>
+                </Card>
+              </motion.div>
+              <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}>
+                <Card className="border-gray-100 shadow-sm overflow-hidden bg-white">
+                  <CardHeader className="pb-2 bg-sky-50/40 border-b border-sky-100">
+                    <CardTitle className="text-xs font-semibold text-sky-800 uppercase tracking-wider">Net profit (stock)</CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-4 pb-6">
+                    <p className="text-3xl font-bold text-sky-700">{formatCurrency(dynamicSummary.totalNetProfit)}</p>
+                    <p className="text-xs text-sky-600 mt-1">Selling (net) − cost (net)</p>
                   </CardContent>
                 </Card>
               </motion.div>
@@ -444,26 +528,59 @@ export default function StockReportPage() {
               <Card className="overflow-hidden border border-gray-100 rounded-xl shadow-sm bg-white">
                 <div className="border-l-4 border-l-red-500 bg-red-50/30 px-5 py-4">
                   <h2 className="text-base font-semibold text-red-800">Item-wise Stock Analysis</h2>
-                  <p className="text-xs text-gray-500 mt-0.5">Quantity and valuation details for each inventory item.</p>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    Per unit: net purchase = list purchase × (1 − mfg % ÷ 100); net sale = list sale × (1 − customer % ÷ 100). Line totals multiply by quantity.
+                  </p>
                 </div>
                 <CardContent className="p-0">
                   <div className="overflow-x-auto">
                     <Table>
-                      <TableHeader className="bg-gray-50/80">
-                        <TableRow>
-                          <TableHead className="font-semibold text-gray-900">Name</TableHead>
+                      <TableHeader>
+                        <TableRow className="bg-amber-50/60 hover:bg-amber-50/60">
+                          <TableHead colSpan={4} className="text-center text-xs font-semibold text-amber-900 border-r border-amber-100">
+                            Item
+                          </TableHead>
+                          <TableHead colSpan={3} className="text-center text-xs font-semibold text-amber-900 border-r border-amber-100">
+                            Purchase (per unit)
+                          </TableHead>
+                          <TableHead colSpan={3} className="text-center text-xs font-semibold text-green-900 border-r border-green-100">
+                            Sale (per unit)
+                          </TableHead>
+                          <TableHead colSpan={4} className="text-center text-xs font-semibold text-gray-800">
+                            Stock (line totals) · supplier
+                          </TableHead>
+                        </TableRow>
+                        <TableRow className="bg-gray-50/80">
+                          <TableHead className="font-semibold text-gray-900 min-w-[120px]">Name</TableHead>
                           <TableHead className="font-semibold text-gray-900 text-center">Type</TableHead>
                           <TableHead className="font-semibold text-gray-900 text-center">Qty</TableHead>
-                          <TableHead className="font-semibold text-gray-900 text-center">Min Stock</TableHead>
-                          <TableHead className="font-semibold text-gray-900 text-right">Value (Cost)</TableHead>
-                          <TableHead className="font-semibold text-gray-900 text-right">Value (Selling)</TableHead>
-                          <TableHead className="font-semibold text-gray-900">Manufacturer</TableHead>
+                          <TableHead className="font-semibold text-gray-900 text-center border-r border-gray-100">Min</TableHead>
+                          <TableHead className="font-semibold text-gray-900 text-right text-xs whitespace-nowrap">
+                            List cost
+                          </TableHead>
+                          <TableHead className="font-semibold text-gray-900 text-center text-xs">Mfg %</TableHead>
+                          <TableHead className="font-semibold text-gray-900 text-right text-xs border-r border-gray-100 whitespace-nowrap">
+                            Net pur.
+                          </TableHead>
+                          <TableHead className="font-semibold text-gray-900 text-right text-xs whitespace-nowrap">
+                            List sale
+                          </TableHead>
+                          <TableHead className="font-semibold text-gray-900 text-center text-xs">Cust %</TableHead>
+                          <TableHead className="font-semibold text-gray-900 text-right text-xs border-r border-gray-100 whitespace-nowrap">
+                            Net sale
+                          </TableHead>
+                          <TableHead className="font-semibold text-gray-900 text-right text-xs">@ cost</TableHead>
+                          <TableHead className="font-semibold text-gray-900 text-right text-xs">@ sell</TableHead>
+                          <TableHead className="font-semibold text-gray-900 text-right text-xs border-r border-gray-100">
+                            Net profit
+                          </TableHead>
+                          <TableHead className="font-semibold text-gray-900 min-w-[100px]">Manufacturer</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {filteredItems.length === 0 ? (
                           <TableRow>
-                            <TableCell colSpan={7} className="h-32 text-center text-gray-500 italic">
+                            <TableCell colSpan={14} className="h-32 text-center text-gray-500 italic">
                               {searchTerm || typeFilter !== "all" || manufacturerFilter !== "all"
                                 ? "No items match your filters."
                                 : "No stock data recorded yet."}
@@ -479,10 +596,37 @@ export default function StockReportPage() {
                                 </span>
                               </TableCell>
                               <TableCell className="text-center font-bold text-red-900">{row.quantity}</TableCell>
-                              <TableCell className="text-center text-gray-500">{row.minimumStock}</TableCell>
-                              <TableCell className="text-right text-amber-700 font-medium">{formatCurrency(row.valueAtCost)}</TableCell>
-                              <TableCell className="text-right text-green-700 font-medium">{formatCurrency(row.valueAtSelling)}</TableCell>
-                              <TableCell className="text-muted-foreground">{row.manufacturer ?? "—"}</TableCell>
+                              <TableCell className="text-center text-gray-500 border-r border-gray-100">
+                                {row.minimumStock}
+                              </TableCell>
+                              <TableCell className="text-right text-amber-800/90 tabular-nums text-sm">
+                                {formatUnitMoney(row.purchaseCostPerUnit ?? 0)}
+                              </TableCell>
+                              <TableCell className="text-center tabular-nums text-sm">
+                                {formatPct(row.manufacturerDiscountPercent ?? 0)}%
+                              </TableCell>
+                              <TableCell className="text-right text-amber-900 font-medium tabular-nums text-sm border-r border-gray-100">
+                                {formatUnitMoney(row.netPurchaseCostPerUnit ?? 0)}
+                              </TableCell>
+                              <TableCell className="text-right text-green-800/90 tabular-nums text-sm">
+                                {formatUnitMoney(row.salePricePerUnit ?? 0)}
+                              </TableCell>
+                              <TableCell className="text-center tabular-nums text-sm">
+                                {formatPct(row.customerDiscountPercent ?? 0)}%
+                              </TableCell>
+                              <TableCell className="text-right text-green-900 font-medium tabular-nums text-sm border-r border-gray-100">
+                                {formatUnitMoney(row.netSalePricePerUnit ?? 0)}
+                              </TableCell>
+                              <TableCell className="text-right text-amber-700 font-medium tabular-nums">
+                                {formatCurrency(row.valueAtCost)}
+                              </TableCell>
+                              <TableCell className="text-right text-green-700 font-medium tabular-nums">
+                                {formatCurrency(row.valueAtSelling)}
+                              </TableCell>
+                              <TableCell className="text-right font-semibold text-sky-800 tabular-nums border-r border-gray-100">
+                                {formatCurrency(row.netProfit ?? 0)}
+                              </TableCell>
+                              <TableCell className="text-muted-foreground text-sm">{row.manufacturer ?? "—"}</TableCell>
                             </TableRow>
                           ))
                         )}

@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { AlertCircle, Loader2, MoreHorizontal, ShoppingCart, XCircle, CalendarClock } from "lucide-react";
+import { AlertCircle, Loader2, MoreHorizontal, ShoppingCart, XCircle, CalendarClock, Search } from "lucide-react";
 import Loading from "@/components/shared/Loading";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { motion } from "framer-motion";
@@ -60,13 +60,27 @@ export interface ReorderItem {
   isExpiringSoon: boolean;
 }
 
-interface CreateOrderPayload {
-  inventoryItemId: string;
-  quantityOrdered: number;
-}
-
 const getAuthHeaders = (token: string | undefined) =>
   token ? { Authorization: `Bearer ${token}` } : {};
+
+function toReorderItemFromInventory(row: {
+  id: string;
+  name: string;
+  quantity: number;
+  minimumStock: number;
+  manufacturer?: string;
+}): ReorderItem {
+  return {
+    id: row.id,
+    name: row.name,
+    quantity: row.quantity,
+    minimumStock: row.minimumStock ?? 0,
+    manufacturer: row.manufacturer ?? "",
+    issueLabel: "Reorder",
+    isLowStock: false,
+    isExpiringSoon: false,
+  };
+}
 
 function mergeLowStockAndExpiring(
   lowStock: Array<{ id: string; name: string; quantity: number; minimumStock: number; manufacturer?: string }>,
@@ -114,13 +128,18 @@ export default function CreatePurchaseOrdersPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedItem, setSelectedItem] = useState<ReorderItem | null>(null);
-  const [orderQuantity, setOrderQuantity] = useState<number>(0);
+  /** String so the field can be cleared while typing (no stuck "0") */
+  const [orderQuantityInput, setOrderQuantityInput] = useState("");
+  const [creatingOrder, setCreatingOrder] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [removeLowStockDialogOpen, setRemoveLowStockDialogOpen] = useState(false);
   const [removeExpiringDialogOpen, setRemoveExpiringDialogOpen] = useState(false);
   const [itemToRemoveLowStock, setItemToRemoveLowStock] = useState<ReorderItem | null>(null);
   const [itemToRemoveExpiring, setItemToRemoveExpiring] = useState<ReorderItem | null>(null);
   const [removing, setRemoving] = useState(false);
+  const [allInventory, setAllInventory] = useState<ReorderItem[]>([]);
+  const [inventorySearch, setInventorySearch] = useState("");
+  const [loadingInventory, setLoadingInventory] = useState(false);
 
   const fetchItems = useCallback(async () => {
     const headers = getAuthHeaders(user?.access_token);
@@ -148,36 +167,100 @@ export default function CreatePurchaseOrdersPage() {
     }
   }, [user?.access_token]);
 
+  const fetchAllInventory = useCallback(async () => {
+    const headers = getAuthHeaders(user?.access_token);
+    try {
+      setLoadingInventory(true);
+      const res = await axios.get(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist`,
+        { headers }
+      );
+      const rows = Array.isArray(res.data) ? res.data : [];
+      setAllInventory(
+        rows.map((r: { id: string; name: string; quantity: number; minimumStock?: number; manufacturer?: string }) =>
+          toReorderItemFromInventory({
+            id: r.id,
+            name: r.name,
+            quantity: r.quantity,
+            minimumStock: r.minimumStock ?? 0,
+            manufacturer: r.manufacturer,
+          })
+        )
+      );
+    } catch (err) {
+      console.error("Error loading inventory for search:", err);
+      setAllInventory([]);
+    } finally {
+      setLoadingInventory(false);
+    }
+  }, [user?.access_token]);
+
   useEffect(() => {
     fetchItems();
-  }, [fetchItems]);
+    fetchAllInventory();
+  }, [fetchItems, fetchAllInventory]);
+
+  const searchMatches = useMemo(() => {
+    const q = inventorySearch.trim().toLowerCase();
+    if (q.length < 1) return [];
+    return allInventory
+      .filter(
+        (i) =>
+          i.name.toLowerCase().includes(q) ||
+          (i.manufacturer && i.manufacturer.toLowerCase().includes(q))
+      )
+      .slice(0, 20);
+  }, [allInventory, inventorySearch]);
 
   const openOrderDialog = (item: ReorderItem) => {
     setSelectedItem(item);
-    setOrderQuantity(Math.max(item.minimumStock * 2 - item.quantity, 10));
+    const suggested = Math.max(item.minimumStock * 2 - item.quantity, 10);
+    setOrderQuantityInput(String(suggested));
     setDialogOpen(true);
+  };
+
+  const onOrderQuantityChange = (raw: string) => {
+    if (raw === "") {
+      setOrderQuantityInput("");
+      return;
+    }
+    if (!/^\d+$/.test(raw)) return;
+    setOrderQuantityInput(raw.replace(/^0+(?=\d)/, ""));
   };
 
   const handleCreateOrder = async () => {
     if (!selectedItem) return;
+    const qty = parseInt(orderQuantityInput.trim(), 10);
+    if (!Number.isFinite(qty) || qty < 1) {
+      toast.error("Enter a valid quantity", {
+        description: "Use a whole number of at least 1.",
+      });
+      return;
+    }
     const headers = getAuthHeaders(user?.access_token);
+    setCreatingOrder(true);
     try {
       await axios.post(
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/purchase-order`,
-        { inventoryItemId: selectedItem.id, quantityOrdered: orderQuantity },
+        { inventoryItemId: selectedItem.id, quantityOrdered: qty },
         { headers }
       );
-      toast.success("Purchase Order Created", {
-        description: `Order for ${orderQuantity} units of ${selectedItem.name} has been created.`,
+      toast.success("Purchase order created", {
+        description: `${qty} units of ${selectedItem.name}.`,
       });
       setDialogOpen(false);
+      setSelectedItem(null);
+      setOrderQuantityInput("");
       await fetchItems();
+      await fetchAllInventory();
       dispatchLowStockInvalidated();
       dispatchExpiringInvalidated();
     } catch (err) {
       console.error("Error creating order:", err);
       toast.error("Failed to create purchase order");
       if (axios.isAxiosError(err)) setError(err.response?.data?.message || "An error occurred");
+    } finally {
+      setCreatingOrder(false);
     }
   };
 
@@ -344,10 +427,67 @@ export default function CreatePurchaseOrdersPage() {
             Create Purchase Order
           </motion.h1>
           <motion.p className="mt-1 text-sm text-gray-500" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }}>
-            Create orders for low stock and expiring soon items.
+            Restock any product by searching inventory, or create orders from low-stock and expiring-soon alerts.
           </motion.p>
           <div className="mt-4 h-px bg-gradient-to-r from-red-200/80 via-red-100/50 to-transparent rounded-full" />
         </header>
+
+        <Card className="overflow-hidden bg-white border border-gray-100 rounded-xl shadow-sm hover:shadow-md transition-shadow mb-6">
+          <div className="border-l-4 border-l-emerald-600 bg-emerald-50/30 px-5 py-3">
+            <h2 className="text-base font-semibold text-red-800">Order stock for any item</h2>
+            <p className="text-xs text-gray-500 mt-0.5">
+              Search by name or manufacturer. When the order is marked delivered, quantity is added to this same inventory row.
+            </p>
+          </div>
+          <CardContent className="p-4 sm:p-5 space-y-3">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search inventory (e.g. Panadol)…"
+                value={inventorySearch}
+                onChange={(e) => setInventorySearch(e.target.value)}
+                className="pl-9 h-10"
+                aria-label="Search inventory for purchase order"
+              />
+            </div>
+            {loadingInventory && (
+              <p className="text-xs text-muted-foreground flex items-center gap-2">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                Loading inventory…
+              </p>
+            )}
+            {!loadingInventory && inventorySearch.trim().length > 0 && searchMatches.length === 0 && (
+              <p className="text-sm text-muted-foreground">No matching items.</p>
+            )}
+            {searchMatches.length > 0 && (
+              <ul className="max-h-56 overflow-y-auto rounded-md border border-gray-100 divide-y divide-gray-100">
+                {searchMatches.map((item) => (
+                  <li
+                    key={item.id}
+                    className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 px-3 py-2.5 hover:bg-gray-50/80"
+                  >
+                    <div className="min-w-0">
+                      <p className="font-medium text-sm truncate">{item.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        Qty {item.quantity}
+                        {item.manufacturer ? ` · ${item.manufacturer}` : ""}
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="shrink-0"
+                      onClick={() => openOrderDialog(item)}
+                    >
+                      <ShoppingCart className="mr-1.5 h-4 w-4" />
+                      Create order
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
 
         <Card className="overflow-hidden bg-white border border-gray-100 rounded-xl shadow-sm hover:shadow-md transition-shadow">
           <div className="border-l-4 border-l-red-500 bg-red-50/30 px-5 py-3">
@@ -509,46 +649,135 @@ export default function CreatePurchaseOrdersPage() {
       </Dialog>
 
       {/* Order Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-[600px] md:max-w-[800px] w-full">
+      <Dialog
+        open={dialogOpen}
+        onOpenChange={(open) => {
+          setDialogOpen(open);
+          if (!open) {
+            setSelectedItem(null);
+            setOrderQuantityInput("");
+            setCreatingOrder(false);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold">Create Purchase Order</DialogTitle>
-            {selectedItem && (
-              <DialogDescription className="text-base mt-2">
-                Create a purchase order for {selectedItem.name} from {selectedItem.manufacturer}
-              </DialogDescription>
-            )}
+            <DialogTitle className="flex items-center gap-2 text-red-800">
+              <ShoppingCart className="h-5 w-5 shrink-0" aria-hidden />
+              Create purchase order
+            </DialogTitle>
+            <DialogDescription className="text-left text-gray-600">
+              {selectedItem ? (
+                <>
+                  Order stock for <span className="font-medium text-foreground">{selectedItem.name}</span>.
+                  Quantity is added to inventory when this order is marked delivered.
+                </>
+              ) : (
+                "Choose an item from the list to create an order."
+              )}
+            </DialogDescription>
           </DialogHeader>
+
           {selectedItem && (
-            <>
-              <div className="flex flex-col gap-6 py-6">
-                <div className="flex flex-col gap-2">
-                  <Label htmlFor="current-quantity" className="text-base font-medium">Current Qty</Label>
-                  <Input id="current-quantity" value={selectedItem.quantity} className="h-12 text-base" disabled />
-                </div>
-                <div className="flex flex-col gap-2">
-                  <Label htmlFor="minimum-quantity" className="text-base font-medium">Minimum Qty</Label>
-                  <Input id="minimum-quantity" value={selectedItem.minimumStock} className="h-12 text-base" disabled />
-                </div>
-                <div className="flex flex-col gap-2">
-                  <Label htmlFor="order-quantity" className="text-base font-medium">Order Qty</Label>
-                  <Input
-                    id="order-quantity"
-                    type="number"
-                    min={1}
-                    value={orderQuantity}
-                    onChange={(e) => setOrderQuantity(Number(e.target.value) || 0)}
-                    className="h-12 text-base"
-                  />
-                </div>
+            <div className="space-y-4">
+              <div className="rounded-lg border border-gray-100 overflow-hidden">
+                <Table>
+                  <TableBody>
+                    <TableRow className="hover:bg-transparent">
+                      <TableCell className="w-[38%] py-2.5 text-sm text-gray-500 font-medium">
+                        Manufacturer
+                      </TableCell>
+                      <TableCell className="py-2.5 text-sm">
+                        {selectedItem.manufacturer?.trim() || "—"}
+                      </TableCell>
+                    </TableRow>
+                    <TableRow className="hover:bg-transparent">
+                      <TableCell className="py-2.5 text-sm text-gray-500 font-medium">
+                        Current stock
+                      </TableCell>
+                      <TableCell
+                        className={`py-2.5 text-sm tabular-nums ${
+                          selectedItem.quantity < selectedItem.minimumStock
+                            ? "text-red-600 font-semibold"
+                            : ""
+                        }`}
+                      >
+                        {selectedItem.quantity}
+                      </TableCell>
+                    </TableRow>
+                    <TableRow className="hover:bg-transparent">
+                      <TableCell className="py-2.5 text-sm text-gray-500 font-medium">
+                        Minimum stock
+                      </TableCell>
+                      <TableCell className="py-2.5 text-sm tabular-nums">
+                        {selectedItem.minimumStock}
+                      </TableCell>
+                    </TableRow>
+                    {(selectedItem.isLowStock || selectedItem.isExpiringSoon) && (
+                      <TableRow className="hover:bg-transparent bg-amber-50/50">
+                        <TableCell className="py-2.5 text-sm text-gray-500 font-medium">
+                          Alert
+                        </TableCell>
+                        <TableCell className="py-2.5 text-sm text-amber-900">
+                          {selectedItem.isLowStock && selectedItem.isExpiringSoon
+                            ? "Low stock and expiring soon"
+                            : selectedItem.isLowStock
+                              ? "Low stock"
+                              : "Expiring soon"}
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
               </div>
-              <DialogFooter className="pt-4">
-                <Button type="button" onClick={handleCreateOrder} className="px-8 py-3 text-base">
-                  Create Order
-                </Button>
-              </DialogFooter>
-            </>
+
+              <div className="space-y-2">
+                <Label htmlFor="order-quantity" className="text-sm font-medium text-gray-700">
+                  Units to order
+                </Label>
+                <Input
+                  id="order-quantity"
+                  inputMode="numeric"
+                  autoComplete="off"
+                  placeholder="e.g. 50"
+                  value={orderQuantityInput}
+                  onChange={(e) => onOrderQuantityChange(e.target.value)}
+                  className="h-10 text-sm tabular-nums"
+                  aria-describedby="order-qty-hint"
+                />
+                <p id="order-qty-hint" className="text-xs text-gray-500">
+                  Suggested:{" "}
+                  {Math.max(selectedItem.minimumStock * 2 - selectedItem.quantity, 10)} units.
+                </p>
+              </div>
+            </div>
           )}
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              type="button"
+              variant="outline"
+              disabled={creatingOrder}
+              onClick={() => setDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              className="bg-red-800 hover:bg-red-900"
+              disabled={creatingOrder || !selectedItem}
+              onClick={handleCreateOrder}
+            >
+              {creatingOrder ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Creating…
+                </>
+              ) : (
+                "Create order"
+              )}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
       </div>
