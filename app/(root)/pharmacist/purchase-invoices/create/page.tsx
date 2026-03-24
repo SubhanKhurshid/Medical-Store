@@ -58,8 +58,8 @@ export default function CreatePurchaseInvoicePage() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!invoiceData.invoiceNumber || !invoiceData.manufacturerId) {
-            toast.error("Please fill in invoice number and supplier");
+        if (!invoiceData.manufacturerId) {
+            toast.error("Please select a supplier");
             return;
         }
 
@@ -79,15 +79,18 @@ export default function CreatePurchaseInvoicePage() {
 
         setIsLoading(true);
         try {
-            const payload = {
-                ...invoiceData,
+            const payload: Record<string, unknown> = {
+                manufacturerId: invoiceData.manufacturerId,
                 items: invoiceItems.map((item) => ({
                     inventoryItemId: item.inventoryItemId,
                     quantity: Number(item.quantity || 0),
                     unitCost: Number(item.unitCost || 0),
                     discount: Number(item.discount || 0),
-                }))
+                })),
             };
+            if (invoiceData.invoiceNumber.trim()) {
+                payload.invoiceNumber = invoiceData.invoiceNumber.trim();
+            }
 
             const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/purchase-invoice`, {
                 method: "POST",
@@ -149,7 +152,7 @@ export default function CreatePurchaseInvoicePage() {
                                     Invoice details
                                 </h2>
                                 <p className="text-xs text-gray-500 mt-0.5">
-                                    Invoice number and supplier.
+                                    Supplier and optional manual invoice # (otherwise auto: 00001, 00002, …).
                                 </p>
                             </div>
                             <div className="text-right text-sm text-gray-600">
@@ -166,8 +169,7 @@ export default function CreatePurchaseInvoicePage() {
                                 <div className="relative">
                                     <FileText className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                                     <Input
-                                        required
-                                        placeholder="Invoice number"
+                                        placeholder="Invoice # (optional — auto if empty)"
                                         value={invoiceData.invoiceNumber}
                                         onChange={(e) =>
                                             setInvoiceData({
