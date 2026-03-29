@@ -4,7 +4,11 @@ import { useEffect, useMemo, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useInventory, ItemType } from "@/app/context/InventoryContext";
+import {
+  useInventory,
+  ItemType,
+  itemTypeUsesMedicineFields,
+} from "@/app/context/InventoryContext";
 import type { InventoryItem } from "@/app/context/InventoryContext";
 import {
   Dialog,
@@ -59,6 +63,11 @@ const baseSchema = z.object({
   minimumStock: requiredNum(0, "Minimum stock is required"),
   description: z.string().optional(),
   manufacturerDiscount: z
+    .union([z.string(), z.number()])
+    .optional()
+    .transform((v) => (v === "" || v === undefined || v === null ? 0 : Number(v)))
+    .pipe(z.number().min(0).max(100)),
+  specialCompanyDiscount: z
     .union([z.string(), z.number()])
     .optional()
     .transform((v) => (v === "" || v === undefined || v === null ? 0 : Number(v)))
@@ -154,6 +163,7 @@ export default function EditInventoryModal({
       minimumStock: String((item as any).minimumStock ?? ""),
       description: (item as any).description ?? "",
       manufacturerDiscount: String((item as any).manufacturerDiscount ?? 0),
+      specialCompanyDiscount: String((item as any).specialCompanyDiscount ?? 0),
       customerDiscount: String((item as any).customerDiscount ?? 0),
       dosage: (item as any).dosage ?? "",
       activeIngredient: (item as any).activeIngredient ?? "",
@@ -183,6 +193,7 @@ export default function EditInventoryModal({
       minimumStock: String((item as any).minimumStock ?? ""),
       description: (item as any).description ?? "",
       manufacturerDiscount: String((item as any).manufacturerDiscount ?? 0),
+      specialCompanyDiscount: String((item as any).specialCompanyDiscount ?? 0),
       customerDiscount: String((item as any).customerDiscount ?? 0),
       dosage: (item as any).dosage ?? "",
       activeIngredient: (item as any).activeIngredient ?? "",
@@ -216,9 +227,9 @@ export default function EditInventoryModal({
       setIsSaving(true);
 
       // Quick client-side checks for type-specific required fields
-      if (itemType === ItemType.MEDICINE) {
+      if (itemTypeUsesMedicineFields(itemType)) {
         if (!(data as any).dosage || !(data as any).activeIngredient) {
-          toast.error("Dosage and Active ingredient are required for Medicine.");
+          toast.error("Dosage and Active ingredient are required for this type.");
           return;
         }
       }
@@ -247,11 +258,12 @@ export default function EditInventoryModal({
         purchasePrice: Number((data as any).purchasePrice ?? 0),
         minimumStock: Number((data as any).minimumStock),
         manufacturerDiscount: Number((data as any).manufacturerDiscount ?? 0),
+        specialCompanyDiscount: Number((data as any).specialCompanyDiscount ?? 0),
         customerDiscount: Number((data as any).customerDiscount ?? 0),
         barcode: data.barcode || undefined,
         category: data.category || undefined,
         description: data.description || undefined,
-        ...(itemType === ItemType.MEDICINE && {
+        ...(itemTypeUsesMedicineFields(itemType) && {
           dosage: (data as any).dosage,
           activeIngredient: (data as any).activeIngredient,
           genericName: (data as any).genericName || undefined,
@@ -374,6 +386,7 @@ export default function EditInventoryModal({
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value={ItemType.MEDICINE}>Medicine</SelectItem>
+                        <SelectItem value={ItemType.SYRUP}>Syrup</SelectItem>
                         <SelectItem value={ItemType.INJECTION}>Injection</SelectItem>
                         <SelectItem value={ItemType.SURGERY}>Surgery</SelectItem>
                         <SelectItem value={ItemType.GENERAL}>General</SelectItem>
@@ -546,6 +559,28 @@ export default function EditInventoryModal({
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="flex flex-col gap-2">
+                    <Label htmlFor="specialCompanyDiscount">
+                      Special company discount (%)
+                    </Label>
+                    <Input
+                      id="specialCompanyDiscount"
+                      type="number"
+                      inputMode="decimal"
+                      min={0}
+                      max={100}
+                      step="any"
+                      placeholder="Optional — after mfg discount"
+                      className="h-11 border-gray-200 bg-white placeholder:text-gray-400 focus:border-red-500 focus:ring-red-500/20"
+                      {...form.register("specialCompanyDiscount")}
+                    />
+                    <p className="text-xs text-gray-500">
+                      Net cost per unit = list purchase × (1 − mfg %) × (1 − this %).
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="flex flex-col gap-2">
                     <Label htmlFor="customerDiscount">Customer discount (%)</Label>
                     <Input
                       id="customerDiscount"
@@ -585,7 +620,7 @@ export default function EditInventoryModal({
                   </div>
                 </div>
 
-                {itemType === ItemType.MEDICINE && (
+                {itemTypeUsesMedicineFields(itemType) && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="flex flex-col gap-2">
                       <Label htmlFor="dosage">

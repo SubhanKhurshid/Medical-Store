@@ -9,7 +9,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, Pill, Syringe, Scissors } from "lucide-react";
+import { MoreHorizontal, Pill, Syringe, Scissors, Droplet } from "lucide-react";
 import { useInventory } from "@/app/context/InventoryContext";
 import { toast } from "sonner";
 import EditInventoryMenuItem from "@/components/inventory/EditInventoryMenuItem";
@@ -30,7 +30,15 @@ export const inventoryColumns: ColumnDef<InventoryItem>[] = [
       const imageUrl = row.getValue("image") as string;
       const type = row.getValue("type") as string;
       const IconComponent =
-        type === "MEDICINE" ? Pill : type === "INJECTION" ? Syringe : type === "SURGERY" ? Scissors : Pill;
+        type === "MEDICINE"
+          ? Pill
+          : type === "SYRUP"
+            ? Droplet
+            : type === "INJECTION"
+              ? Syringe
+              : type === "SURGERY"
+                ? Scissors
+                : Pill;
       return imageUrl ? (
         <img
           src={imageUrl}
@@ -54,7 +62,12 @@ export const inventoryColumns: ColumnDef<InventoryItem>[] = [
     header: "Type",
     cell: ({ row }) => {
       const type = (row.getValue("type") as string) ?? "";
-      const variant = type === "MEDICINE" ? "default" : type === "SURGERY" ? "secondary" : "outline";
+      const variant =
+        type === "MEDICINE" || type === "SYRUP"
+          ? "default"
+          : type === "SURGERY"
+            ? "secondary"
+            : "outline";
       return <Badge variant={variant} className="capitalize">{type.toLowerCase()}</Badge>;
     },
   },
@@ -112,10 +125,28 @@ export const inventoryColumns: ColumnDef<InventoryItem>[] = [
   },
   {
     accessorKey: "purchasePrice",
-    header: "Purchase",
+    header: "List purchase",
     cell: ({ row }) => {
       const v = row.original.purchasePrice ?? 0;
       return new Intl.NumberFormat("en-PK", { style: "currency", currency: "PKR", maximumFractionDigits: 0 }).format(v);
+    },
+  },
+  {
+    accessorKey: "manufacturerDiscount",
+    header: "Mfg %",
+    cell: ({ row }) => {
+      const p = row.original.manufacturerDiscount ?? 0;
+      if (!p) return <span className="text-muted-foreground">—</span>;
+      return <span className="tabular-nums">{Number(p)}%</span>;
+    },
+  },
+  {
+    accessorKey: "specialCompanyDiscount",
+    header: "Spec. co. %",
+    cell: ({ row }) => {
+      const p = row.original.specialCompanyDiscount ?? 0;
+      if (!p) return <span className="text-muted-foreground">—</span>;
+      return <span className="tabular-nums">{Number(p)}%</span>;
     },
   },
   {

@@ -25,6 +25,7 @@ import {
   Scissors,
   ScanLine,
   Syringe,
+  Droplet,
 } from "lucide-react";
 
 import { toast } from "sonner";
@@ -118,6 +119,8 @@ const SalesPage = () => {
     switch (type) {
       case "MEDICINE":
         return <Pill className="h-16 w-16 text-muted-foreground/40" />;
+      case "SYRUP":
+        return <Droplet className="h-16 w-16 text-muted-foreground/40" />;
       case "INJECTION":
         return <Syringe className="h-16 w-16 text-muted-foreground/40" />;
       case "GENERAL":

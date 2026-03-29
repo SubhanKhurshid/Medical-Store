@@ -9,6 +9,23 @@ import { motion } from "framer-motion";
 import { PlusCircle, Trash2, Save, FileText, Building2, Package, Tag, Percent } from "lucide-react";
 import { toast } from "sonner";
 
+function formatInventoryOptionLabel(inv: {
+    name: string;
+    quantity?: number;
+    purchasePrice?: number;
+    manufacturerDiscount?: number;
+    specialCompanyDiscount?: number;
+}) {
+    const bits: string[] = [`${inv.name} (Qty: ${inv.quantity ?? 0})`];
+    const mfg = Number(inv.manufacturerDiscount ?? 0);
+    const spec = Number(inv.specialCompanyDiscount ?? 0);
+    const list = Number(inv.purchasePrice ?? 0);
+    if (list > 0) bits.push(`list ${list}`);
+    if (mfg > 0) bits.push(`mfg ${mfg}%`);
+    if (spec > 0) bits.push(`spec. co. ${spec}%`);
+    return bits.join(" · ");
+}
+
 export default function CreatePurchaseInvoicePage() {
     const router = useRouter();
     const [manufacturers, setManufacturers] = useState<any[]>([]);
@@ -53,6 +70,16 @@ export default function CreatePurchaseInvoicePage() {
     const handleItemChange = (index: number, field: string, value: any) => {
         const newItems = [...invoiceItems];
         newItems[index][field] = value;
+        if (field === "inventoryItemId" && value) {
+            const inv = inventoryItems.find((i: { id: string }) => i.id === value);
+            if (inv) {
+                const pp = Number((inv as { purchasePrice?: number }).purchasePrice ?? 0);
+                const cur = String(newItems[index].unitCost ?? "").trim();
+                if (pp > 0 && (cur === "" || cur === "0")) {
+                    newItems[index].unitCost = String(pp);
+                }
+            }
+        }
         setInvoiceItems(newItems);
     };
 
@@ -217,7 +244,7 @@ export default function CreatePurchaseInvoicePage() {
                                     Line items
                                 </h2>
                                 <p className="text-xs text-gray-500 mt-0.5">
-                                    Add each product on the supplier invoice.
+                                    Add each product on the supplier invoice. Item list shows qty, list purchase, and any manufacturer / special company discount % from inventory; unit cost prefills from list purchase when empty.
                                 </p>
                             </div>
                             <Button
@@ -285,7 +312,7 @@ export default function CreatePurchaseInvoicePage() {
                                                             </option>
                                                             {inventoryItems.map((inv) => (
                                                                 <option key={inv.id} value={inv.id}>
-                                                                    {inv.name} (Qty: {inv.quantity})
+                                                                    {formatInventoryOptionLabel(inv)}
                                                                 </option>
                                                             ))}
                                                         </select>
