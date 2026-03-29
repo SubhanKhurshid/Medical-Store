@@ -19,7 +19,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ItemType, useInventory } from "@/app/context/InventoryContext";
+import {
+  ItemType,
+  itemTypeUsesMedicineFields,
+  useInventory,
+} from "@/app/context/InventoryContext";
 import { Calendar } from "lucide-react";
 import { toast } from "sonner";
 import axios from "axios";
@@ -64,6 +68,11 @@ const baseSchema = z.object({
   minimumStock: requiredNum(0, "Minimum stock is required"),
   description: z.string().optional(),
   manufacturerDiscount: z
+    .union([z.string(), z.number()])
+    .optional()
+    .transform((v) => (v === "" || v === undefined || v === null ? 0 : Number(v)))
+    .pipe(z.number().min(0).max(100)),
+  specialCompanyDiscount: z
     .union([z.string(), z.number()])
     .optional()
     .transform((v) => (v === "" || v === undefined || v === null ? 0 : Number(v)))
@@ -126,7 +135,7 @@ export default function InventoryManagement() {
   >([]);
   const form = useForm<FormValues>({
     resolver: zodResolver(
-      itemType === ItemType.MEDICINE
+      itemTypeUsesMedicineFields(itemType)
         ? medicineSchema
         : itemType === ItemType.INJECTION
           ? injectionSchema
@@ -147,6 +156,7 @@ export default function InventoryManagement() {
       category: "",
       minimumStock: "",
       manufacturerDiscount: "",
+      specialCompanyDiscount: "",
       customerDiscount: "",
       description: "",
       dosage: "",
@@ -205,6 +215,7 @@ export default function InventoryManagement() {
     category: "",
     minimumStock: "",
     manufacturerDiscount: "",
+    specialCompanyDiscount: "",
     customerDiscount: "",
     description: "",
     dosage: "",
@@ -225,13 +236,14 @@ export default function InventoryManagement() {
       price: sellingPrice,
       sellingPrice,
       purchasePrice,
+      specialCompanyDiscount: Number(data.specialCompanyDiscount ?? 0),
       customerDiscount: Number(data.customerDiscount ?? 0),
       ...(data.barcode && data.barcode.trim() && { barcode: data.barcode.trim() }),
       ...(data.category && data.category.trim() && { category: data.category.trim() }),
       manufacturerId: data.manufacturer,
       expiryDate: new Date(data.expiryDate).toISOString(),
       type: itemType,
-      ...(itemType === ItemType.MEDICINE && {
+      ...(itemTypeUsesMedicineFields(itemType) && {
         dosage: data.dosage,
         activeIngredient: data.activeIngredient,
         genericName: data.genericName,
@@ -291,7 +303,7 @@ export default function InventoryManagement() {
             Add Medicine / Item
           </motion.h1>
           <motion.p className="mt-1 text-sm text-gray-500" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }}>
-            Add inventory by filling the fields below. Choose type: Medicine, Injection, Surgery, or General.             To add more stock for a product that already exists, use{" "}
+            Add inventory by filling the fields below. Choose type: Medicine, Syrup, Injection, Surgery, or General. To add more stock for a product that already exists, use{" "}
             <Link href="/pharmacist/purchase-orders/create" className="font-medium text-red-800 underline-offset-2 hover:underline">
               Create Purchase Order
             </Link>{" "}
@@ -316,6 +328,7 @@ export default function InventoryManagement() {
           >
             {[
               { value: ItemType.MEDICINE, label: "Medicine" },
+              { value: ItemType.SYRUP, label: "Syrup" },
               { value: ItemType.INJECTION, label: "Injection" },
               { value: ItemType.SURGERY, label: "Surgery" },
               { value: ItemType.GENERAL, label: "General" },
@@ -456,6 +469,33 @@ export default function InventoryManagement() {
                 )}
               </div>
               <div className="flex flex-col gap-2">
+                <Label htmlFor="specialCompanyDiscount">
+                  Special company discount (%)
+                </Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    id="specialCompanyDiscount"
+                    placeholder="e.g. 5 (optional)"
+                    type="number"
+                    inputMode="decimal"
+                    min={0}
+                    max={100}
+                    step="any"
+                    className="text-lg p-4 min-h-[48px] touch-manipulation"
+                    {...form.register("specialCompanyDiscount")}
+                  />
+                  <span className="text-lg font-medium text-gray-600">%</span>
+                </div>
+                <p className="text-xs text-gray-500">
+                  Applied after manufacturer discount: net cost = list purchase × (1 − mfg %) × (1 − this %).
+                </p>
+                {form.formState.errors.specialCompanyDiscount && (
+                  <span className="text-red-500 text-sm">
+                    {form.formState.errors.specialCompanyDiscount.message}
+                  </span>
+                )}
+              </div>
+              <div className="flex flex-col gap-2">
                 <Label htmlFor="customerDiscount">Customer discount (%)</Label>
                 <div className="flex items-center gap-2">
                   <Input
@@ -589,7 +629,7 @@ export default function InventoryManagement() {
                 )}
               </div>
 
-              {itemType === ItemType.MEDICINE && (
+              {itemTypeUsesMedicineFields(itemType) && (
                 <>
                   <div className="flex flex-col gap-2">
                     <Label htmlFor="dosage">Dosage <span className="text-red-500">*</span></Label>

@@ -4,7 +4,6 @@ import { useAuth } from "@/app/providers/AuthProvider";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { motion } from "framer-motion";
 import {
-  BarChart3,
   Calendar,
   Package,
   TrendingUp,
@@ -16,14 +15,14 @@ import {
 import Link from "next/link";
 
 const reportCards = [
-  {
-    title: "Daily & Monthly Sale Reports",
-    description: "View sales by day, week, month, or year with charts.",
-    href: "/pharmacist/sales-history",
-    icon: BarChart3,
-    color: "text-green-600",
-    bg: "bg-green-50",
-  },
+  // {
+  //   title: "Daily & Monthly Sale Reports",
+  //   description: "View sales by day, week, month, or year with charts.",
+  //   href: "/pharmacist/sales-history",
+  //   icon: BarChart3,
+  //   color: "text-green-600",
+  //   bg: "bg-green-50",
+  // },
   {
     title: "Profit & Loss Report",
     description: "Revenue, cost, and profit for a selected period.",
@@ -34,7 +33,7 @@ const reportCards = [
   },
   {
     title: "Stock Report",
-    description: "Current stock levels and value (cost & selling).",
+    description: "Stock levels and value using list purchase, manufacturer %, and special company % for net cost.",
     href: "/pharmacist/reports/stock",
     icon: Package,
     color: "text-amber-600",

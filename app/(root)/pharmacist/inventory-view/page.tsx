@@ -90,7 +90,7 @@ const Inventory = () => {
             Inventory
           </motion.h1>
           <motion.p className="mt-1 text-sm text-gray-500" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }}>
-            View and filter inventory items.
+            View and filter inventory items. The table includes list purchase, manufacturer %, and special company % (used together for net cost on stock and profit reports).
           </motion.p>
           <div className="mt-4 h-px bg-gradient-to-r from-red-200/80 via-red-100/50 to-transparent rounded-full" />
         </header>
@@ -131,6 +131,7 @@ const Inventory = () => {
                       <SelectContent>
                           <SelectItem className="text-lg" value="all">All types</SelectItem>
                           <SelectItem className="text-lg" value="MEDICINE">Medicine</SelectItem>
+                          <SelectItem className="text-lg" value="SYRUP">Syrup</SelectItem>
                           <SelectItem className="text-lg" value="SURGERY">Surgery</SelectItem>
                           <SelectItem className="text-lg" value="INJECTION">Injection</SelectItem>
                           <SelectItem className="text-lg" value="GENERAL">General</SelectItem>

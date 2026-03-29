@@ -5,9 +5,15 @@ import { useAuth } from "../providers/AuthProvider";
 
 export enum ItemType {
   MEDICINE = "MEDICINE",
+  SYRUP = "SYRUP",
   INJECTION = "INJECTION",
   SURGERY = "SURGERY",
   GENERAL = "GENERAL",
+}
+
+/** Medicine and syrup share the same inventory fields (dosage, active ingredient, etc.). */
+export function itemTypeUsesMedicineFields(type: ItemType): boolean {
+  return type === ItemType.MEDICINE || type === ItemType.SYRUP;
 }
 
 export interface InventoryItem {
@@ -25,6 +31,8 @@ export interface InventoryItem {
   barcode?: string | null;
   category?: string | null;
   manufacturerDiscount: number;
+  /** Extra company discount % (0–100) on cost after manufacturer discount. */
+  specialCompanyDiscount?: number;
   /** Default customer discount % (0–100) for stock valuation. */
   customerDiscount?: number;
   minimumStock: number;

@@ -54,6 +54,10 @@ export interface ReorderItem {
   quantity: number;
   minimumStock: number;
   manufacturer: string;
+  /** List purchase (before discounts); from inventory when available. */
+  listPurchase?: number;
+  manufacturerDiscount?: number;
+  specialCompanyDiscount?: number;
   /** Display: "Low Stock", "Expiring Soon", or "Low Stock, Expiring Soon" */
   issueLabel: string;
   isLowStock: boolean;
@@ -69,6 +73,9 @@ function toReorderItemFromInventory(row: {
   quantity: number;
   minimumStock: number;
   manufacturer?: string;
+  purchasePrice?: number;
+  manufacturerDiscount?: number;
+  specialCompanyDiscount?: number;
 }): ReorderItem {
   return {
     id: row.id,
@@ -76,16 +83,33 @@ function toReorderItemFromInventory(row: {
     quantity: row.quantity,
     minimumStock: row.minimumStock ?? 0,
     manufacturer: row.manufacturer ?? "",
+    listPurchase: row.purchasePrice,
+    manufacturerDiscount: row.manufacturerDiscount,
+    specialCompanyDiscount: row.specialCompanyDiscount,
     issueLabel: "Reorder",
     isLowStock: false,
     isExpiringSoon: false,
   };
 }
 
-function mergeLowStockAndExpiring(
-  lowStock: Array<{ id: string; name: string; quantity: number; minimumStock: number; manufacturer?: string }>,
-  expiring: Array<{ id: string; name: string; quantity: number; minimumStock: number; manufacturer?: string }>
-): ReorderItem[] {
+function pricingFromInventoryRow(item: Record<string, unknown>): Pick<
+  ReorderItem,
+  "listPurchase" | "manufacturerDiscount" | "specialCompanyDiscount"
+> {
+  return {
+    listPurchase: typeof item.purchasePrice === "number" ? item.purchasePrice : undefined,
+    manufacturerDiscount:
+      typeof item.manufacturerDiscount === "number"
+        ? item.manufacturerDiscount
+        : undefined,
+    specialCompanyDiscount:
+      typeof item.specialCompanyDiscount === "number"
+        ? item.specialCompanyDiscount
+        : undefined,
+  };
+}
+
+function mergeLowStockAndExpiring(lowStock: any[], expiring: any[]): ReorderItem[] {
   const map = new Map<string, ReorderItem>();
   for (const item of lowStock) {
     map.set(item.id, {
@@ -94,6 +118,7 @@ function mergeLowStockAndExpiring(
       quantity: item.quantity,
       minimumStock: item.minimumStock ?? (item as any).minimumQuantity ?? 0,
       manufacturer: item.manufacturer ?? "",
+      ...pricingFromInventoryRow(item),
       issueLabel: "Low Stock",
       isLowStock: true,
       isExpiringSoon: false,
@@ -103,9 +128,15 @@ function mergeLowStockAndExpiring(
     const existing = map.get(item.id);
     const qty = item.quantity;
     const min = item.minimumStock ?? (item as any).minimumQuantity ?? 0;
+    const pricing = pricingFromInventoryRow(item);
     if (existing) {
       existing.issueLabel = "Low Stock, Expiring Soon";
       existing.isExpiringSoon = true;
+      if (existing.listPurchase == null && pricing.listPurchase != null) {
+        existing.listPurchase = pricing.listPurchase;
+        existing.manufacturerDiscount = pricing.manufacturerDiscount;
+        existing.specialCompanyDiscount = pricing.specialCompanyDiscount;
+      }
     } else {
       map.set(item.id, {
         id: item.id,
@@ -113,6 +144,7 @@ function mergeLowStockAndExpiring(
         quantity: qty,
         minimumStock: min,
         manufacturer: item.manufacturer ?? "",
+        ...pricing,
         issueLabel: "Expiring Soon",
         isLowStock: false,
         isExpiringSoon: true,
@@ -177,13 +209,25 @@ export default function CreatePurchaseOrdersPage() {
       );
       const rows = Array.isArray(res.data) ? res.data : [];
       setAllInventory(
-        rows.map((r: { id: string; name: string; quantity: number; minimumStock?: number; manufacturer?: string }) =>
+        rows.map((r: {
+          id: string;
+          name: string;
+          quantity: number;
+          minimumStock?: number;
+          manufacturer?: string;
+          purchasePrice?: number;
+          manufacturerDiscount?: number;
+          specialCompanyDiscount?: number;
+        }) =>
           toReorderItemFromInventory({
             id: r.id,
             name: r.name,
             quantity: r.quantity,
             minimumStock: r.minimumStock ?? 0,
             manufacturer: r.manufacturer,
+            purchasePrice: r.purchasePrice,
+            manufacturerDiscount: r.manufacturerDiscount,
+            specialCompanyDiscount: r.specialCompanyDiscount,
           })
         )
       );
@@ -348,6 +392,23 @@ export default function CreatePurchaseOrdersPage() {
     {
       accessorKey: "manufacturer",
       header: "Manufacturer",
+    },
+    {
+      id: "costDiscounts",
+      header: "Cost %",
+      cell: ({ row }) => {
+        const item = row.original;
+        const m = item.manufacturerDiscount ?? 0;
+        const s = item.specialCompanyDiscount ?? 0;
+        if (!m && !s) return <span className="text-muted-foreground">—</span>;
+        return (
+          <span className="text-xs text-muted-foreground">
+            {[m ? `Mfg ${Number(m)}%` : null, s ? `Spec. co. ${Number(s)}%` : null]
+              .filter(Boolean)
+              .join(" · ")}
+          </span>
+        );
+      },
     },
     {
       id: "actions",
@@ -713,6 +774,42 @@ export default function CreatePurchaseOrdersPage() {
                         {selectedItem.minimumStock}
                       </TableCell>
                     </TableRow>
+                    {(selectedItem.listPurchase != null && selectedItem.listPurchase > 0) ||
+                    (selectedItem.manufacturerDiscount ?? 0) > 0 ||
+                    (selectedItem.specialCompanyDiscount ?? 0) > 0 ? (
+                      <>
+                        {selectedItem.listPurchase != null && selectedItem.listPurchase > 0 && (
+                          <TableRow className="hover:bg-transparent">
+                            <TableCell className="py-2.5 text-sm text-gray-500 font-medium">
+                              List purchase
+                            </TableCell>
+                            <TableCell className="py-2.5 text-sm tabular-nums">
+                              {selectedItem.listPurchase}
+                            </TableCell>
+                          </TableRow>
+                        )}
+                        {(selectedItem.manufacturerDiscount ?? 0) > 0 && (
+                          <TableRow className="hover:bg-transparent">
+                            <TableCell className="py-2.5 text-sm text-gray-500 font-medium">
+                              Manufacturer discount
+                            </TableCell>
+                            <TableCell className="py-2.5 text-sm tabular-nums">
+                              {selectedItem.manufacturerDiscount}%
+                            </TableCell>
+                          </TableRow>
+                        )}
+                        {(selectedItem.specialCompanyDiscount ?? 0) > 0 && (
+                          <TableRow className="hover:bg-transparent">
+                            <TableCell className="py-2.5 text-sm text-gray-500 font-medium">
+                              Special company discount
+                            </TableCell>
+                            <TableCell className="py-2.5 text-sm tabular-nums">
+                              {selectedItem.specialCompanyDiscount}%
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </>
+                    ) : null}
                     {(selectedItem.isLowStock || selectedItem.isExpiringSoon) && (
                       <TableRow className="hover:bg-transparent bg-amber-50/50">
                         <TableCell className="py-2.5 text-sm text-gray-500 font-medium">

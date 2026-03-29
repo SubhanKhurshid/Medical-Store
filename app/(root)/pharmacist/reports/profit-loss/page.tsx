@@ -78,7 +78,7 @@ export default function ProfitLossReportPage() {
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.4, delay: 0.1 }}
               >
-                Revenue, cost, and profit analytics for business performance.
+                Revenue, cost, and profit analytics for business performance. Cost of goods uses each item’s net unit cost (list purchase after manufacturer and special company discounts).
               </motion.p>
             </div>
           </div>
