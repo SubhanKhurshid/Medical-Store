@@ -22,7 +22,6 @@ import axios from "axios";
 import { toast } from "sonner";
 import Loading from "@/components/shared/Loading";
 import { sortByLocaleKey } from "@/lib/sort-alphabetical";
-import { PDF_URDU_FONT_FAMILY, registerUrduFont } from "@/lib/jspdf-register-urdu-font";
 import {
   Select,
   SelectContent,
@@ -233,7 +232,6 @@ const SalesTable = () => {
         import("jspdf-autotable"),
       ]);
       const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
-      await registerUrduFont(doc);
       const margin = 40;
       let y = margin;
       doc.setFontSize(15);
@@ -266,13 +264,8 @@ const SalesTable = () => {
         head: [["Invoice #", "Date", "Customer", "Phone", "Payment", "Total", "Refunded"]],
         body,
         startY: y,
-        styles: { fontSize: 8, cellPadding: 5, font: PDF_URDU_FONT_FAMILY, fontStyle: "normal" },
-        headStyles: {
-          fillColor: [185, 28, 28],
-          textColor: 255,
-          font: PDF_URDU_FONT_FAMILY,
-          fontStyle: "bold",
-        },
+        styles: { fontSize: 8, cellPadding: 5 },
+        headStyles: { fillColor: [185, 28, 28], textColor: 255 },
         margin: { left: margin, right: margin },
       });
 

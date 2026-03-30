@@ -17,7 +17,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import Loading from "@/components/shared/Loading";
-import { PDF_URDU_FONT_FAMILY, registerUrduFont } from "@/lib/jspdf-register-urdu-font";
 
 type Period = "day" | "month" | "year";
 
@@ -140,7 +139,6 @@ export default function PaymentMethodTotalsPage() {
         import("jspdf-autotable"),
       ]);
       const doc = new jsPDF({ orientation: "portrait", unit: "pt", format: "a4" });
-      await registerUrduFont(doc);
       const margin = 48;
       let y = margin;
       doc.setFontSize(16);
@@ -174,13 +172,8 @@ export default function PaymentMethodTotalsPage() {
         head: [["Payment method", "Net amount (PKR)"]],
         body,
         startY: y,
-        styles: { fontSize: 10, cellPadding: 8, font: PDF_URDU_FONT_FAMILY, fontStyle: "normal" },
-        headStyles: {
-          fillColor: [185, 28, 28],
-          textColor: 255,
-          font: PDF_URDU_FONT_FAMILY,
-          fontStyle: "bold",
-        },
+        styles: { fontSize: 10, cellPadding: 8 },
+        headStyles: { fillColor: [185, 28, 28], textColor: 255 },
         columnStyles: {
           0: { cellWidth: 200 },
           1: { cellWidth: 200, halign: "right" },
@@ -189,7 +182,6 @@ export default function PaymentMethodTotalsPage() {
         didParseCell: (hookData) => {
           if (hookData.section === "body" && hookData.row.index === body.length - 1) {
             hookData.cell.styles.fontStyle = "bold";
-            hookData.cell.styles.font = PDF_URDU_FONT_FAMILY;
           }
         },
       });
