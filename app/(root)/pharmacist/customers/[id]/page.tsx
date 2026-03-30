@@ -178,7 +178,31 @@ export default function CustomerDetailPage() {
 
                         <div className="mt-6 pt-4 border-t border-gray-100">
                             <p className="text-sm text-gray-500 uppercase tracking-wider font-semibold mb-2">Record payment</p>
-                            <div className="flex flex-wrap gap-2 items-end">
+                            <form
+                                className="flex flex-wrap gap-2 items-end"
+                                onSubmit={async (e) => {
+                                    e.preventDefault();
+                                    const amt = parseFloat(paymentAmount);
+                                    if (!amt || amt <= 0) return;
+                                    setPaymentSubmitting(true);
+                                    try {
+                                        await axios.post(
+                                            `${API}/pharmacist/customer/${params.id}/payment`,
+                                            { amount: amt, reference: paymentReference || undefined },
+                                            { headers: { Authorization: `Bearer ${accessToken}` } }
+                                        );
+                                        toast.success("Payment recorded.");
+                                        setPaymentAmount("");
+                                        setPaymentReference("");
+                                        fetchCustomer();
+                                        fetchTransactions();
+                                    } catch (err: any) {
+                                        toast.error(err.response?.data?.message ?? "Failed to record payment.");
+                                    } finally {
+                                        setPaymentSubmitting(false);
+                                    }
+                                }}
+                            >
                                 <div>
                                     <Label className="text-xs">Amount (Rs)</Label>
                                     <Input
@@ -201,34 +225,14 @@ export default function CustomerDetailPage() {
                                     />
                                 </div>
                                 <Button
+                                    type="submit"
                                     size="sm"
                                     className="bg-red-800 hover:bg-red-900"
                                     disabled={!paymentAmount || parseFloat(paymentAmount) <= 0 || paymentSubmitting}
-                                    onClick={async () => {
-                                        const amt = parseFloat(paymentAmount);
-                                        if (!amt || amt <= 0) return;
-                                        setPaymentSubmitting(true);
-                                        try {
-                                            await axios.post(
-                                                `${API}/pharmacist/customer/${params.id}/payment`,
-                                                { amount: amt, reference: paymentReference || undefined },
-                                                { headers: { Authorization: `Bearer ${accessToken}` } }
-                                            );
-                                            toast.success("Payment recorded.");
-                                            setPaymentAmount("");
-                                            setPaymentReference("");
-                                            fetchCustomer();
-                                            fetchTransactions();
-                                        } catch (e: any) {
-                                            toast.error(e.response?.data?.message ?? "Failed to record payment.");
-                                        } finally {
-                                            setPaymentSubmitting(false);
-                                        }
-                                    }}
                                 >
                                     {paymentSubmitting ? "..." : "Record"}
                                 </Button>
-                            </div>
+                            </form>
                         </div>
 
                         <div className="mt-8 pt-6 border-t border-gray-100 flex justify-between items-center">
@@ -366,70 +370,73 @@ export default function CustomerDetailPage() {
 
             <Dialog open={reminderOpen} onOpenChange={setReminderOpen}>
                 <DialogContent className="max-w-sm">
-                    <DialogHeader>
-                        <DialogTitle>Log reminder</DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-4 py-2">
-                        <div>
-                            <Label>Type</Label>
-                            <select
-                                value={reminderType}
-                                onChange={(e) => setReminderType(e.target.value)}
-                                className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2"
-                            >
-                                <option value="REFILL">Refill</option>
-                                <option value="FOLLOW_UP">Follow-up</option>
-                                <option value="EXPIRY">Expiry</option>
-                            </select>
+                    <form
+                        onSubmit={async (e) => {
+                            e.preventDefault();
+                            setReminderSubmitting(true);
+                            try {
+                                await axios.post(
+                                    `${API}/pharmacist/customer/${params.id}/reminder`,
+                                    { type: reminderType, channel: reminderChannel, note: reminderNote || undefined },
+                                    { headers: { Authorization: `Bearer ${accessToken}` } }
+                                );
+                                toast.success("Reminder logged.");
+                                setReminderOpen(false);
+                                setReminderNote("");
+                                fetchReminders();
+                            } catch (err: any) {
+                                toast.error(err.response?.data?.message ?? "Failed to log reminder.");
+                            } finally {
+                                setReminderSubmitting(false);
+                            }
+                        }}
+                    >
+                        <DialogHeader>
+                            <DialogTitle>Log reminder</DialogTitle>
+                        </DialogHeader>
+                        <div className="space-y-4 py-2">
+                            <div>
+                                <Label>Type</Label>
+                                <select
+                                    value={reminderType}
+                                    onChange={(e) => setReminderType(e.target.value)}
+                                    className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2"
+                                >
+                                    <option value="REFILL">Refill</option>
+                                    <option value="FOLLOW_UP">Follow-up</option>
+                                    <option value="EXPIRY">Expiry</option>
+                                </select>
+                            </div>
+                            <div>
+                                <Label>Channel</Label>
+                                <select
+                                    value={reminderChannel}
+                                    onChange={(e) => setReminderChannel(e.target.value)}
+                                    className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2"
+                                >
+                                    <option value="SMS">SMS</option>
+                                    <option value="EMAIL">Email</option>
+                                </select>
+                            </div>
+                            <div>
+                                <Label>Note (optional)</Label>
+                                <Input
+                                    value={reminderNote}
+                                    onChange={(e) => setReminderNote(e.target.value)}
+                                    placeholder="e.g. Refill due next week"
+                                    className="mt-1"
+                                />
+                            </div>
                         </div>
-                        <div>
-                            <Label>Channel</Label>
-                            <select
-                                value={reminderChannel}
-                                onChange={(e) => setReminderChannel(e.target.value)}
-                                className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2"
-                            >
-                                <option value="SMS">SMS</option>
-                                <option value="EMAIL">Email</option>
-                            </select>
-                        </div>
-                        <div>
-                            <Label>Note (optional)</Label>
-                            <Input
-                                value={reminderNote}
-                                onChange={(e) => setReminderNote(e.target.value)}
-                                placeholder="e.g. Refill due next week"
-                                className="mt-1"
-                            />
-                        </div>
-                    </div>
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setReminderOpen(false)}>Cancel</Button>
-                        <Button
-                            className="bg-red-800 hover:bg-red-900"
-                            disabled={reminderSubmitting}
-                            onClick={async () => {
-                                setReminderSubmitting(true);
-                                try {
-                                    await axios.post(
-                                        `${API}/pharmacist/customer/${params.id}/reminder`,
-                                        { type: reminderType, channel: reminderChannel, note: reminderNote || undefined },
-                                        { headers: { Authorization: `Bearer ${accessToken}` } }
-                                    );
-                                    toast.success("Reminder logged.");
-                                    setReminderOpen(false);
-                                    setReminderNote("");
-                                    fetchReminders();
-                                } catch (e: any) {
-                                    toast.error(e.response?.data?.message ?? "Failed to log reminder.");
-                                } finally {
-                                    setReminderSubmitting(false);
-                                }
-                            }}
-                        >
-                            {reminderSubmitting ? "..." : "Log reminder"}
-                        </Button>
-                    </DialogFooter>
+                        <DialogFooter>
+                            <Button type="button" variant="outline" onClick={() => setReminderOpen(false)}>
+                                Cancel
+                            </Button>
+                            <Button type="submit" className="bg-red-800 hover:bg-red-900" disabled={reminderSubmitting}>
+                                {reminderSubmitting ? "..." : "Log reminder"}
+                            </Button>
+                        </DialogFooter>
+                    </form>
                 </DialogContent>
             </Dialog>
         </motion.div>

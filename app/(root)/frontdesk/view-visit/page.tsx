@@ -1,5 +1,6 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import { sortByLocaleKey } from "@/lib/sort-alphabetical";
 import {
   Table,
   TableBody,
@@ -70,6 +71,11 @@ const ViewVisitPage = () => {
   const { user } = useAuth();
 
   const accessToken = user?.access_token;
+
+  const patientsSorted = useMemo(
+    () => sortByLocaleKey(patients, (v) => v.patient?.name),
+    [patients],
+  );
 
   useEffect(() => {
     const fetchVisits = async (date?: Date) => {
@@ -255,7 +261,7 @@ const ViewVisitPage = () => {
                 ></path>
               </svg>
             </motion.div>
-          ) : patients.length > 0 ? (
+          ) : patientsSorted.length > 0 ? (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -289,7 +295,7 @@ const ViewVisitPage = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {patients.map((item, index) => (
+                  {patientsSorted.map((item, index) => (
                     <motion.tr
                       key={index}
                       initial={{ opacity: 0, y: 20 }}

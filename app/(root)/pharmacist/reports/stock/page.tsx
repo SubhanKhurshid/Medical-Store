@@ -27,6 +27,8 @@ import {
 import Loading from "@/components/shared/Loading";
 import { format } from "date-fns";
 import { toast } from "sonner";
+import { sortByLocaleKey } from "@/lib/sort-alphabetical";
+import { PDF_URDU_FONT_FAMILY, registerUrduFont } from "@/lib/jspdf-register-urdu-font";
 
 interface StockReportData {
   summary: {
@@ -152,7 +154,7 @@ export default function StockReportPage() {
 
   const filteredItems = useMemo(() => {
     if (!data) return [];
-    return data.items.filter((item) => {
+    const rows = data.items.filter((item) => {
       const matchesSearch =
         item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         item.genericName?.toLowerCase().includes(searchTerm.toLowerCase());
@@ -161,6 +163,7 @@ export default function StockReportPage() {
         manufacturerFilter === "all" || item.manufacturer === manufacturerFilter;
       return matchesSearch && matchesType && matchesManufacturer;
     });
+    return sortByLocaleKey(rows, (item) => item.name);
   }, [data, searchTerm, typeFilter, manufacturerFilter]);
 
   const dynamicSummary = useMemo(() => {
@@ -220,6 +223,7 @@ export default function StockReportPage() {
         import("jspdf-autotable"),
       ]);
       const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
+      await registerUrduFont(doc);
       const margin = 40;
       let y = margin;
       doc.setFontSize(15);
@@ -315,9 +319,19 @@ export default function StockReportPage() {
           ],
         ],
         startY: y,
-        styles: { fontSize: 7, cellPadding: 4 },
-        headStyles: { fillColor: [185, 28, 28], textColor: 255 },
-        footStyles: { fillColor: [243, 244, 246], textColor: 17, fontStyle: "bold" },
+        styles: { fontSize: 7, cellPadding: 4, font: PDF_URDU_FONT_FAMILY, fontStyle: "normal" },
+        headStyles: {
+          fillColor: [185, 28, 28],
+          textColor: 255,
+          font: PDF_URDU_FONT_FAMILY,
+          fontStyle: "bold",
+        },
+        footStyles: {
+          fillColor: [243, 244, 246],
+          textColor: 17,
+          font: PDF_URDU_FONT_FAMILY,
+          fontStyle: "bold",
+        },
         margin: { left: margin, right: margin },
       });
 

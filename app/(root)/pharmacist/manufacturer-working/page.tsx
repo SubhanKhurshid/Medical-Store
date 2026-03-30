@@ -150,7 +150,7 @@ const Manufacturer = () => {
 
   const columns = [
     {
-      id: "name",
+      accessorKey: "name",
       header: "Company",
       cell: ({ row }: any) => (
         <div className="flex items-center space-x-2">
@@ -160,7 +160,7 @@ const Manufacturer = () => {
       ),
     },
     {
-      id: "phone",
+      accessorKey: "phone",
       header: "Phone",
       cell: ({ row }: any) => (
         <div className="flex items-center space-x-2">
@@ -171,6 +171,7 @@ const Manufacturer = () => {
     },
     {
       id: "location",
+      accessorFn: (row: any) => `${row.city}, ${row.country}`,
       header: "Location",
       cell: ({ row }: any) => (
         <div className="flex items-center space-x-2">
@@ -180,14 +181,14 @@ const Manufacturer = () => {
       ),
     },
     {
-      id: "balance",
+      accessorKey: "balance",
       header: "Balance",
       cell: ({ row }: any) => (
         <span className="font-medium">{row.original.balance}</span>
       ),
     },
     {
-      id: "status",
+      accessorKey: "status",
       header: "Status",
       cell: ({ row }: any) => (
         <Badge
@@ -200,6 +201,7 @@ const Manufacturer = () => {
     {
       id: "actions",
       header: "Actions",
+      enableSorting: false,
       cell: ({ row }: any) => {
         const raw = manufacturersRaw.find((m) => m.id === row.original.id || m.companyName === row.original.name);
         return (

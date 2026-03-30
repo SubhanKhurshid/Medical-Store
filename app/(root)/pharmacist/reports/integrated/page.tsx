@@ -6,7 +6,8 @@ import { motion } from "framer-motion";
 import { ArrowLeft, AlertTriangle, Package } from "lucide-react";
 import Loading from "@/components/shared/Loading";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { sortByLocaleKey } from "@/lib/sort-alphabetical";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -69,6 +70,15 @@ export default function IntegratedReportPage() {
   const formatDate = (d: string) =>
     new Date(d).toLocaleDateString("en-PK", { year: "numeric", month: "short", day: "numeric" });
 
+  const lowStockSorted = useMemo(
+    () => sortByLocaleKey(data?.lowStock ?? [], (r) => r.name),
+    [data?.lowStock],
+  );
+  const expiringSorted = useMemo(
+    () => sortByLocaleKey(data?.expiring ?? [], (r) => r.name),
+    [data?.expiring],
+  );
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -121,7 +131,7 @@ export default function IntegratedReportPage() {
               <CardTitle>Low stock ({data.lowStock?.length ?? 0})</CardTitle>
             </CardHeader>
             <CardContent className="p-0">
-              <Table wrapperClassName={(data.lowStock ?? []).length > 0 ? "min-h-[260px]" : undefined}>
+              <Table wrapperClassName={lowStockSorted.length > 0 ? "min-h-[260px]" : undefined}>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Name</TableHead>
@@ -131,7 +141,7 @@ export default function IntegratedReportPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {(data.lowStock ?? []).length === 0 ? (
+                  {lowStockSorted.length === 0 ? (
                     <TableEmptyState
                       icon={Package}
                       title="No low stock items"
@@ -139,7 +149,7 @@ export default function IntegratedReportPage() {
                       colSpan={4}
                     />
                   ) : (
-                    (data.lowStock ?? []).map((row) => (
+                    lowStockSorted.map((row) => (
                       <TableRow key={row.id}>
                         <TableCell className="font-medium">{row.name}</TableCell>
                         <TableCell className="text-amber-600 font-semibold">{row.currentQuantity}</TableCell>
@@ -158,7 +168,7 @@ export default function IntegratedReportPage() {
               <CardTitle>Expiring soon ({data.expiring?.length ?? 0})</CardTitle>
             </CardHeader>
             <CardContent className="p-0">
-              <Table wrapperClassName={(data.expiring ?? []).length > 0 ? "min-h-[260px]" : undefined}>
+              <Table wrapperClassName={expiringSorted.length > 0 ? "min-h-[260px]" : undefined}>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Name</TableHead>
@@ -168,7 +178,7 @@ export default function IntegratedReportPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {(data.expiring ?? []).length === 0 ? (
+                  {expiringSorted.length === 0 ? (
                     <TableEmptyState
                       icon={AlertTriangle}
                       title="No items expiring soon"
@@ -176,7 +186,7 @@ export default function IntegratedReportPage() {
                       colSpan={4}
                     />
                   ) : (
-                    (data.expiring ?? []).map((row) => (
+                    expiringSorted.map((row) => (
                       <TableRow key={row.id}>
                         <TableCell className="font-medium">{row.name}</TableCell>
                         <TableCell>{row.quantity}</TableCell>

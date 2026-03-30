@@ -36,6 +36,7 @@ import {
   flexRender,
   getCoreRowModel,
   getPaginationRowModel,
+  getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
 import type { ColumnDef } from "@tanstack/react-table";
@@ -43,6 +44,7 @@ import axios from "axios";
 import { useAuth } from "@/app/providers/AuthProvider";
 import { dispatchLowStockInvalidated } from "@/lib/low-stock-events";
 import { dispatchExpiringInvalidated } from "@/lib/expiring-events";
+import { sortByLocaleKey } from "@/lib/sort-alphabetical";
 import { TableEmptyState } from "@/components/shared/TableEmptyState";
 import { Package } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -247,13 +249,14 @@ export default function CreatePurchaseOrdersPage() {
   const searchMatches = useMemo(() => {
     const q = inventorySearch.trim().toLowerCase();
     if (q.length < 1) return [];
-    return allInventory
-      .filter(
+    return sortByLocaleKey(
+      allInventory.filter(
         (i) =>
           i.name.toLowerCase().includes(q) ||
-          (i.manufacturer && i.manufacturer.toLowerCase().includes(q))
-      )
-      .slice(0, 20);
+          (i.manufacturer && i.manufacturer.toLowerCase().includes(q)),
+      ),
+      (i) => i.name,
+    ).slice(0, 20);
   }, [allInventory, inventorySearch]);
 
   const openOrderDialog = (item: ReorderItem) => {
@@ -396,6 +399,7 @@ export default function CreatePurchaseOrdersPage() {
     {
       id: "costDiscounts",
       header: "Cost %",
+      enableSorting: false,
       cell: ({ row }) => {
         const item = row.original;
         const m = item.manufacturerDiscount ?? 0;
@@ -413,6 +417,7 @@ export default function CreatePurchaseOrdersPage() {
     {
       id: "actions",
       header: "Action",
+      enableSorting: false,
       cell: ({ row }) => {
         const item = row.original;
         return (
@@ -463,8 +468,12 @@ export default function CreatePurchaseOrdersPage() {
     data: items,
     columns,
     getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
-    initialState: { pagination: { pageSize: 5 } },
+    initialState: {
+      pagination: { pageSize: 5 },
+      sorting: [{ id: "name", desc: false }],
+    },
   });
 
   if (loading) {
@@ -739,6 +748,13 @@ export default function CreatePurchaseOrdersPage() {
             </DialogDescription>
           </DialogHeader>
 
+          <form
+            className="flex flex-col gap-4"
+            onSubmit={(e) => {
+              e.preventDefault();
+              void handleCreateOrder();
+            }}
+          >
           {selectedItem && (
             <div className="space-y-4">
               <div className="rounded-lg border border-gray-100 overflow-hidden">
@@ -860,10 +876,9 @@ export default function CreatePurchaseOrdersPage() {
               Cancel
             </Button>
             <Button
-              type="button"
+              type="submit"
               className="bg-red-800 hover:bg-red-900"
               disabled={creatingOrder || !selectedItem}
-              onClick={handleCreateOrder}
             >
               {creatingOrder ? (
                 <>
@@ -875,6 +890,7 @@ export default function CreatePurchaseOrdersPage() {
               )}
             </Button>
           </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
       </div>

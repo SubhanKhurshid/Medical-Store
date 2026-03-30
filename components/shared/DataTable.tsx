@@ -33,6 +33,8 @@ interface DataTableProps<TData, TValue> {
   data: TData[];
   onRowClick?: (row: TData) => void;
   disableRowClick?: boolean;
+  /** Default sort when the table loads. Column `id` must match sorting id (often same as accessorKey). */
+  initialSorting?: SortingState;
 }
 
 export function DataTable<TData extends Record<string, any>, TValue>({
@@ -40,14 +42,16 @@ export function DataTable<TData extends Record<string, any>, TValue>({
   data,
   onRowClick,
   disableRowClick,
+  initialSorting = [{ id: "name", desc: false }],
 }: DataTableProps<TData, TValue>) {
-  const [sorting, setSorting] = useState<SortingState>([]);
+  const [sorting, setSorting] = useState<SortingState>(initialSorting);
   const [selectedRow, setSelectedRow] = useState<TData | null>(null);
 
   const table = useReactTable({
     data,
     columns,
     getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     onSortingChange: setSorting,
     state: { sorting },

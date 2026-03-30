@@ -132,11 +132,6 @@ const EditPatientPage = () => {
     }
   };
 
-  const handleEdit = () => {
-    console.log("Edit Patient is pressed");
-    form.handleSubmit((data) => onSubmit(data))();
-  };
-
   const handleReset = () => {
     console.log(initial);
     form.reset();
@@ -589,11 +584,7 @@ const EditPatientPage = () => {
                 Reset
               </Button>
 
-              <Button
-                type="button" // Changed to type="button"
-                onClick={handleEdit} // Add patient and visit
-                className="bg-amber-500 hover:bg-amber-600 text-white"
-              >
+              <Button type="submit" className="bg-amber-500 hover:bg-amber-600 text-white">
                 Edit Patient Details
               </Button>
             </div>

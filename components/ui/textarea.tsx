@@ -3,10 +3,33 @@ import * as React from "react"
 import { cn } from "@/lib/utils"
 
 export interface TextareaProps
-  extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {}
+  extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
+  /**
+   * When true (default), Cmd+Enter (macOS) or Ctrl+Enter submits the parent form if a submit control exists.
+   * Plain Enter still inserts a new line.
+   */
+  submitWithMetaEnter?: boolean
+}
 
 const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
-  ({ className, ...props }, ref) => {
+  ({ className, submitWithMetaEnter = true, onKeyDown, ...props }, ref) => {
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      onKeyDown?.(e)
+      if (e.defaultPrevented || !submitWithMetaEnter) return
+      if (e.key !== "Enter" || (!e.metaKey && !e.ctrlKey)) return
+      if (e.nativeEvent.isComposing) return
+
+      const form = e.currentTarget.form
+      if (!form) return
+      const submitter = form.querySelector(
+        'button[type="submit"]:not([disabled]), input[type="submit"]:not([disabled])',
+      )
+      if (!submitter) return
+
+      e.preventDefault()
+      form.requestSubmit()
+    }
+
     return (
       <textarea
         className={cn(
@@ -14,6 +37,7 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
           className
         )}
         ref={ref}
+        onKeyDown={handleKeyDown}
         {...props}
       />
     )

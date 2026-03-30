@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { sortByLocaleKey } from "@/lib/sort-alphabetical";
 import { DataTable } from "@/components/shared/DataTable";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -72,7 +73,7 @@ export default function PurchaseInvoicesPage() {
 
     const columns = [
         {
-            id: "invoiceNumber",
+            accessorKey: "invoiceNumber",
             header: "Invoice #",
             cell: ({ row }: any) => (
                 <div className="flex items-center space-x-2">
@@ -82,7 +83,7 @@ export default function PurchaseInvoicesPage() {
             ),
         },
         {
-            id: "manufacturer",
+            accessorKey: "manufacturer",
             header: "Supplier",
             cell: ({ row }: any) => (
                 <div className="flex items-center space-x-2">
@@ -92,7 +93,7 @@ export default function PurchaseInvoicesPage() {
             ),
         },
         {
-            id: "date",
+            accessorKey: "date",
             header: "Date",
             cell: ({ row }: any) => (
                 <div className="flex items-center space-x-2">
@@ -102,7 +103,7 @@ export default function PurchaseInvoicesPage() {
             ),
         },
         {
-            id: "totalAmount",
+            accessorKey: "totalAmount",
             header: "Total Amount",
             cell: ({ row }: any) => (
                 <div className="flex items-center space-x-2">
@@ -112,7 +113,7 @@ export default function PurchaseInvoicesPage() {
             ),
         },
         {
-            id: "status",
+            accessorKey: "status",
             header: "Status",
             cell: ({ row }: any) => (
                 <span className={`px-2 py-1 rounded-full text-xs font-semibold ${row.original.status === 'CONFIRMED' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
@@ -192,6 +193,7 @@ export default function PurchaseInvoicesPage() {
                                             i.manufacturer.toLowerCase().includes(search.toLowerCase())
                                     )}
                                     onRowClick={(inv) => setSelectedInvoice(inv)}
+                                    initialSorting={[{ id: "manufacturer", desc: false }]}
                                 />
                             </motion.div>
                         )}
@@ -229,7 +231,7 @@ export default function PurchaseInvoicesPage() {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y">
-                                        {(selectedInvoice.items || []).map((item) => {
+                                        {sortByLocaleKey(selectedInvoice.items || [], (line) => line.inventoryItem?.name).map((item) => {
                                             const lineSubtotal = item.quantity * item.unitCost;
                                             const discountPct = lineSubtotal > 0 ? ((item.discount / lineSubtotal) * 100).toFixed(1) : "0";
                                             return (
