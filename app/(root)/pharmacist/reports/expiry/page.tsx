@@ -6,7 +6,8 @@ import { motion } from "framer-motion";
 import { Calendar, ArrowLeft } from "lucide-react";
 import Loading from "@/components/shared/Loading";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { sortByLocaleKey } from "@/lib/sort-alphabetical";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -57,6 +58,8 @@ export default function ExpiryReportPage() {
   const formatDate = (d: string) =>
     new Date(d).toLocaleDateString("en-PK", { year: "numeric", month: "short", day: "numeric" });
 
+  const sortedItems = useMemo(() => sortByLocaleKey(items, (r) => r.name), [items]);
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -99,7 +102,7 @@ export default function ExpiryReportPage() {
               <Loading />
             </div>
           ) : (
-            <Table wrapperClassName={items.length > 0 ? "min-h-[260px]" : undefined}>
+            <Table wrapperClassName={sortedItems.length > 0 ? "min-h-[260px]" : undefined}>
               <TableHeader>
                 <TableRow>
                   <TableHead>Name</TableHead>
@@ -110,7 +113,7 @@ export default function ExpiryReportPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {items.length === 0 ? (
+                {sortedItems.length === 0 ? (
                   <TableEmptyState
                     icon={CalendarX}
                     title="No items expiring soon"
@@ -118,7 +121,7 @@ export default function ExpiryReportPage() {
                     colSpan={5}
                   />
                 ) : (
-                  items.map((row) => (
+                  sortedItems.map((row) => (
                     <TableRow key={row.id}>
                       <TableCell className="font-medium">{row.name}</TableCell>
                       <TableCell>{row.quantity}</TableCell>

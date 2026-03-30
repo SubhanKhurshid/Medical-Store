@@ -486,9 +486,6 @@ export default function InventoryManagement() {
                   />
                   <span className="text-lg font-medium text-gray-600">%</span>
                 </div>
-                <p className="text-xs text-gray-500">
-                  Applied after manufacturer discount: net cost = list purchase × (1 − mfg %) × (1 − this %).
-                </p>
                 {form.formState.errors.specialCompanyDiscount && (
                   <span className="text-red-500 text-sm">
                     {form.formState.errors.specialCompanyDiscount.message}
@@ -511,9 +508,6 @@ export default function InventoryManagement() {
                   />
                   <span className="text-lg font-medium text-gray-600">%</span>
                 </div>
-                <p className="text-xs text-gray-500">
-                  For stock report: net sale = selling price after this discount.
-                </p>
                 {form.formState.errors.customerDiscount && (
                   <span className="text-red-500 text-sm">
                     {form.formState.errors.customerDiscount.message}

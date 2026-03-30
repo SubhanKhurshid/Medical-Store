@@ -66,7 +66,7 @@ const SupplierPayments = () => {
 
     const columns = [
         {
-            id: "manufacturer",
+            accessorKey: "manufacturer",
             header: "Supplier",
             cell: ({ row }: any) => (
                 <div className="flex items-center space-x-2">
@@ -76,7 +76,7 @@ const SupplierPayments = () => {
             ),
         },
         {
-            id: "amount",
+            accessorKey: "amount",
             header: "Amount Paid",
             cell: ({ row }: any) => (
                 <div className="flex items-center space-x-2">
@@ -86,7 +86,7 @@ const SupplierPayments = () => {
             ),
         },
         {
-            id: "paymentMethod",
+            accessorKey: "paymentMethod",
             header: "Method",
             cell: ({ row }: any) => (
                 <span className="text-sm text-gray-700 capitalize">
@@ -95,7 +95,7 @@ const SupplierPayments = () => {
             ),
         },
         {
-            id: "date",
+            accessorKey: "date",
             header: "Date",
             cell: ({ row }: any) => (
                 <div className="flex items-center space-x-2">
@@ -105,7 +105,7 @@ const SupplierPayments = () => {
             ),
         },
         {
-            id: "reference",
+            accessorKey: "reference",
             header: "Reference",
             cell: ({ row }: any) => (
                 <span>{row.original.reference}</span>
@@ -183,6 +183,7 @@ const SupplierPayments = () => {
                                             p.reference?.toLowerCase().includes(search?.toLowerCase())
                                     )}
                                     onRowClick={(p) => setSelectedPayment(p)}
+                                    initialSorting={[{ id: "manufacturer", desc: false }]}
                                 />
                             </motion.div>
                         )}

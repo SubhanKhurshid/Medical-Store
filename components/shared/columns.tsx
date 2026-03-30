@@ -160,6 +160,7 @@ export const inventoryColumns: ColumnDef<InventoryItem>[] = [
   {
     id: "actions",
     header: "",
+    enableSorting: false,
     cell: ({ row }) => {
       const item = row.original;
       const { deleteItem } = useInventory();

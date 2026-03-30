@@ -2,6 +2,7 @@ import axios from "axios";
 import React, { createContext, useContext, useReducer, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { useAuth } from "../providers/AuthProvider";
+import { sortByLocaleKey } from "@/lib/sort-alphabetical";
 
 export enum ItemType {
   MEDICINE = "MEDICINE",
@@ -83,13 +84,16 @@ const inventoryReducer = (
     case "ADD_ITEM":
       return {
         ...state,
-        items: [...state.items, action.payload],
+        items: sortByLocaleKey([...state.items, action.payload], (i) => i.name),
       };
     case "UPDATE_ITEM":
       return {
         ...state,
-        items: state.items.map((item) =>
-          item.id === action.payload.id ? action.payload : item
+        items: sortByLocaleKey(
+          state.items.map((item) =>
+            item.id === action.payload.id ? action.payload : item
+          ),
+          (i) => i.name,
         ),
       };
     case "DELETE_ITEM":
@@ -100,7 +104,7 @@ const inventoryReducer = (
     case "SET_ITEMS":
       return {
         ...state,
-        items: action.payload,
+        items: sortByLocaleKey(action.payload, (i) => i.name),
       };
     default:
       return state;
@@ -186,7 +190,7 @@ export const InventoryProvider = ({
         },
       }
     );
-    return response.data;
+    return sortByLocaleKey(response.data as InventoryItem[], (i) => i.name);
   };
 
   const getExpiringItems = async (): Promise<InventoryItem[]> => {
@@ -198,7 +202,7 @@ export const InventoryProvider = ({
         },
       }
     );
-    return response.data;
+    return sortByLocaleKey(response.data as InventoryItem[], (i) => i.name);
   };
 
   return (

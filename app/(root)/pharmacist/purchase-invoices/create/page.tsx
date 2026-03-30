@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { sortByLocaleKey } from "@/lib/sort-alphabetical";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -45,13 +46,19 @@ export default function CreatePurchaseInvoicePage() {
         // Fetch manufacturers
         fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/manufacturer`)
             .then((res) => res.json())
-            .then((data) => setManufacturers(Array.isArray(data) ? data : [data]))
+            .then((data) =>
+                setManufacturers(
+                    sortByLocaleKey(Array.isArray(data) ? data : [data], (m) => m.companyName),
+                ),
+            )
             .catch((err) => console.error(err));
 
         // Fetch inventory items
         fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist`)
             .then((res) => res.json())
-            .then((data) => setInventoryItems(Array.isArray(data) ? data : [data]))
+            .then((data) =>
+                setInventoryItems(sortByLocaleKey(Array.isArray(data) ? data : [data], (i) => i.name)),
+            )
             .catch((err) => console.error(err));
     }, []);
 

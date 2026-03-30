@@ -35,6 +35,7 @@ import {
   flexRender,
   getCoreRowModel,
   getPaginationRowModel,
+  getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
 import type { ColumnDef } from "@tanstack/react-table";
@@ -154,6 +155,7 @@ export default function ViewPurchaseOrdersPage() {
     {
       id: "actions",
       header: "Actions",
+      enableSorting: false,
       cell: ({ row }) => {
         const order = row.original;
         if (order.status !== "PENDING") return null;
@@ -193,8 +195,12 @@ export default function ViewPurchaseOrdersPage() {
     data: purchaseOrders,
     columns,
     getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
-    initialState: { pagination: { pageSize: 5 } },
+    initialState: {
+      pagination: { pageSize: 5 },
+      sorting: [{ id: "itemName", desc: false }],
+    },
   });
 
   useEffect(() => {

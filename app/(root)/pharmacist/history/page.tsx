@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import type { ColumnDef } from "@tanstack/react-table";
 import { DataTable } from "@/components/shared/DataTable";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -20,6 +21,8 @@ import { useInventory } from "@/app/context/InventoryContext";
 import axios from "axios";
 import { toast } from "sonner";
 import Loading from "@/components/shared/Loading";
+import { sortByLocaleKey } from "@/lib/sort-alphabetical";
+import { PDF_URDU_FONT_FAMILY, registerUrduFont } from "@/lib/jspdf-register-urdu-font";
 import {
   Select,
   SelectContent,
@@ -230,6 +233,7 @@ const SalesTable = () => {
         import("jspdf-autotable"),
       ]);
       const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
+      await registerUrduFont(doc);
       const margin = 40;
       let y = margin;
       doc.setFontSize(15);
@@ -262,8 +266,13 @@ const SalesTable = () => {
         head: [["Invoice #", "Date", "Customer", "Phone", "Payment", "Total", "Refunded"]],
         body,
         startY: y,
-        styles: { fontSize: 8, cellPadding: 5 },
-        headStyles: { fillColor: [185, 28, 28], textColor: 255 },
+        styles: { fontSize: 8, cellPadding: 5, font: PDF_URDU_FONT_FAMILY, fontStyle: "normal" },
+        headStyles: {
+          fillColor: [185, 28, 28],
+          textColor: 255,
+          font: PDF_URDU_FONT_FAMILY,
+          fontStyle: "bold",
+        },
         margin: { left: margin, right: margin },
       });
 
@@ -327,43 +336,44 @@ const SalesTable = () => {
     }
   };
 
-  const columns = [
+  const columns: ColumnDef<Sale>[] = [
     {
-      id: "invoiceNumber",
+      accessorKey: "invoiceNumber",
       header: "Invoice #",
-      cell: ({ row }: { row: { original: Sale } }) => (
+      cell: ({ row }) => (
         <span className="font-medium font-mono text-foreground">
           {row.original.invoiceNumber || "—"}
         </span>
       ),
     },
     {
+      accessorFn: (row) => row.customerName ?? "",
       id: "customerName",
       header: "Customer",
-      cell: ({ row }: { row: { original: Sale } }) => (
+      cell: ({ row }) => (
         <span className="text-foreground">{row.original.customerName || "—"}</span>
       ),
     },
     {
-      id: "customerPhone",
+      accessorKey: "customerPhone",
       header: "Phone",
-      cell: ({ row }: { row: { original: Sale } }) => (
+      cell: ({ row }) => (
         <span className="text-muted-foreground">{row.original.customerPhone || "—"}</span>
       ),
     },
     {
-      id: "soldAt",
+      accessorKey: "soldAt",
       header: "Date",
-      cell: ({ row }: { row: { original: Sale } }) => (
+      cell: ({ row }) => (
         <span className="text-muted-foreground">
           {new Date(row.original.soldAt).toLocaleDateString()}
         </span>
       ),
     },
     {
-      id: "paymentMethod",
+      accessorKey: "paymentMethod",
       header: "Payment",
-      cell: ({ row }: { row: { original: Sale } }) => (
+      cell: ({ row }) => (
         <span className="text-foreground">
           {PAYMENT_LABELS[row.original.paymentMethod as string] ??
             row.original.paymentMethod ??
@@ -372,9 +382,9 @@ const SalesTable = () => {
       ),
     },
     {
-      id: "totalPrice",
+      accessorKey: "totalPrice",
       header: "Total",
-      cell: ({ row }: { row: { original: Sale } }) => {
+      cell: ({ row }) => {
         const refunded = Number(row.original.refundedAmount) || 0;
         return (
           <span className="font-medium text-foreground">
@@ -391,7 +401,8 @@ const SalesTable = () => {
     {
       id: "actions",
       header: "Actions",
-      cell: ({ row }: { row: { original: Sale } }) => (
+      enableSorting: false,
+      cell: ({ row }) => (
         <div className="flex gap-1.5">
           <Button
             variant="outline"
@@ -589,6 +600,7 @@ const SalesTable = () => {
                     columns={columns}
                     data={displaySales}
                     disableRowClick={true}
+                    initialSorting={[{ id: "customerName", desc: false }]}
                   />
                 </motion.div>
               </AnimatePresence>
@@ -630,7 +642,7 @@ const SalesTable = () => {
                 <div>
                   <p className="font-medium text-gray-700 mb-2">Items</p>
                   <ul className="border rounded p-2 space-y-1">
-                    {viewSale.saleItems?.map((si) => (
+                    {sortByLocaleKey(viewSale.saleItems ?? [], (si) => si.inventoryItem?.name ?? si.inventoryItemId).map((si) => (
                       <li key={si.id} className="flex justify-between">
                         <span>{si.inventoryItem?.name ?? si.inventoryItemId}</span>
                         <span>
@@ -647,63 +659,70 @@ const SalesTable = () => {
 
         <Dialog open={!!refundSale} onOpenChange={() => setRefundSale(null)}>
           <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle className="text-red-800">Refund Sale</DialogTitle>
-            </DialogHeader>
-            {refundSale && (
-              <div className="space-y-4">
-                <p className="text-sm text-gray-600">
-                  Invoice: {refundSale.invoiceNumber ?? refundSale.id}. Select quantities to refund.
-                </p>
-                <div className="space-y-2 max-h-48 overflow-y-auto">
-                  {refundSale.saleItems.map((si) => (
-                    <div key={si.id} className="flex items-center justify-between gap-2 border-b pb-2">
-                      <span className="text-sm font-medium truncate flex-1">
-                        {si.inventoryItem?.name ?? si.inventoryItemId}
-                      </span>
-                      <span className="text-xs text-gray-500">max: {si.quantity}</span>
-                      <Input
-                        type="number"
-                        min={0}
-                        max={si.quantity}
-                        value={refundQuantities[si.id] ?? 0}
-                        onChange={(e) =>
-                          setRefundQuantities((prev) => ({
-                            ...prev,
-                            [si.id]: Math.min(
-                              si.quantity,
-                              Math.max(0, parseInt(e.target.value, 10) || 0),
-                            ),
-                          }))
-                        }
-                        className="w-20"
-                      />
-                    </div>
-                  ))}
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                void handleRefundSubmit();
+              }}
+            >
+              <DialogHeader>
+                <DialogTitle className="text-red-800">Refund Sale</DialogTitle>
+              </DialogHeader>
+              {refundSale && (
+                <div className="space-y-4">
+                  <p className="text-sm text-gray-600">
+                    Invoice: {refundSale.invoiceNumber ?? refundSale.id}. Select quantities to refund.
+                  </p>
+                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                    {refundSale.saleItems.map((si) => (
+                      <div key={si.id} className="flex items-center justify-between gap-2 border-b pb-2">
+                        <span className="text-sm font-medium truncate flex-1">
+                          {si.inventoryItem?.name ?? si.inventoryItemId}
+                        </span>
+                        <span className="text-xs text-gray-500">max: {si.quantity}</span>
+                        <Input
+                          type="number"
+                          min={0}
+                          max={si.quantity}
+                          value={refundQuantities[si.id] ?? 0}
+                          onChange={(e) =>
+                            setRefundQuantities((prev) => ({
+                              ...prev,
+                              [si.id]: Math.min(
+                                si.quantity,
+                                Math.max(0, parseInt(e.target.value, 10) || 0),
+                              ),
+                            }))
+                          }
+                          className="w-20"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  <div>
+                    <Label>Reason (optional)</Label>
+                    <Input
+                      value={refundReason}
+                      onChange={(e) => setRefundReason(e.target.value)}
+                      placeholder="e.g. Returned by customer"
+                      className="mt-1"
+                    />
+                  </div>
                 </div>
-                <div>
-                  <Label>Reason (optional)</Label>
-                  <Input
-                    value={refundReason}
-                    onChange={(e) => setRefundReason(e.target.value)}
-                    placeholder="e.g. Returned by customer"
-                    className="mt-1"
-                  />
-                </div>
-              </div>
-            )}
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setRefundSale(null)}>
-                Cancel
-              </Button>
-              <Button
-                className="bg-red-800 hover:bg-red-900"
-                onClick={() => void handleRefundSubmit()}
-                disabled={refundSubmitting}
-              >
-                {refundSubmitting ? "Processing..." : "Process Refund"}
-              </Button>
-            </DialogFooter>
+              )}
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setRefundSale(null)}>
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  className="bg-red-800 hover:bg-red-900"
+                  disabled={refundSubmitting}
+                >
+                  {refundSubmitting ? "Processing..." : "Process Refund"}
+                </Button>
+              </DialogFooter>
+            </form>
           </DialogContent>
         </Dialog>
       </div>

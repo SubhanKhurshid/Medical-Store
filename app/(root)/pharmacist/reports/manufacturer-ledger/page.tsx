@@ -25,6 +25,8 @@ import {
 } from "@/components/ui/table";
 import Loading from "@/components/shared/Loading";
 import { Suspense } from "react";
+import { sortByLocaleKey } from "@/lib/sort-alphabetical";
+import { PDF_URDU_FONT_FAMILY, registerUrduFont } from "@/lib/jspdf-register-urdu-font";
 
 const PAYMENT_METHOD_FILTERS = [
   { value: "ALL", label: "All payment methods" },
@@ -89,7 +91,7 @@ function LedgerContent() {
           headers: { Authorization: `Bearer ${user.access_token}` },
         });
         const json = await res.json();
-        setManufacturers(json);
+        setManufacturers(sortByLocaleKey(Array.isArray(json) ? json : [], (m) => m.companyName));
       } catch (e) {
         console.error(e);
       } finally {
@@ -168,6 +170,7 @@ function LedgerContent() {
         import("jspdf-autotable"),
       ]);
       const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
+      await registerUrduFont(doc);
       const margin = 40;
       let y = margin;
       doc.setFontSize(16);
@@ -191,9 +194,9 @@ function LedgerContent() {
       y += 14;
       doc.text(`Total payments: ${formatCurrency(totals.credits)}`, margin, y);
       y += 14;
-      doc.setFont("helvetica", "bold");
+      doc.setFont(PDF_URDU_FONT_FAMILY, "bold");
       doc.text(`Closing / outstanding balance: ${formatCurrency(data.manufacturer.currentBalance)}`, margin, y);
-      doc.setFont("helvetica", "normal");
+      doc.setFont(PDF_URDU_FONT_FAMILY, "normal");
       y += 24;
 
       const head = [
@@ -225,8 +228,13 @@ function LedgerContent() {
         head,
         body,
         startY: y,
-        styles: { fontSize: 7, cellPadding: 4 },
-        headStyles: { fillColor: [185, 28, 28], textColor: 255 },
+        styles: { fontSize: 7, cellPadding: 4, font: PDF_URDU_FONT_FAMILY, fontStyle: "normal" },
+        headStyles: {
+          fillColor: [185, 28, 28],
+          textColor: 255,
+          font: PDF_URDU_FONT_FAMILY,
+          fontStyle: "bold",
+        },
         columnStyles: {
           0: { cellWidth: 62 },
           1: { cellWidth: 52 },

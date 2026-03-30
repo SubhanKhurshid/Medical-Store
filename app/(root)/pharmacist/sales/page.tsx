@@ -32,6 +32,7 @@ import { toast } from "sonner";
 import axios from "axios";
 import { useAuth } from "@/app/providers/AuthProvider";
 import { useInventory } from "@/app/context/InventoryContext";
+import { sortByLocaleKey } from "@/lib/sort-alphabetical";
 import { motion, AnimatePresence } from "framer-motion";
 import { Receipt } from "@/components/Receipt";
 import Loading from "@/components/shared/Loading";
@@ -100,7 +101,7 @@ const SalesPage = () => {
         imageUrl: product.image ?? product.imageUrl ?? "",
       }));
       console.log("Fetched products:", fetchedProducts);
-      setProducts(fetchedProducts);
+      setProducts(sortByLocaleKey(fetchedProducts, (p) => p.name));
     } catch (error) {
       console.error("Failed to fetch products", error);
       toast.error("Failed to fetch products");
@@ -134,14 +135,17 @@ const SalesPage = () => {
 
   useEffect(() => {
     if (searchTerm) {
-      const results = products.filter((product) => {
-        const productName = product.name ? product.name.toLowerCase() : "";
-        const genericName = product.genericName ? product.genericName.toLowerCase() : "";
-        return productName.includes(searchTerm.toLowerCase()) || genericName.includes(searchTerm.toLowerCase());
-      });
+      const results = sortByLocaleKey(
+        products.filter((product) => {
+          const productName = product.name ? product.name.toLowerCase() : "";
+          const genericName = product.genericName ? product.genericName.toLowerCase() : "";
+          return productName.includes(searchTerm.toLowerCase()) || genericName.includes(searchTerm.toLowerCase());
+        }),
+        (p) => p.name,
+      );
       setSearchResults(results);
     } else {
-      setSearchResults(products.slice(0, 10)); // Show 10 items initially
+      setSearchResults(sortByLocaleKey(products.slice(0, 10), (p) => p.name));
     }
   }, [searchTerm, products]);
 
@@ -164,7 +168,7 @@ const SalesPage = () => {
       };
       setProducts((prev) => {
         if (prev.some((p) => p.id === product.id)) return prev;
-        return [...prev, product];
+        return sortByLocaleKey([...prev, product], (p) => p.name);
       });
       addToCart(product, 1);
       setBarcodeInput("");
@@ -449,6 +453,24 @@ const SalesPage = () => {
                         placeholder="Search product by name..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key !== "Enter" || e.nativeEvent.isComposing) return;
+                          const q = searchTerm.trim();
+                          if (!q) return;
+                          e.preventDefault();
+                          if (searchResults.length === 0) {
+                            toast.error("No items match your search.");
+                            return;
+                          }
+                          if (searchResults.length === 1) {
+                            addToCart(searchResults[0]);
+                            setSearchTerm("");
+                            return;
+                          }
+                          toast.info("Multiple matches", {
+                            description: "Pick an item from the list or narrow your search.",
+                          });
+                        }}
                         className="pl-9 h-11 border-gray-200 focus:border-red-500 focus:ring-red-500/20"
                       />
                     </div>
@@ -692,36 +714,40 @@ const SalesPage = () => {
         {/* Discount Input Dialog */}
         <Dialog open={isDiscountInputOpen} onOpenChange={setIsDiscountInputOpen}>
           <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-              <DialogTitle className="text-red-800">
-                Enter Discount Percentage
-              </DialogTitle>
-            </DialogHeader>
-            <div className="py-4 space-y-2">
-              <Label htmlFor="discount">Discount (%)</Label>
-              <div className="flex items-center gap-2">
-                <Input
-                  id="discount"
-                  type="number"
-                  value={discount}
-                  onChange={(e) => setDiscount(e.target.value)}
-                  placeholder="e.g. 10"
-                  className="border-red-800 focus:ring-red-800"
-                  min={0}
-                  max={100}
-                  step="any"
-                />
-                <span className="text-lg font-medium text-gray-600">%</span>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleDiscountSubmit();
+              }}
+            >
+              <DialogHeader>
+                <DialogTitle className="text-red-800">
+                  Enter Discount Percentage
+                </DialogTitle>
+              </DialogHeader>
+              <div className="py-4 space-y-2">
+                <Label htmlFor="discount">Discount (%)</Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    id="discount"
+                    type="number"
+                    value={discount}
+                    onChange={(e) => setDiscount(e.target.value)}
+                    placeholder="e.g. 10"
+                    className="border-red-800 focus:ring-red-800"
+                    min={0}
+                    max={100}
+                    step="any"
+                  />
+                  <span className="text-lg font-medium text-gray-600">%</span>
+                </div>
               </div>
-            </div>
-            <DialogFooter>
-              <Button
-                onClick={handleDiscountSubmit}
-                className="bg-red-800 hover:bg-red-800/80"
-              >
-                Apply Discount
-              </Button>
-            </DialogFooter>
+              <DialogFooter>
+                <Button type="submit" className="bg-red-800 hover:bg-red-800/80">
+                  Apply Discount
+                </Button>
+              </DialogFooter>
+            </form>
           </DialogContent>
         </Dialog>
 

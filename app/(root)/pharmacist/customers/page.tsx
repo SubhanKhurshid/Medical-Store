@@ -59,7 +59,7 @@ const CustomersPage = () => {
 
     const columns = [
         {
-            id: "name",
+            accessorKey: "name",
             header: "Customer Name",
             cell: ({ row }: any) => (
                 <div className="flex items-center space-x-2">
@@ -69,7 +69,7 @@ const CustomersPage = () => {
             ),
         },
         {
-            id: "phone",
+            accessorKey: "phone",
             header: "Phone Number",
             cell: ({ row }: any) => (
                 <div className="flex items-center space-x-2">
@@ -79,12 +79,12 @@ const CustomersPage = () => {
             ),
         },
         {
-            id: "email",
+            accessorKey: "email",
             header: "Email Address",
             cell: ({ row }: any) => <span>{row.original.email || "-"}</span>,
         },
         {
-            id: "creditBalance",
+            accessorKey: "creditBalance",
             header: "Credit Balance",
             cell: ({ row }: any) => {
                 const bal = Number(row.original.creditBalance) || 0;
@@ -101,6 +101,7 @@ const CustomersPage = () => {
         {
             id: "actions",
             header: "Actions",
+            enableSorting: false,
             cell: ({ row }: any) => (
                 <div className="flex gap-2">
                     <Button
