@@ -72,6 +72,7 @@ const SalesPage = () => {
   const { refetchInventory } = useInventory();
   const [isProcessing, setIsProcessing] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [cashReceivedInput, setCashReceivedInput] = useState("");
   const barcodeInputRef = useRef<HTMLInputElement>(null);
 
   const focusBarcodeInput = useCallback(() => {
@@ -333,6 +334,7 @@ const SalesPage = () => {
           setCustomerId(undefined);
           setCustomerName("");
           setCustomerPhone("");
+          setCashReceivedInput("");
           setCompletedSale(null);
           setIsReceiptModalOpen(false);
           fetchProducts();
@@ -752,7 +754,13 @@ const SalesPage = () => {
         </Dialog>
 
         {/* Receipt Modal Dialog – no modal chrome: transparent container, receipt is the only white surface */}
-        <Dialog open={isReceiptModalOpen} onOpenChange={setIsReceiptModalOpen}>
+        <Dialog
+          open={isReceiptModalOpen}
+          onOpenChange={(open) => {
+            setIsReceiptModalOpen(open);
+            if (!open) setCashReceivedInput("");
+          }}
+        >
           <DialogContent className="sm:max-w-[500px] w-auto max-w-[95vw] p-0 border-0 bg-transparent shadow-none rounded-none gap-0 overflow-visible">
             <DialogHeader className="px-0 pt-0 pb-1 print:hidden">
               <DialogTitle className="text-red-800 text-base">Receipt</DialogTitle>
@@ -765,9 +773,28 @@ const SalesPage = () => {
                 discountedTotal={discountedTotal}
                 invoiceNumber={completedSale?.invoiceNumber ?? undefined}
                 paymentMethod={completedSale?.paymentMethod ?? paymentMethod}
+                cashReceived={
+                  paymentMethod === "CASH" && cashReceivedInput.trim() !== ""
+                    ? parseFloat(cashReceivedInput)
+                    : undefined
+                }
               />
             </div>
-            <DialogFooter className="px-0 pb-0 pt-3 print:hidden">
+            <DialogFooter className="px-0 pb-0 pt-3 print:hidden flex-col sm:flex-row gap-2 items-stretch sm:items-center">
+              {paymentMethod === "CASH" && (
+                <label className="flex items-center gap-2 text-sm text-gray-700 mr-auto w-full sm:w-auto">
+                  <span className="whitespace-nowrap">Cash received (Rs)</span>
+                  <input
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    className="border rounded-md px-2 py-1 w-28 text-gray-900"
+                    value={cashReceivedInput}
+                    onChange={(e) => setCashReceivedInput(e.target.value)}
+                    placeholder="Optional"
+                  />
+                </label>
+              )}
               <Button
                 onClick={() => setIsReceiptModalOpen(false)}
                 variant="outline"

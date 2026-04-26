@@ -89,6 +89,7 @@ const Sidebar = () => {
       { href: "/pharmacist/customers", label: "Customers" },
       { href: "/pharmacist/inventory-management", label: "Add Medicine" },
       { href: "/pharmacist/manufacturer-working", label: "Manufacturer" },
+      { href: "/pharmacist/vendor-working", label: "Vendors" },
       { href: "/pharmacist/inventory-view", label: "View Inventory" },
       {
         href: "/pharmacist/purchase-orders/create",

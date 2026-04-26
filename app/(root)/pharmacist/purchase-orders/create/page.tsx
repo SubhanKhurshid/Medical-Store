@@ -56,6 +56,8 @@ export interface ReorderItem {
   quantity: number;
   minimumStock: number;
   manufacturer: string;
+  /** Drug company id on inventory (for vendor matching). */
+  manufacturerId?: string | null;
   /** List purchase (before discounts); from inventory when available. */
   listPurchase?: number;
   manufacturerDiscount?: number;
@@ -75,6 +77,7 @@ function toReorderItemFromInventory(row: {
   quantity: number;
   minimumStock: number;
   manufacturer?: string;
+  manufacturerId?: string | null;
   purchasePrice?: number;
   manufacturerDiscount?: number;
   specialCompanyDiscount?: number;
@@ -85,6 +88,7 @@ function toReorderItemFromInventory(row: {
     quantity: row.quantity,
     minimumStock: row.minimumStock ?? 0,
     manufacturer: row.manufacturer ?? "",
+    manufacturerId: row.manufacturerId ?? null,
     listPurchase: row.purchasePrice,
     manufacturerDiscount: row.manufacturerDiscount,
     specialCompanyDiscount: row.specialCompanyDiscount,
@@ -120,6 +124,7 @@ function mergeLowStockAndExpiring(lowStock: any[], expiring: any[]): ReorderItem
       quantity: item.quantity,
       minimumStock: item.minimumStock ?? (item as any).minimumQuantity ?? 0,
       manufacturer: item.manufacturer ?? "",
+      manufacturerId: item.manufacturerId ?? null,
       ...pricingFromInventoryRow(item),
       issueLabel: "Low Stock",
       isLowStock: true,
@@ -134,6 +139,9 @@ function mergeLowStockAndExpiring(lowStock: any[], expiring: any[]): ReorderItem
     if (existing) {
       existing.issueLabel = "Low Stock, Expiring Soon";
       existing.isExpiringSoon = true;
+      if (!existing.manufacturerId && item.manufacturerId) {
+        existing.manufacturerId = item.manufacturerId;
+      }
       if (existing.listPurchase == null && pricing.listPurchase != null) {
         existing.listPurchase = pricing.listPurchase;
         existing.manufacturerDiscount = pricing.manufacturerDiscount;
@@ -146,6 +154,7 @@ function mergeLowStockAndExpiring(lowStock: any[], expiring: any[]): ReorderItem
         quantity: qty,
         minimumStock: min,
         manufacturer: item.manufacturer ?? "",
+        manufacturerId: item.manufacturerId ?? null,
         ...pricing,
         issueLabel: "Expiring Soon",
         isLowStock: false,
@@ -156,8 +165,16 @@ function mergeLowStockAndExpiring(lowStock: any[], expiring: any[]): ReorderItem
   return Array.from(map.values());
 }
 
+interface VendorWithLinks {
+  id: string;
+  name: string;
+  manufacturerLinks: { manufacturerId: string }[];
+}
+
 export default function CreatePurchaseOrdersPage() {
   const { user } = useAuth();
+  const [vendors, setVendors] = useState<VendorWithLinks[]>([]);
+  const [selectedVendorId, setSelectedVendorId] = useState("");
   const [items, setItems] = useState<ReorderItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -201,6 +218,26 @@ export default function CreatePurchaseOrdersPage() {
     }
   }, [user?.access_token]);
 
+  const fetchVendors = useCallback(async () => {
+    const headers = getAuthHeaders(user?.access_token);
+    try {
+      const res = await axios.get(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/vendor`,
+        { headers }
+      );
+      const rows = Array.isArray(res.data) ? res.data : [];
+      setVendors(
+        rows.map((v: { id: string; name: string; manufacturerLinks?: { manufacturerId: string }[] }) => ({
+          id: v.id,
+          name: v.name,
+          manufacturerLinks: v.manufacturerLinks ?? [],
+        }))
+      );
+    } catch {
+      setVendors([]);
+    }
+  }, [user?.access_token]);
+
   const fetchAllInventory = useCallback(async () => {
     const headers = getAuthHeaders(user?.access_token);
     try {
@@ -217,6 +254,7 @@ export default function CreatePurchaseOrdersPage() {
           quantity: number;
           minimumStock?: number;
           manufacturer?: string;
+          manufacturerId?: string | null;
           purchasePrice?: number;
           manufacturerDiscount?: number;
           specialCompanyDiscount?: number;
@@ -227,6 +265,7 @@ export default function CreatePurchaseOrdersPage() {
             quantity: r.quantity,
             minimumStock: r.minimumStock ?? 0,
             manufacturer: r.manufacturer,
+            manufacturerId: r.manufacturerId,
             purchasePrice: r.purchasePrice,
             manufacturerDiscount: r.manufacturerDiscount,
             specialCompanyDiscount: r.specialCompanyDiscount,
@@ -244,7 +283,8 @@ export default function CreatePurchaseOrdersPage() {
   useEffect(() => {
     fetchItems();
     fetchAllInventory();
-  }, [fetchItems, fetchAllInventory]);
+    fetchVendors();
+  }, [fetchItems, fetchAllInventory, fetchVendors]);
 
   const searchMatches = useMemo(() => {
     const q = inventorySearch.trim().toLowerCase();
@@ -263,6 +303,19 @@ export default function CreatePurchaseOrdersPage() {
     setSelectedItem(item);
     const suggested = Math.max(item.minimumStock * 2 - item.quantity, 10);
     setOrderQuantityInput(String(suggested));
+    const mid = item.manufacturerId;
+    const eligible = vendors.filter(
+      (v) =>
+        !v.manufacturerLinks.length ||
+        (mid != null && mid !== "" && v.manufacturerLinks.some((l) => l.manufacturerId === mid))
+    );
+    let defaultVid = "";
+    if (eligible.length === 1) defaultVid = eligible[0].id;
+    else if (eligible.length > 1 && mid) {
+      const exact = eligible.filter((v) => v.manufacturerLinks.some((l) => l.manufacturerId === mid));
+      if (exact.length === 1) defaultVid = exact[0].id;
+    }
+    setSelectedVendorId(defaultVid);
     setDialogOpen(true);
   };
 
@@ -277,6 +330,10 @@ export default function CreatePurchaseOrdersPage() {
 
   const handleCreateOrder = async () => {
     if (!selectedItem) return;
+    if (!selectedVendorId) {
+      toast.error("Select a vendor", { description: "Who are you ordering this stock from?" });
+      return;
+    }
     const qty = parseInt(orderQuantityInput.trim(), 10);
     if (!Number.isFinite(qty) || qty < 1) {
       toast.error("Enter a valid quantity", {
@@ -289,7 +346,7 @@ export default function CreatePurchaseOrdersPage() {
     try {
       await axios.post(
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/purchase-order`,
-        { inventoryItemId: selectedItem.id, quantityOrdered: qty },
+        { inventoryItemId: selectedItem.id, quantityOrdered: qty, vendorId: selectedVendorId },
         { headers }
       );
       toast.success("Purchase order created", {
@@ -726,6 +783,7 @@ export default function CreatePurchaseOrdersPage() {
           if (!open) {
             setSelectedItem(null);
             setOrderQuantityInput("");
+            setSelectedVendorId("");
             setCreatingOrder(false);
           }
         }}
@@ -842,6 +900,39 @@ export default function CreatePurchaseOrdersPage() {
                     )}
                   </TableBody>
                 </Table>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="po-vendor" className="text-sm font-medium text-gray-700">
+                  Vendor
+                </Label>
+                <select
+                  id="po-vendor"
+                  required
+                  value={selectedVendorId}
+                  onChange={(e) => setSelectedVendorId(e.target.value)}
+                  className="w-full h-10 px-3 text-sm border border-gray-200 rounded-md bg-white focus:outline-none focus:ring-1 focus:ring-red-500/30 focus:border-red-500"
+                >
+                  <option value="">Select vendor…</option>
+                  {vendors
+                    .filter(
+                      (v) =>
+                        !v.manufacturerLinks.length ||
+                        (selectedItem.manufacturerId != null &&
+                          selectedItem.manufacturerId !== "" &&
+                          v.manufacturerLinks.some(
+                            (l) => l.manufacturerId === selectedItem.manufacturerId
+                          ))
+                    )
+                    .map((v) => (
+                      <option key={v.id} value={v.id}>
+                        {v.name}
+                      </option>
+                    ))}
+                </select>
+                <p className="text-xs text-gray-500">
+                  Only vendors linked to this item&apos;s manufacturer are listed (or vendors with no links).
+                </p>
               </div>
 
               <div className="space-y-2">

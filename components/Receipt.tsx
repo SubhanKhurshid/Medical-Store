@@ -24,6 +24,8 @@ interface ReceiptProps {
   invoiceNumber?: string | null;
   /** Payment method used for this sale */
   paymentMethod?: PaymentMethodDisplay | string | null;
+  /** For cash sales: amount the customer gave (shows change due). */
+  cashReceived?: number | null;
 }
 
 const PAYMENT_LABELS: Record<string, string> = {
@@ -41,6 +43,7 @@ export function Receipt({
   discountedTotal,
   invoiceNumber,
   paymentMethod,
+  cashReceived,
 }: ReceiptProps) {
   const orderNumber = invoiceNumber?.trim() || "— pending";
   const barcodeValue = invoiceNumber?.trim() || BARCODE_PLACEHOLDER;
@@ -48,6 +51,10 @@ export function Receipt({
   const now = useMemo(() => new Date(), []);
 
   const paymentLabel = paymentMethod ? (PAYMENT_LABELS[String(paymentMethod)] ?? String(paymentMethod)) : "Cash";
+  const cashIn =
+    cashReceived != null && Number.isFinite(cashReceived) && cashReceived > 0 ? cashReceived : null;
+  const changeDue =
+    cashIn != null && String(paymentMethod) === "CASH" ? Math.max(0, cashIn - discountedTotal) : 0;
 
   return (
     <div
@@ -165,9 +172,20 @@ export function Receipt({
           <span>Payment ({paymentLabel})</span>
           <span>Rs {discountedTotal.toFixed(2)}</span>
         </div>
+        {cashIn != null && String(paymentMethod) === "CASH" && (
+          <div style={{ display: "flex", justifyContent: "space-between" }}>
+            <span>Cash received</span>
+            <span>Rs {cashIn.toFixed(2)}</span>
+          </div>
+        )}
         <div style={{ display: "flex", justifyContent: "space-between" }}>
           <span>CHANGE DUE</span>
-          <span>Rs 0.00</span>
+          <span>
+            Rs{" "}
+            {cashIn != null && String(paymentMethod) === "CASH"
+              ? changeDue.toFixed(2)
+              : "0.00"}
+          </span>
         </div>
       </div>
 

@@ -62,6 +62,7 @@ const baseSchema = z.object({
   category: z.string().optional(),
   minimumStock: requiredNum(0, "Minimum stock is required"),
   description: z.string().optional(),
+  purpose: z.string().optional(),
   manufacturerDiscount: z
     .union([z.string(), z.number()])
     .optional()
@@ -162,6 +163,7 @@ export default function EditInventoryModal({
       category: (item as any).category ?? "",
       minimumStock: String((item as any).minimumStock ?? ""),
       description: (item as any).description ?? "",
+      purpose: (item as any).purpose ?? "",
       manufacturerDiscount: String((item as any).manufacturerDiscount ?? 0),
       specialCompanyDiscount: String((item as any).specialCompanyDiscount ?? 0),
       customerDiscount: String((item as any).customerDiscount ?? 0),
@@ -192,6 +194,7 @@ export default function EditInventoryModal({
       category: (item as any).category ?? "",
       minimumStock: String((item as any).minimumStock ?? ""),
       description: (item as any).description ?? "",
+      purpose: (item as any).purpose ?? "",
       manufacturerDiscount: String((item as any).manufacturerDiscount ?? 0),
       specialCompanyDiscount: String((item as any).specialCompanyDiscount ?? 0),
       customerDiscount: String((item as any).customerDiscount ?? 0),
@@ -263,6 +266,7 @@ export default function EditInventoryModal({
         barcode: data.barcode || undefined,
         category: data.category || undefined,
         description: data.description || undefined,
+        purpose: data.purpose?.trim() ? data.purpose.trim() : undefined,
         ...(itemTypeUsesMedicineFields(itemType) && {
           dosage: (data as any).dosage,
           activeIngredient: (data as any).activeIngredient,
@@ -750,6 +754,16 @@ export default function EditInventoryModal({
                     placeholder="Item description"
                     className="min-h-[92px] bg-white border-gray-200 focus:border-red-500 focus:ring-red-500/20"
                     {...form.register("description")}
+                  />
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="purpose">Purpose</Label>
+                  <Textarea
+                    id="purpose"
+                    placeholder="e.g. indication, usage note"
+                    className="min-h-[72px] bg-white border-gray-200 focus:border-red-500 focus:ring-red-500/20"
+                    {...form.register("purpose")}
                   />
                 </div>
               </div>

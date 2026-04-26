@@ -50,6 +50,7 @@ interface PurchaseOrder {
   itemName: string;
   quantityOrdered: number;
   manufacturer: string;
+  vendorName: string;
   status: "PENDING" | "DELIVERED" | "CANCELLED";
   createdAt: string;
 }
@@ -139,8 +140,12 @@ export default function ViewPurchaseOrdersPage() {
       header: "Quantity",
     },
     {
+      accessorKey: "vendorName",
+      header: "Vendor",
+    },
+    {
       accessorKey: "manufacturer",
-      header: "Manufacturer",
+      header: "Mfg. (product)",
     },
     {
       accessorKey: "createdAt",
@@ -215,6 +220,7 @@ export default function ViewPurchaseOrdersPage() {
           ...order,
           itemName: order.inventoryItem?.name || "N/A",
           manufacturer: order.manufacturer?.companyName || "N/A",
+          vendorName: order.vendor?.name || "—",
           orderNumber: `PO-${new Date(
             order.createdAt
           ).getFullYear()}-${order.id.slice(-4)}`,
@@ -422,7 +428,13 @@ export default function ViewPurchaseOrdersPage() {
                 </div>
                 <div>
                   <h4 className="text-base font-medium text-muted-foreground mb-2">
-                    Manufacturer
+                    Vendor
+                  </h4>
+                  <p className="text-lg">{selectedRow.vendorName}</p>
+                </div>
+                <div>
+                  <h4 className="text-base font-medium text-muted-foreground mb-2">
+                    Manufacturer (product)
                   </h4>
                   <p className="text-lg">{selectedRow.manufacturer}</p>
                 </div>

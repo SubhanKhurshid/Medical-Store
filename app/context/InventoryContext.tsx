@@ -38,6 +38,7 @@ export interface InventoryItem {
   customerDiscount?: number;
   minimumStock: number;
   description?: string;
+  purpose?: string | null;
   createdAt: string;
   updatedAt: string;
   image?: string;

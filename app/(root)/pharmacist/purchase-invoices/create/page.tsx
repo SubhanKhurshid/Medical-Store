@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { sortByLocaleKey } from "@/lib/sort-alphabetical";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,15 +27,21 @@ function formatInventoryOptionLabel(inv: {
     return bits.join(" · ");
 }
 
+interface VendorOption {
+    id: string;
+    name: string;
+    manufacturerLinks?: { manufacturerId: string }[];
+}
+
 export default function CreatePurchaseInvoicePage() {
     const router = useRouter();
-    const [manufacturers, setManufacturers] = useState<any[]>([]);
+    const [vendors, setVendors] = useState<VendorOption[]>([]);
     const [inventoryItems, setInventoryItems] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(false);
 
     const [invoiceData, setInvoiceData] = useState({
         invoiceNumber: "",
-        manufacturerId: "",
+        vendorId: "",
     });
 
     const [invoiceItems, setInvoiceItems] = useState<any[]>([
@@ -43,17 +49,15 @@ export default function CreatePurchaseInvoicePage() {
     ]);
 
     useEffect(() => {
-        // Fetch manufacturers
-        fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/manufacturer`)
+        fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/vendor`)
             .then((res) => res.json())
             .then((data) =>
-                setManufacturers(
-                    sortByLocaleKey(Array.isArray(data) ? data : [data], (m) => m.companyName),
+                setVendors(
+                    sortByLocaleKey(Array.isArray(data) ? data : [data], (v: VendorOption) => v.name),
                 ),
             )
             .catch((err) => console.error(err));
 
-        // Fetch inventory items
         fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist`)
             .then((res) => res.json())
             .then((data) =>
@@ -61,6 +65,21 @@ export default function CreatePurchaseInvoicePage() {
             )
             .catch((err) => console.error(err));
     }, []);
+
+    const allowedManufacturerIds = useMemo(() => {
+        const v = vendors.find((x) => x.id === invoiceData.vendorId);
+        if (!v?.manufacturerLinks?.length) return null as Set<string> | null;
+        return new Set(v.manufacturerLinks.map((l) => l.manufacturerId));
+    }, [vendors, invoiceData.vendorId]);
+
+    const inventoryChoices = useMemo(() => {
+        if (!allowedManufacturerIds) return inventoryItems;
+        return inventoryItems.filter((inv) => {
+            const mid = inv.manufacturerId as string | null | undefined;
+            if (!mid) return false;
+            return allowedManufacturerIds.has(mid);
+        });
+    }, [inventoryItems, allowedManufacturerIds]);
 
     const handleAddItem = () => {
         setInvoiceItems([
@@ -92,8 +111,8 @@ export default function CreatePurchaseInvoicePage() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!invoiceData.manufacturerId) {
-            toast.error("Please select a supplier");
+        if (!invoiceData.vendorId) {
+            toast.error("Please select a vendor");
             return;
         }
 
@@ -114,7 +133,7 @@ export default function CreatePurchaseInvoicePage() {
         setIsLoading(true);
         try {
             const payload: Record<string, unknown> = {
-                manufacturerId: invoiceData.manufacturerId,
+                vendorId: invoiceData.vendorId,
                 items: invoiceItems.map((item) => ({
                     inventoryItemId: item.inventoryItemId,
                     quantity: Number(item.quantity || 0),
@@ -186,7 +205,7 @@ export default function CreatePurchaseInvoicePage() {
                                     Invoice details
                                 </h2>
                                 <p className="text-xs text-gray-500 mt-0.5">
-                                    Supplier and optional manual invoice # (otherwise auto: 00001, 00002, …).
+                                    Vendor (who you owe) and optional manual invoice # (otherwise auto: 00001, 00002, …).
                                 </p>
                             </div>
                             <div className="text-right text-sm text-gray-600">
@@ -219,21 +238,21 @@ export default function CreatePurchaseInvoicePage() {
                                         <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                                         <select
                                             required
-                                            value={invoiceData.manufacturerId}
+                                            value={invoiceData.vendorId}
                                             onChange={(e) =>
                                                 setInvoiceData({
                                                     ...invoiceData,
-                                                    manufacturerId: e.target.value,
+                                                    vendorId: e.target.value,
                                                 })
                                             }
                                             className="w-full pl-9 pr-3 h-11 text-sm border border-gray-200 rounded-md bg-white focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500/20"
                                         >
                                             <option value="" disabled>
-                                                Select supplier
+                                                Select vendor
                                             </option>
-                                            {manufacturers.map((m) => (
+                                            {vendors.map((m) => (
                                                 <option key={m.id} value={m.id}>
-                                                    {m.companyName}
+                                                    {m.name}
                                                 </option>
                                             ))}
                                         </select>
@@ -251,7 +270,7 @@ export default function CreatePurchaseInvoicePage() {
                                     Line items
                                 </h2>
                                 <p className="text-xs text-gray-500 mt-0.5">
-                                    Add each product on the supplier invoice. Item list shows qty, list purchase, and any manufacturer / special company discount % from inventory; unit cost prefills from list purchase when empty.
+                                    Add each product on the vendor invoice. When the vendor has manufacturer links, only those products appear in the dropdown.
                                 </p>
                             </div>
                             <Button
@@ -317,7 +336,7 @@ export default function CreatePurchaseInvoicePage() {
                                                             <option value="" disabled>
                                                                 Select item
                                                             </option>
-                                                            {inventoryItems.map((inv) => (
+                                                            {inventoryChoices.map((inv) => (
                                                                 <option key={inv.id} value={inv.id}>
                                                                     {formatInventoryOptionLabel(inv)}
                                                                 </option>
