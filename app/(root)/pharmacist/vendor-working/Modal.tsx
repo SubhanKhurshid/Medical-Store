@@ -16,13 +16,35 @@ interface Mfg {
   companyName: string;
 }
 
+/** Matches GET /pharmacist/vendor list item */
+export interface VendorRaw {
+  id: string;
+  name: string;
+  vendorType: string;
+  phone: string;
+  cell?: string | null;
+  salePersonName?: string | null;
+  country?: string | null;
+  city?: string | null;
+  province?: string | null;
+  address?: string | null;
+  notes?: string | null;
+  balance?: number;
+  manufacturerLinks?: {
+    manufacturerId: string;
+    manufacturer?: { id: string; companyName: string } | null;
+  }[];
+}
+
 interface VendorModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: () => void;
+  /** When set, modal PATCHes this vendor instead of POST create */
+  editVendor?: VendorRaw | null;
 }
 
-export default function VendorModal({ isOpen, onClose, onSave }: VendorModalProps) {
+export default function VendorModal({ isOpen, onClose, onSave, editVendor }: VendorModalProps) {
   const { user } = useAuth();
   const [manufacturers, setManufacturers] = useState<Mfg[]>([]);
   const [selectedMfgIds, setSelectedMfgIds] = useState<Set<string>>(new Set());
@@ -42,19 +64,7 @@ export default function VendorModal({ isOpen, onClose, onSave }: VendorModalProp
 
   useEffect(() => {
     if (!isOpen) return;
-    setSelectedMfgIds(new Set());
-    setFormData({
-      name: "",
-      vendorType: "SUPPLIER",
-      phone: "",
-      cell: "",
-      salePersonName: "",
-      country: "",
-      city: "",
-      province: "",
-      address: "",
-      notes: "",
-    });
+
     fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/manufacturer`)
       .then((res) => res.json())
       .then((data) => {
@@ -71,6 +81,44 @@ export default function VendorModal({ isOpen, onClose, onSave }: VendorModalProp
       })
       .catch(console.error);
   }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    if (editVendor) {
+      setFormData({
+        name: editVendor.name ?? "",
+        vendorType: editVendor.vendorType ?? "SUPPLIER",
+        phone: editVendor.phone ?? "",
+        cell: editVendor.cell ?? "",
+        salePersonName: editVendor.salePersonName ?? "",
+        country: editVendor.country ?? "",
+        city: editVendor.city ?? "",
+        province: editVendor.province ?? "",
+        address: editVendor.address ?? "",
+        notes: editVendor.notes ?? "",
+      });
+      const ids =
+        editVendor.manufacturerLinks?.map(
+          (l) => l.manufacturer?.id ?? l.manufacturerId,
+        ) ?? [];
+      setSelectedMfgIds(new Set(ids.filter(Boolean)));
+    } else {
+      setFormData({
+        name: "",
+        vendorType: "SUPPLIER",
+        phone: "",
+        cell: "",
+        salePersonName: "",
+        country: "",
+        city: "",
+        province: "",
+        address: "",
+        notes: "",
+      });
+      setSelectedMfgIds(new Set());
+    }
+  }, [isOpen, editVendor]);
 
   const toggleMfg = (id: string) => {
     setSelectedMfgIds((prev) => {
@@ -102,8 +150,13 @@ export default function VendorModal({ isOpen, onClose, onSave }: VendorModalProp
         notes: formData.notes.trim() || undefined,
         manufacturerIds: Array.from(selectedMfgIds),
       };
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/vendor`, {
-        method: "POST",
+
+      const url = editVendor
+        ? `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/vendor/${editVendor.id}`
+        : `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/vendor`;
+
+      const res = await fetch(url, {
+        method: editVendor ? "PATCH" : "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${user.access_token}`,
@@ -112,7 +165,9 @@ export default function VendorModal({ isOpen, onClose, onSave }: VendorModalProp
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error(err.message || "Failed to create vendor");
+        throw new Error(
+          Array.isArray(err.message) ? err.message.join(" ") : err.message || "Failed to save vendor",
+        );
       }
       onSave();
       onClose();
@@ -123,6 +178,8 @@ export default function VendorModal({ isOpen, onClose, onSave }: VendorModalProp
       setSaving(false);
     }
   };
+
+  const isEdit = Boolean(editVendor);
 
   return (
     <AnimatePresence>
@@ -140,7 +197,7 @@ export default function VendorModal({ isOpen, onClose, onSave }: VendorModalProp
             className="bg-white rounded-xl w-full max-w-3xl max-h-[90vh] shadow-2xl overflow-hidden flex flex-col"
           >
             <div className="flex justify-between items-center p-6 border-b-2 border-red-700 shrink-0">
-              <h3 className="text-2xl text-red-800 font-bold">Add vendor</h3>
+              <h3 className="text-2xl text-red-800 font-bold">{isEdit ? "Edit vendor" : "Add vendor"}</h3>
               <button type="button" onClick={onClose} className="text-gray-500 hover:text-red-600">
                 <X className="h-5 w-5" />
               </button>
@@ -264,7 +321,7 @@ export default function VendorModal({ isOpen, onClose, onSave }: VendorModalProp
                   Cancel
                 </Button>
                 <Button type="submit" className="bg-red-800 hover:bg-red-900 text-white" disabled={saving}>
-                  {saving ? "Saving…" : "Save vendor"}
+                  {saving ? "Saving…" : isEdit ? "Update vendor" : "Save vendor"}
                 </Button>
               </div>
             </form>
