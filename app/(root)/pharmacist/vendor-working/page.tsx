@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { DataTable } from "@/components/shared/DataTable";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -13,7 +13,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, PlusCircle, Loader2, Building2, Phone, MapPin, Trash2, FileText } from "lucide-react";
+import { Search, PlusCircle, Loader2, Building2, Phone, Trash2, FileText, Pencil } from "lucide-react";
 import Link from "next/link";
 import Loading from "@/components/shared/Loading";
 import { toast } from "sonner";
@@ -21,7 +21,7 @@ import axios from "axios";
 import { useAuth } from "@/app/providers/AuthProvider";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import VendorModal from "./Modal";
+import VendorModal, { type VendorRaw } from "./Modal";
 
 interface VendorRow {
   id: string;
@@ -31,22 +31,15 @@ interface VendorRow {
   balance: string;
   balanceRaw: number;
   linkedCount: number;
-}
-
-interface VendorRaw {
-  id: string;
-  name: string;
-  vendorType: string;
-  phone: string;
-  balance: number;
-  manufacturerLinks?: { manufacturer?: { companyName: string } }[];
+  manufacturerNames: string;
 }
 
 export default function VendorsPage() {
   const [search, setSearch] = useState("");
-  const [vendors, setVendors] = useState<VendorRow[]>([]);
+  const [vendorsRaw, setVendorsRaw] = useState<VendorRaw[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editVendor, setEditVendor] = useState<VendorRaw | null>(null);
   const [selected, setSelected] = useState<VendorRow | null>(null);
   const [itemToDelete, setItemToDelete] = useState<VendorRow | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -64,17 +57,7 @@ export default function VendorsPage() {
       if (!res.ok) throw new Error("Failed to fetch vendors");
       const data: VendorRaw[] = await res.json();
       const list = Array.isArray(data) ? data : [];
-      setVendors(
-        list.map((v) => ({
-          id: v.id,
-          name: v.name,
-          vendorType: v.vendorType,
-          phone: v.phone,
-          balance: `${(v.balance ?? 0).toLocaleString()} Rs`,
-          balanceRaw: v.balance ?? 0,
-          linkedCount: v.manufacturerLinks?.length ?? 0,
-        })),
-      );
+      setVendorsRaw(list);
     } catch (e) {
       console.error(e);
     } finally {
@@ -85,6 +68,28 @@ export default function VendorsPage() {
   useEffect(() => {
     fetchVendors();
   }, [accessToken]);
+
+  const vendorRows = useMemo(
+    () =>
+      vendorsRaw.map((v) => {
+        const names =
+          (v.manufacturerLinks ?? [])
+            .map((l) => l.manufacturer?.companyName)
+            .filter(Boolean)
+            .join(", ") || "—";
+        return {
+          id: v.id,
+          name: v.name,
+          vendorType: v.vendorType,
+          phone: v.phone,
+          balance: `${(v.balance ?? 0).toLocaleString()} Rs`,
+          balanceRaw: v.balance ?? 0,
+          linkedCount: v.manufacturerLinks?.length ?? 0,
+          manufacturerNames: names,
+        };
+      }),
+    [vendorsRaw],
+  );
 
   const handleDelete = async () => {
     if (!itemToDelete || !accessToken) return;
@@ -134,10 +139,12 @@ export default function VendorsPage() {
       ),
     },
     {
-      accessorKey: "linkedCount",
-      header: "Mfg. links",
+      accessorKey: "manufacturerNames",
+      header: "Manufacturers",
       cell: ({ row }: { row: { original: VendorRow } }) => (
-        <span className="tabular-nums">{row.original.linkedCount}</span>
+        <span className="text-sm text-gray-700 max-w-[280px] line-clamp-2" title={row.original.manufacturerNames}>
+          {row.original.manufacturerNames}
+        </span>
       ),
     },
     {
@@ -162,6 +169,22 @@ export default function VendorsPage() {
           <Button
             variant="ghost"
             size="sm"
+            className="text-gray-700 hover:bg-gray-100"
+            onClick={(e) => {
+              e.stopPropagation();
+              const raw = vendorsRaw.find((x) => x.id === row.original.id);
+              if (raw) {
+                setEditVendor(raw);
+                setIsModalOpen(true);
+              }
+            }}
+            title="Edit vendor"
+          >
+            <Pencil className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
             className="text-red-600 hover:bg-red-50"
             onClick={(e) => {
               e.stopPropagation();
@@ -175,10 +198,11 @@ export default function VendorsPage() {
     },
   ];
 
-  const filtered = vendors.filter(
+  const filtered = vendorRows.filter(
     (v) =>
       v.name.toLowerCase().includes(search.toLowerCase()) ||
-      v.vendorType.toLowerCase().includes(search.toLowerCase()),
+      v.vendorType.toLowerCase().includes(search.toLowerCase()) ||
+      v.manufacturerNames.toLowerCase().includes(search.toLowerCase()),
   );
 
   return (
@@ -213,7 +237,13 @@ export default function VendorsPage() {
                   className="pl-9 h-10"
                 />
               </div>
-              <Button onClick={() => setIsModalOpen(true)} className="bg-red-800 hover:bg-red-700 text-white shrink-0">
+              <Button
+                onClick={() => {
+                  setEditVendor(null);
+                  setIsModalOpen(true);
+                }}
+                className="bg-red-800 hover:bg-red-700 text-white shrink-0"
+              >
                 <PlusCircle className="mr-2 h-4 w-4" />
                 Add vendor
               </Button>
@@ -233,7 +263,15 @@ export default function VendorsPage() {
           </CardContent>
         </Card>
 
-        <VendorModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSave={fetchVendors} />
+        <VendorModal
+          isOpen={isModalOpen}
+          editVendor={editVendor}
+          onClose={() => {
+            setIsModalOpen(false);
+            setEditVendor(null);
+          }}
+          onSave={fetchVendors}
+        />
 
         <Dialog open={!!selected} onOpenChange={() => setSelected(null)}>
           <DialogContent className="sm:max-w-md">
@@ -255,7 +293,7 @@ export default function VendorsPage() {
                   <span className="text-muted-foreground">Balance:</span> {selected.balance}
                 </p>
                 <p>
-                  <span className="text-muted-foreground">Manufacturer links:</span> {selected.linkedCount}
+                  <span className="text-muted-foreground">Manufacturers:</span> {selected.manufacturerNames}
                 </p>
               </div>
             )}
