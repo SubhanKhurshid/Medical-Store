@@ -67,6 +67,7 @@ const baseSchema = z.object({
   category: z.string().optional(),
   minimumStock: requiredNum(0, "Minimum stock is required"),
   description: z.string().optional(),
+  purpose: z.string().optional(),
   manufacturerDiscount: z
     .union([z.string(), z.number()])
     .optional()
@@ -159,6 +160,7 @@ export default function InventoryManagement() {
       specialCompanyDiscount: "",
       customerDiscount: "",
       description: "",
+      purpose: "",
       dosage: "",
       activeIngredient: "",
       genericName: "",
@@ -218,6 +220,7 @@ export default function InventoryManagement() {
     specialCompanyDiscount: "",
     customerDiscount: "",
     description: "",
+    purpose: "",
     dosage: "",
     activeIngredient: "",
     genericName: "",
@@ -240,6 +243,7 @@ export default function InventoryManagement() {
       customerDiscount: Number(data.customerDiscount ?? 0),
       ...(data.barcode && data.barcode.trim() && { barcode: data.barcode.trim() }),
       ...(data.category && data.category.trim() && { category: data.category.trim() }),
+      ...(data.purpose && data.purpose.trim() && { purpose: data.purpose.trim() }),
       manufacturerId: data.manufacturer,
       expiryDate: new Date(data.expiryDate).toISOString(),
       type: itemType,
@@ -815,6 +819,21 @@ export default function InventoryManagement() {
               {form.formState.errors.description && (
                 <span className="text-red-500 text-sm">
                   {form.formState.errors.description.message}
+                </span>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="purpose">Purpose</Label>
+              <Textarea
+                id="purpose"
+                placeholder="e.g. indication, usage note"
+                className="text-lg"
+                {...form.register("purpose")}
+              />
+              {form.formState.errors.purpose && (
+                <span className="text-red-500 text-sm">
+                  {form.formState.errors.purpose.message}
                 </span>
               )}
             </div>

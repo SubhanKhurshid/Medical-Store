@@ -29,7 +29,7 @@ interface InvoiceItem {
 interface Invoice {
     id: string;
     invoiceNumber: string;
-    manufacturer: string;
+    supplierLabel: string;
     totalAmount: number;
     date: string;
     status: string;
@@ -55,7 +55,10 @@ export default function PurchaseInvoicesPage() {
                 const mappedData = data.map((item: any) => ({
                     id: item.id,
                     invoiceNumber: item.invoiceNumber,
-                    manufacturer: item.manufacturer?.companyName || "Unknown",
+                    supplierLabel:
+                        item.vendor?.name ||
+                        item.manufacturer?.companyName ||
+                        "Unknown",
                     totalAmount: item.totalAmount,
                     date: new Date(item.date).toLocaleDateString(),
                     status: item.status,
@@ -83,12 +86,12 @@ export default function PurchaseInvoicesPage() {
             ),
         },
         {
-            accessorKey: "manufacturer",
-            header: "Supplier",
+            accessorKey: "supplierLabel",
+            header: "Vendor",
             cell: ({ row }: any) => (
                 <div className="flex items-center space-x-2">
                     <Building2 className="h-4 w-4 text-gray-500" />
-                    <span>{row.original.manufacturer}</span>
+                    <span>{row.original.supplierLabel}</span>
                 </div>
             ),
         },
@@ -190,10 +193,10 @@ export default function PurchaseInvoicesPage() {
                                     data={invoices.filter(
                                         (i) =>
                                             i.invoiceNumber.toLowerCase().includes(search.toLowerCase()) ||
-                                            i.manufacturer.toLowerCase().includes(search.toLowerCase())
+                                            i.supplierLabel.toLowerCase().includes(search.toLowerCase())
                                     )}
                                     onRowClick={(inv) => setSelectedInvoice(inv)}
-                                    initialSorting={[{ id: "manufacturer", desc: false }]}
+                                    initialSorting={[{ id: "supplierLabel", desc: false }]}
                                 />
                             </motion.div>
                         )}
@@ -206,7 +209,7 @@ export default function PurchaseInvoicesPage() {
                 <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle className="text-red-800">
-                            Invoice #{selectedInvoice?.invoiceNumber} – {selectedInvoice?.manufacturer}
+                            Invoice #{selectedInvoice?.invoiceNumber} – {selectedInvoice?.supplierLabel}
                         </DialogTitle>
                     </DialogHeader>
                     {selectedInvoice && (

@@ -18,7 +18,7 @@ import {
 
 interface Payment {
     id: string;
-    manufacturer: string;
+    payeeLabel: string;
     amount: number;
     date: string;
     reference: string;
@@ -45,7 +45,10 @@ const SupplierPayments = () => {
             const data = await response.json();
             const mappedData = data.map((item: any) => ({
                 id: item.id,
-                manufacturer: item.manufacturer?.companyName || "Unknown",
+                payeeLabel:
+                    item.vendor?.name ||
+                    item.manufacturer?.companyName ||
+                    "Unknown",
                 amount: item.amount,
                 date: new Date(item.paymentDate).toLocaleDateString(),
                 reference: item.reference || "-",
@@ -66,12 +69,12 @@ const SupplierPayments = () => {
 
     const columns = [
         {
-            accessorKey: "manufacturer",
-            header: "Supplier",
+            accessorKey: "payeeLabel",
+            header: "Vendor",
             cell: ({ row }: any) => (
                 <div className="flex items-center space-x-2">
                     <Building2 className="h-4 w-4 text-gray-500" />
-                    <span className="font-medium">{row.original.manufacturer}</span>
+                    <span className="font-medium">{row.original.payeeLabel}</span>
                 </div>
             ),
         },
@@ -126,7 +129,7 @@ const SupplierPayments = () => {
                         Supplier Payments
                     </motion.h1>
                     <motion.p className="mt-1 text-sm text-gray-500" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }}>
-                        Track payments made to manufacturers.
+                        Track payments made to vendors (suppliers).
                     </motion.p>
                     <div className="mt-4 h-px bg-gradient-to-r from-red-200/80 via-red-100/50 to-transparent rounded-full" />
                 </header>
@@ -135,7 +138,7 @@ const SupplierPayments = () => {
                     <div className="border-l-4 border-l-red-500 bg-red-50/30 px-5 py-3">
                         <h2 className="text-base font-semibold text-red-800">Payment records</h2>
                         <p className="text-xs text-gray-500 mt-0.5">
-                            Search by supplier or reference.
+                            Search by vendor or reference.
                         </p>
                     </div>
                     <CardContent className="p-4 sm:p-5">
@@ -179,11 +182,11 @@ const SupplierPayments = () => {
                                     columns={columns}
                                     data={payments.filter(
                                         (p) =>
-                                            p.manufacturer?.toLowerCase().includes(search?.toLowerCase()) ||
+                                            p.payeeLabel?.toLowerCase().includes(search?.toLowerCase()) ||
                                             p.reference?.toLowerCase().includes(search?.toLowerCase())
                                     )}
                                     onRowClick={(p) => setSelectedPayment(p)}
-                                    initialSorting={[{ id: "manufacturer", desc: false }]}
+                                    initialSorting={[{ id: "payeeLabel", desc: false }]}
                                 />
                             </motion.div>
                         )}
@@ -212,10 +215,10 @@ const SupplierPayments = () => {
                         <div className="space-y-4">
                             <div className="grid grid-cols-2 gap-4 text-sm">
                                 <div>
-                                    <span className="text-muted-foreground">Supplier</span>
+                                    <span className="text-muted-foreground">Vendor</span>
                                     <p className="font-medium text-foreground flex items-center gap-2 mt-1">
                                         <Building2 className="h-4 w-4 text-gray-500" />
-                                        {selectedPayment.manufacturer}
+                                        {selectedPayment.payeeLabel}
                                     </p>
                                 </div>
                                 <div>

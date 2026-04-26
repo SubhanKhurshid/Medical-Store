@@ -17,6 +17,11 @@ interface PendingManufacturer {
   companyName: string;
 }
 
+interface PendingVendor {
+  id: string;
+  name: string;
+}
+
 interface CompanyPurchaseOrder {
   id: string;
   quantityOrdered: number;
@@ -37,57 +42,73 @@ interface CompanyPurchaseOrder {
 
 export default function CompanyPurchaseOrderPrintPage() {
   const router = useRouter();
+  const [groupBy, setGroupBy] = useState<"vendor" | "manufacturer">("vendor");
   const [manufacturers, setManufacturers] = useState<PendingManufacturer[]>([]);
+  const [vendors, setVendors] = useState<PendingVendor[]>([]);
   const [selectedManufacturerId, setSelectedManufacturerId] = useState<string>("");
+  const [selectedVendorId, setSelectedVendorId] = useState<string>("");
   const [orders, setOrders] = useState<CompanyPurchaseOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingOrders, setLoadingOrders] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchManufacturers = async () => {
+    const load = async () => {
       try {
         setLoading(true);
-        const { data } = await axios.get(
-          `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/purchase-orders/pending-manufacturers`
-        );
-        setManufacturers(data ?? []);
-        if (data && data.length > 0) {
-          setSelectedManufacturerId(data[0].id);
+        const [mRes, vRes] = await Promise.all([
+          axios.get(
+            `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/purchase-orders/pending-manufacturers`
+          ),
+          axios.get(
+            `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/purchase-orders/pending-vendors`
+          ),
+        ]);
+        const mData = mRes.data ?? [];
+        const vData = vRes.data ?? [];
+        setManufacturers(mData);
+        setVendors(vData);
+        if (vData.length > 0) {
+          setSelectedVendorId(vData[0].id);
+        }
+        if (mData.length > 0) {
+          setSelectedManufacturerId(mData[0].id);
         }
       } catch (err) {
-        console.error("Error fetching manufacturers with pending POs:", err);
-        setError("Failed to load companies with pending purchase orders");
+        console.error(err);
+        setError("Failed to load pending purchase order groups");
       } finally {
         setLoading(false);
       }
     };
-
-    fetchManufacturers();
+    load();
   }, []);
 
   useEffect(() => {
-    if (!selectedManufacturerId) {
+    const id = groupBy === "vendor" ? selectedVendorId : selectedManufacturerId;
+    if (!id) {
       setOrders([]);
       return;
     }
     const fetchOrders = async () => {
       try {
         setLoadingOrders(true);
-        const { data } = await axios.get(
-          `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/purchase-orders/by-manufacturer/${selectedManufacturerId}`
-        );
+        const path =
+          groupBy === "vendor"
+            ? `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/purchase-orders/by-vendor/${id}`
+            : `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/purchase-orders/by-manufacturer/${id}`;
+        const { data } = await axios.get(path);
         setOrders(data ?? []);
         setError(null);
       } catch (err) {
-        console.error("Error fetching pending POs for manufacturer:", err);
-        setError("Failed to load purchase orders for this company");
+        console.error(err);
+        setError("Failed to load purchase orders for this selection");
       } finally {
         setLoadingOrders(false);
       }
     };
     fetchOrders();
-  }, [selectedManufacturerId]);
+  }, [groupBy, selectedManufacturerId, selectedVendorId]);
 
   const handlePrint = () => {
     window.print();
@@ -109,6 +130,7 @@ export default function CompanyPurchaseOrderPrintPage() {
   }
 
   const selectedManufacturer = manufacturers.find((m) => m.id === selectedManufacturerId);
+  const selectedVendor = vendors.find((v) => v.id === selectedVendorId);
 
   return (
     <div id="company-po-print-root" className="min-h-screen bg-gray-50/80 print:bg-white">
@@ -122,7 +144,7 @@ export default function CompanyPurchaseOrderPrintPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4 }}
             >
-              Company-wise Purchase Orders
+              Pending purchase orders (print)
             </motion.h1>
             <motion.p
               className="mt-1 text-sm text-gray-500"
@@ -130,7 +152,7 @@ export default function CompanyPurchaseOrderPrintPage() {
               animate={{ opacity: 1 }}
               transition={{ delay: 0.1 }}
             >
-              Print all pending purchase orders grouped by company.
+              Group by vendor (supplier) or by drug manufacturer (legacy).
             </motion.p>
           </div>
           <div className="flex gap-2">
@@ -156,7 +178,7 @@ export default function CompanyPurchaseOrderPrintPage() {
                 NS Ibrahim Medical Store
               </h1>
               <p className="text-xs text-gray-600">
-                Company-wise Pending Purchase Orders
+                Pending Purchase Orders — {groupBy === "vendor" ? "by vendor" : "by manufacturer"}
               </p>
               <p className="mt-1 text-[11px] text-gray-500">
                 Printed on{" "}
@@ -172,29 +194,54 @@ export default function CompanyPurchaseOrderPrintPage() {
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-4">
               <div>
                 <p className="text-xs font-semibold text-gray-700">
-                  Supplier / Company:
+                  {groupBy === "vendor" ? "Vendor" : "Drug manufacturer"}:
                 </p>
                 <p className="text-sm font-semibold text-gray-900 mt-0.5">
-                  {selectedManufacturer?.companyName || "Select Company"}
+                  {groupBy === "vendor"
+                    ? selectedVendor?.name || "Select vendor"
+                    : selectedManufacturer?.companyName || "Select manufacturer"}
                 </p>
               </div>
-              <div className="flex items-center gap-2 print:hidden">
-                <span className="text-xs font-medium text-gray-600">Company</span>
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 print:hidden">
                 <Select
-                  value={selectedManufacturerId}
-                  onValueChange={(val) => setSelectedManufacturerId(val)}
+                  value={groupBy}
+                  onValueChange={(v) => setGroupBy(v as "vendor" | "manufacturer")}
                 >
-                  <SelectTrigger className="w-60">
-                    <SelectValue placeholder="Select company" />
+                  <SelectTrigger className="w-44">
+                    <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {manufacturers.map((m) => (
-                      <SelectItem key={m.id} value={m.id}>
-                        {m.companyName}
-                      </SelectItem>
-                    ))}
+                    <SelectItem value="vendor">By vendor</SelectItem>
+                    <SelectItem value="manufacturer">By manufacturer</SelectItem>
                   </SelectContent>
                 </Select>
+                {groupBy === "vendor" ? (
+                  <Select value={selectedVendorId} onValueChange={setSelectedVendorId}>
+                    <SelectTrigger className="w-60">
+                      <SelectValue placeholder="Select vendor" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {vendors.map((m) => (
+                        <SelectItem key={m.id} value={m.id}>
+                          {m.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Select value={selectedManufacturerId} onValueChange={setSelectedManufacturerId}>
+                    <SelectTrigger className="w-60">
+                      <SelectValue placeholder="Select manufacturer" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {manufacturers.map((m) => (
+                        <SelectItem key={m.id} value={m.id}>
+                          {m.companyName}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
             </div>
 
@@ -212,7 +259,7 @@ export default function CompanyPurchaseOrderPrintPage() {
               </div>
             ) : !orders.length ? (
               <div className="py-12 text-center text-sm text-gray-500">
-                No pending purchase orders for this company.
+                No pending purchase orders for this selection.
               </div>
             ) : (
               <div className="border border-gray-200 rounded-md overflow-hidden">
@@ -222,6 +269,11 @@ export default function CompanyPurchaseOrderPrintPage() {
                       <TableHead className="text-xs font-semibold text-gray-700">
                         Item
                       </TableHead>
+                      {groupBy === "vendor" && (
+                        <TableHead className="text-xs font-semibold text-gray-700">
+                          Mfg.
+                        </TableHead>
+                      )}
                       <TableHead className="text-xs font-semibold text-gray-700">
                         Barcode
                       </TableHead>
@@ -239,6 +291,11 @@ export default function CompanyPurchaseOrderPrintPage() {
                         <TableCell className="text-xs">
                           {order.inventoryItem?.name ?? "N/A"}
                         </TableCell>
+                        {groupBy === "vendor" && (
+                          <TableCell className="text-xs">
+                            {order.manufacturer?.companyName ?? "—"}
+                          </TableCell>
+                        )}
                         <TableCell className="text-xs">
                           {order.inventoryItem?.barcode || "-"}
                         </TableCell>

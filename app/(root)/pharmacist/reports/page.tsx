@@ -11,6 +11,7 @@ import {
   LayoutGrid,
   Wallet,
   Building2,
+  Truck,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -73,11 +74,19 @@ const reportCards = [
   },
   {
     title: "Manufacturer Ledger",
-    description: "Detailed transaction history and balance for any manufacturer.",
+    description: "Legacy payables view keyed by drug company (pre-vendor migration).",
     href: "/pharmacist/reports/manufacturer-ledger",
     icon: Building2,
     color: "text-rose-600",
     bg: "bg-rose-50",
+  },
+  {
+    title: "Vendor Ledger",
+    description: "Accounts payable by vendor (distributor / market / supplier).",
+    href: "/pharmacist/reports/vendor-ledger",
+    icon: Truck,
+    color: "text-teal-600",
+    bg: "bg-teal-50",
   },
 ];
 
