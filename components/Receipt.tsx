@@ -26,6 +26,8 @@ interface ReceiptProps {
   paymentMethod?: PaymentMethodDisplay | string | null;
   /** For cash sales: amount the customer gave (shows change due). */
   cashReceived?: number | null;
+  customerName?: string;
+  customerPhone?: string;
 }
 
 const PAYMENT_LABELS: Record<string, string> = {
@@ -44,6 +46,8 @@ export function Receipt({
   invoiceNumber,
   paymentMethod,
   cashReceived,
+  customerName,
+  customerPhone,
 }: ReceiptProps) {
   const orderNumber = invoiceNumber?.trim() || "— pending";
   const barcodeValue = invoiceNumber?.trim() || BARCODE_PLACEHOLDER;
@@ -119,6 +123,18 @@ export function Receipt({
           <span>Order Type:</span>
           <span>Quick Sale</span>
         </div>
+        {customerName && (
+          <div style={{ display: "flex", justifyContent: "space-between" }}>
+            <span>Customer:</span>
+            <span>{customerName}</span>
+          </div>
+        )}
+        {customerPhone && (
+          <div style={{ display: "flex", justifyContent: "space-between" }}>
+            <span>Cell #:</span>
+            <span>{customerPhone}</span>
+          </div>
+        )}
       </div>
 
       <div style={{ borderTop: "1px dashed #000", margin: "4px 0" }}></div>

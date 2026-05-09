@@ -36,6 +36,7 @@ import { sortByLocaleKey } from "@/lib/sort-alphabetical";
 import { motion, AnimatePresence } from "framer-motion";
 import { Receipt } from "@/components/Receipt";
 import Loading from "@/components/shared/Loading";
+import { useReactToPrint } from "react-to-print";
 
 interface Product {
   id: string;
@@ -55,8 +56,6 @@ const SalesPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState<Product[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [isDiscountPromptOpen, setIsDiscountPromptOpen] = useState(false);
-  const [isDiscountInputOpen, setIsDiscountInputOpen] = useState(false);
   const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
   const [discount, setDiscount] = useState<string>("");
   const [barcodeInput, setBarcodeInput] = useState("");
@@ -74,6 +73,7 @@ const SalesPage = () => {
   const [loading, setLoading] = useState(true);
   const [cashReceivedInput, setCashReceivedInput] = useState("");
   const barcodeInputRef = useRef<HTMLInputElement>(null);
+  const receiptRef = useRef<HTMLDivElement>(null);
 
   const focusBarcodeInput = useCallback(() => {
     barcodeInputRef.current?.focus();
@@ -270,31 +270,12 @@ const SalesPage = () => {
       toast.error("Your cart is empty.");
       return;
     }
-    setIsDiscountPromptOpen(true);
-  };
-
-  const handleDiscountPromptResponse = (applyDiscount: boolean) => {
-    setIsDiscountPromptOpen(false);
-    if (applyDiscount) {
-      setIsDiscountInputOpen(true);
-    } else {
-      setIsReceiptModalOpen(true);
-    }
-  };
-
-  const handleDiscountSubmit = () => {
-    const discountVal = parseFloat(discount);
-    if (isNaN(discountVal) || discountVal < 0 || discountVal > 100) {
-      toast.error("Please enter a valid discount percentage (0-100).");
-      return;
-    }
-    setIsDiscountInputOpen(false);
+    setCompletedSale(null);
     setIsReceiptModalOpen(true);
   };
 
-  const handlePrint = async () => {
+  const handleCreateSale = async () => {
     setIsProcessing(true);
-    setCompletedSale(null);
     try {
       const saleData = {
         customerId,
@@ -312,11 +293,7 @@ const SalesPage = () => {
       const response = await axios.post(
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/sales`,
         saleData,
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        }
+        { headers: { Authorization: `Bearer ${accessToken}` } }
       );
 
       if (response.status === 201 || response.status === 200) {
@@ -325,35 +302,40 @@ const SalesPage = () => {
           invoiceNumber: created.invoiceNumber ?? "",
           paymentMethod: created.paymentMethod ?? paymentMethod,
         });
-        toast.success("Sale recorded successfully!");
-        refetchInventory(); // Keep inventory quantities in sync (e.g. View Inventory)
-        setTimeout(() => {
-          window.print();
-          setCart([]);
-          setDiscount("");
-          setCustomerId(undefined);
-          setCustomerName("");
-          setCustomerPhone("");
-          setCashReceivedInput("");
-          setCompletedSale(null);
-          setIsReceiptModalOpen(false);
-          fetchProducts();
-          focusBarcodeInput();
-        }, 100);
+        toast.success("Sale recorded! Invoice #" + (created.invoiceNumber ?? ""));
+        refetchInventory();
+        fetchProducts();
       } else {
         toast.error("Failed to record sale.");
       }
     } catch (error: any) {
       console.error("Failed to record sale", error);
-      if (error.response?.data?.message) {
-        toast.error(`Error: ${error.response.data.message}`);
-      } else {
-        toast.error("Failed to record sale.");
-      }
+      toast.error(error.response?.data?.message ?? "Failed to record sale.");
     } finally {
       setIsProcessing(false);
     }
   };
+
+  const resetSaleState = () => {
+    setCart([]);
+    setDiscount("");
+    setCustomerId(undefined);
+    setCustomerName("");
+    setCustomerPhone("");
+    setCashReceivedInput("");
+    setCompletedSale(null);
+    setIsReceiptModalOpen(false);
+    focusBarcodeInput();
+  };
+
+  const handlePrint = useReactToPrint({
+    contentRef: receiptRef,
+    pageStyle: `
+      @page { size: 80mm auto; margin: 0; }
+      body { margin: 0; background: white; }
+    `,
+    onAfterPrint: resetSaleState,
+  });
 
   return (
     <div className="min-h-screen bg-gray-50/80 text-gray-900 print-receipt">
@@ -372,7 +354,7 @@ const SalesPage = () => {
               Scan or search items, then complete the sale.
             </motion.p>
           </div>
-          <Button
+          {/* <Button
             onClick={() => {
               setIsReceiptModalOpen(true);
             }}
@@ -380,7 +362,7 @@ const SalesPage = () => {
           >
             <Printer className="mr-2 h-4 w-4" />
             Print Receipt
-          </Button>
+          </Button> */}
         </header>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -397,15 +379,6 @@ const SalesPage = () => {
                 className="space-y-5"
               >
                 <Card className="overflow-hidden border border-gray-100 rounded-xl shadow-sm bg-white">
-                  <div className="border-l-4 border-l-red-500 bg-red-50/40 px-4 py-3">
-                    <h2 className="text-sm font-semibold text-red-800 flex items-center gap-2">
-                      <ScanLine className="h-4 w-4" />
-                      Barcode
-                    </h2>
-                    <p className="text-xs text-gray-500 mt-0.5">
-                      Scan with your barcode scanner, or type the code and press Enter.
-                    </p>
-                  </div>
                   <CardContent className="p-4">
                     <div className="flex gap-2">
                       <div className="relative flex-1">
@@ -438,15 +411,6 @@ const SalesPage = () => {
                 </Card>
 
                 <Card className="overflow-hidden border border-gray-100 rounded-xl shadow-sm bg-white">
-                  <div className="border-l-4 border-l-gray-300 bg-gray-50/60 px-4 py-3">
-                    <h2 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
-                      <Search className="h-4 w-4" />
-                      Search by name
-                    </h2>
-                    <p className="text-xs text-gray-500 mt-0.5">
-                      Find items by product name, then add to cart.
-                    </p>
-                  </div>
                   <CardContent className="p-4">
                     <div className="relative mb-4">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -538,9 +502,6 @@ const SalesPage = () => {
                       <ShoppingCart className="h-4 w-4" />
                       Cart
                     </h2>
-                    <p className="text-xs text-gray-500 mt-0.5">
-                      Payment method and customer (for credit).
-                    </p>
                   </div>
                   <CardContent className="p-4">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
@@ -684,193 +645,184 @@ const SalesPage = () => {
           </DialogContent>
         </Dialog>
 
-        {/* Discount Prompt Dialog */}
-        <Dialog
-          open={isDiscountPromptOpen}
-          onOpenChange={setIsDiscountPromptOpen}
-        >
-          <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-              <DialogTitle className="text-red-800">Apply Discount?</DialogTitle>
-            </DialogHeader>
-            <div className="py-4">
-              <p>Would you like to apply a discount to this purchase?</p>
-            </div>
-            <DialogFooter>
-              <Button
-                onClick={() => handleDiscountPromptResponse(false)}
-                variant="outline"
-              >
-                No Discount
-              </Button>
-              <Button
-                onClick={() => handleDiscountPromptResponse(true)}
-                className="bg-red-800 hover:bg-red-800/80"
-              >
-                Apply Discount
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-        {/* Discount Input Dialog */}
-        <Dialog open={isDiscountInputOpen} onOpenChange={setIsDiscountInputOpen}>
-          <DialogContent className="sm:max-w-[425px]">
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                handleDiscountSubmit();
-              }}
-            >
-              <DialogHeader>
-                <DialogTitle className="text-red-800">
-                  Enter Discount Percentage
-                </DialogTitle>
-              </DialogHeader>
-              <div className="py-4 space-y-2">
-                <Label htmlFor="discount">Discount (%)</Label>
-                <div className="flex items-center gap-2">
-                  <Input
-                    id="discount"
-                    type="number"
-                    value={discount}
-                    onChange={(e) => setDiscount(e.target.value)}
-                    placeholder="e.g. 10"
-                    className="border-red-800 focus:ring-red-800"
-                    min={0}
-                    max={100}
-                    step="any"
-                  />
-                  <span className="text-lg font-medium text-gray-600">%</span>
-                </div>
-              </div>
-              <DialogFooter>
-                <Button type="submit" className="bg-red-800 hover:bg-red-800/80">
-                  Apply Discount
-                </Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
-
-        {/* Receipt Modal Dialog – no modal chrome: transparent container, receipt is the only white surface */}
+        {/* Receipt Modal — Invoice Detail */}
         <Dialog
           open={isReceiptModalOpen}
           onOpenChange={(open) => {
             setIsReceiptModalOpen(open);
-            if (!open) setCashReceivedInput("");
+            if (!open) {
+              setCart([]);
+              setDiscount("");
+              setCustomerId(undefined);
+              setCustomerName("");
+              setCustomerPhone("");
+              setCashReceivedInput("");
+              setCompletedSale(null);
+              focusBarcodeInput();
+            }
           }}
         >
-          <DialogContent className="sm:max-w-[500px] w-auto max-w-[95vw] p-0 border-0 bg-transparent shadow-none rounded-none gap-0 overflow-visible">
-            <DialogHeader className="px-0 pt-0 pb-1 print:hidden">
-              <DialogTitle className="text-red-800 text-base">Receipt</DialogTitle>
+          <DialogContent className="sm:max-w-[560px] max-w-[95vw]">
+            <DialogHeader>
+              <DialogTitle className="text-red-800 text-lg font-bold">Invoice Detail</DialogTitle>
             </DialogHeader>
-            <div className="print:p-0 print-content" id="receipt-print-area">
-              <Receipt
-                cart={cart}
-                discount={discount || "0"}
-                totalBill={totalBill}
-                discountedTotal={discountedTotal}
-                invoiceNumber={completedSale?.invoiceNumber ?? undefined}
-                paymentMethod={completedSale?.paymentMethod ?? paymentMethod}
-                cashReceived={
-                  paymentMethod === "CASH" && cashReceivedInput.trim() !== ""
-                    ? parseFloat(cashReceivedInput)
-                    : undefined
-                }
-              />
-            </div>
-            <DialogFooter className="px-0 pb-0 pt-3 print:hidden flex-col sm:flex-row gap-2 items-stretch sm:items-center">
+
+            <div className="space-y-4 py-2">
+              {/* Date + Invoice # */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs text-gray-500 mb-1">Date</p>
+                  <p className="text-sm font-medium border-b border-gray-300 pb-1">
+                    {new Date().toLocaleDateString()}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 mb-1">Invoice #</p>
+                  <p className="text-sm font-medium border-b border-gray-300 pb-1">
+                    {completedSale?.invoiceNumber
+                      ? <span className="text-red-800 font-bold">{completedSale.invoiceNumber}</span>
+                      : <span className="text-gray-400 italic text-xs">Generated on checkout</span>}
+                  </p>
+                </div>
+              </div>
+
+              {/* Customer Name + Cell # */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs text-gray-500 mb-1">Customer Name</p>
+                  <p className="text-sm font-medium border-b border-gray-300 pb-1">
+                    {customerName || "—"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 mb-1">Cell #</p>
+                  <p className="text-sm font-medium border-b border-gray-300 pb-1">
+                    {customerPhone || "—"}
+                  </p>
+                </div>
+              </div>
+
+              {/* Items */}
+              <div>
+                <div className="grid grid-cols-[1fr_auto_auto] gap-2 text-xs font-semibold text-gray-500 border-b border-gray-200 pb-1 mb-1">
+                  <span>Product Name</span>
+                  <span className="text-right">Qty</span>
+                  <span className="text-right">Bill Rs.</span>
+                </div>
+                <div className="space-y-1 max-h-36 overflow-y-auto">
+                  {cart.map((item) => (
+                    <div key={item.id} className="grid grid-cols-[1fr_auto_auto] gap-2 text-sm">
+                      <span className="truncate">{item.name}</span>
+                      <span className="text-right tabular-nums">{item.quantity}</span>
+                      <span className="text-right tabular-nums">Rs {(item.price * item.quantity).toFixed(2)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Discount input + Net Bill — same row */}
+              <div className="flex items-end gap-4 border-t border-gray-200 pt-3">
+                <div className="flex-1">
+                  <Label className="text-xs text-gray-500">Discount %</Label>
+                  <div className="flex items-center gap-1 mt-1">
+                    <Input
+                      type="number"
+                      min={0}
+                      max={100}
+                      step="any"
+                      value={discount}
+                      onChange={(e) => setDiscount(e.target.value)}
+                      placeholder="0"
+                      className="h-9"
+                      disabled={!!completedSale}
+                    />
+                    <span className="text-sm text-gray-500">%</span>
+                  </div>
+                </div>
+                <div className="flex-1">
+                  <p className="text-xs text-gray-500 mb-1">Net Bill Rs.</p>
+                  <p className="h-9 flex items-center text-sm font-bold text-red-800 border-b border-gray-300">
+                    Rs {discountedTotal.toFixed(2)}
+                  </p>
+                </div>
+              </div>
+
+              {/* Cash Handling — CASH payment only */}
               {paymentMethod === "CASH" && (
-                <label className="flex items-center gap-2 text-sm text-gray-700 mr-auto w-full sm:w-auto">
-                  <span className="whitespace-nowrap">Cash received (Rs)</span>
-                  <input
-                    type="number"
-                    min={0}
-                    step="0.01"
-                    className="border rounded-md px-2 py-1 w-28 text-gray-900"
-                    value={cashReceivedInput}
-                    onChange={(e) => setCashReceivedInput(e.target.value)}
-                    placeholder="Optional"
-                  />
-                </label>
+                <div className="rounded-lg border border-gray-200 bg-gray-50/60 p-4 space-y-3">
+                  <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Cash Handling</p>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-xs text-gray-500">Cash Received Rs.</Label>
+                      <Input
+                        type="number"
+                        min={0}
+                        step="0.01"
+                        value={cashReceivedInput}
+                        onChange={(e) => setCashReceivedInput(e.target.value)}
+                        placeholder="0.00"
+                        className="mt-1 h-9"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs text-gray-500">Cash Return Rs.</Label>
+                      <p className="mt-1 h-9 flex items-center text-sm font-semibold text-red-800 border border-gray-200 rounded-md px-3 bg-white">
+                        {cashReceivedInput && parseFloat(cashReceivedInput) >= discountedTotal
+                          ? `Rs ${(parseFloat(cashReceivedInput) - discountedTotal).toFixed(2)}`
+                          : "—"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
               )}
-              <Button
-                onClick={() => setIsReceiptModalOpen(false)}
-                variant="outline"
-              >
+            </div>
+
+            <DialogFooter className="gap-2">
+              <Button onClick={() => { setIsReceiptModalOpen(false); setCashReceivedInput(""); }} variant="outline">
                 Close
               </Button>
-              <Button
-                onClick={handlePrint}
-                className="bg-red-800 hover:bg-red-800/80"
-                disabled={isProcessing}
-              >
-                <Printer className="mr-2 h-4 w-4" />
-                {isProcessing ? "Processing..." : "Print Bill"}
-              </Button>
+              {!completedSale ? (
+                <Button
+                  onClick={handleCreateSale}
+                  className="bg-red-800 hover:bg-red-800/80"
+                  disabled={isProcessing || (paymentMethod === "CASH" && cashReceivedInput.trim() === "")}
+                >
+                  {isProcessing ? "Processing..." : "Proceed to Checkout"}
+                </Button>
+              ) : (
+                <Button onClick={handlePrint} className="bg-red-800 hover:bg-red-800/80">
+                  <Printer className="mr-2 h-4 w-4" />
+                  Print Bill
+                </Button>
+              )}
             </DialogFooter>
           </DialogContent>
         </Dialog>
 
-        <style jsx global>{`
-        @media print {
-          @page {
-            size: 80mm auto;
-            margin: 0;
-          }
+      </div>
 
-          body {
-            background: white !important;
+      {/* Off-screen receipt — only visible during react-to-print */}
+      <div
+        aria-hidden="true"
+        style={{ position: "fixed", top: "-9999px", left: 0, width: "80mm" }}
+      >
+        <div ref={receiptRef}>
+        <Receipt
+          cart={cart}
+          discount={discount || "0"}
+          totalBill={totalBill}
+          discountedTotal={discountedTotal}
+          invoiceNumber={completedSale?.invoiceNumber ?? undefined}
+          paymentMethod={completedSale?.paymentMethod ?? paymentMethod}
+          customerName={customerName || undefined}
+          customerPhone={customerPhone || undefined}
+          cashReceived={
+            paymentMethod === "CASH" && cashReceivedInput.trim() !== ""
+              ? parseFloat(cashReceivedInput)
+              : undefined
           }
-
-          /* Hide only the app (navbar, sidebar, sales UI). Receipt dialog is in a Radix portal outside #app-root. */
-          #app-root {
-            display: none !important;
-          }
-
-          /* When dialog is open, body has #app-root, overlay portal, content portal. Hide overlay portal. */
-          body > div:nth-child(2) {
-            display: none !important;
-          }
-
-          /* Content portal (last child): position receipt at top-left for 80mm paper */
-          body > div:last-child > div {
-            position: fixed !important;
-            left: 0 !important;
-            top: 0 !important;
-            right: auto !important;
-            bottom: auto !important;
-            transform: none !important;
-            width: 80mm !important;
-            max-width: 80mm !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            border: none !important;
-            box-shadow: none !important;
-            background: white !important;
-          }
-
-          .print\:hidden,
-          body > div:last-child button {
-            display: none !important;
-          }
-
-          #receipt-print-area {
-            width: 100% !important;
-            max-width: 80mm !important;
-            padding: 0 !important;
-            margin: 0 !important;
-            background: white !important;
-          }
-
-          * {
-            -webkit-print-color-adjust: exact !important;
-            color-adjust: exact !important;
-            box-shadow: none !important;
-          }
-        }
-      `}</style>
+        />
+        </div>
       </div>
     </div>
   );

@@ -93,8 +93,8 @@ const baseSchema = z.object({
 });
 
 const medicineSchema = baseSchema.extend({
-  dosage: z.string().min(1, "Dosage is required"),
-  activeIngredient: z.string().min(1, "Active ingredient is required"),
+  dosage: z.string().optional(),
+  activeIngredient: z.string().optional(),
   genericName: z.string().optional(),
 });
 
@@ -304,14 +304,14 @@ export default function InventoryManagement() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4 }}
           >
-            Add Medicine / Item
+            Purchase Medicine
           </motion.h1>
           <motion.p className="mt-1 text-sm text-gray-500" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }}>
-            Add inventory by filling the fields below. Choose type: Medicine, Syrup, Injection, Surgery, or General. To add more stock for a product that already exists, use{" "}
+            Fill required fields (marked with *). To add more stock for an existing product, use{" "}
             <Link href="/pharmacist/purchase-orders/create" className="font-medium text-red-800 underline-offset-2 hover:underline">
               Create Purchase Order
             </Link>{" "}
-            and search for that item—do not create a second entry with the same name.
+            instead—do not create a second entry with the same name.
           </motion.p>
           <div className="mt-4 h-px bg-gradient-to-r from-red-200/80 via-red-100/50 to-transparent rounded-full" />
         </header>
@@ -320,119 +320,101 @@ export default function InventoryManagement() {
           <div className="border-l-4 border-l-red-500 bg-red-50/30 px-5 py-3">
             <h2 className="text-base font-semibold text-red-800">New item</h2>
             <p className="text-xs text-gray-500 mt-0.5">
-              Select item type, then fill required fields (marked with *).
+              Fill required fields (marked with *).
             </p>
           </div>
           <CardContent className="p-4 sm:p-5 pt-6">
-          {/* Item type: plain buttons so every tab (including Medicine) works on mobile */}
-          <div
-            role="tablist"
-            aria-label="Item type"
-            className="flex flex-wrap gap-2 mb-6"
-          >
-            {[
-              { value: ItemType.MEDICINE, label: "Medicine" },
-              { value: ItemType.SYRUP, label: "Syrup" },
-              { value: ItemType.INJECTION, label: "Injection" },
-              { value: ItemType.SURGERY, label: "Surgery" },
-              { value: ItemType.GENERAL, label: "General" },
-            ].map(({ value, label }) => {
-              const isActive = itemType === value;
-              return (
-                <button
-                  key={value}
-                  type="button"
-                  role="tab"
-                  aria-selected={isActive}
-                  onClick={() => setItemType(value)}
-                  className={`min-h-[48px] min-w-[100px] flex-1 rounded-lg border px-4 py-3 text-sm font-medium touch-manipulation transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${isActive
-                      ? "bg-background text-foreground shadow-sm border-border"
-                      : "bg-muted/50 text-muted-foreground hover:bg-muted border-transparent"
-                    }`}
-                >
-                  {label}
-                </button>
-              );
-            })}
-          </div>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+              {/* 1 — Manufacturer */}
               <div className="flex flex-col gap-2">
-                <Label htmlFor="name">Item Name <span className="text-red-500">*</span></Label>
-                <Input
-                  id="name"
-                  placeholder="Item name"
-                  className="text-lg p-4"
-                  {...form.register("name")}
+                <Label htmlFor="manufacturer">Manufacturer <span className="text-red-500">*</span></Label>
+                <Controller
+                  name="manufacturer"
+                  control={form.control}
+                  render={({ field }) => (
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <SelectTrigger className="text-lg p-4 min-h-[48px]">
+                        <SelectValue placeholder="Select Manufacturer" />
+                      </SelectTrigger>
+                      <SelectContent className="text-lg">
+                        {manufacturers.map((m) => (
+                          <SelectItem className="text-lg" key={m.id} value={m.id}>
+                            {m.companyName}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
                 />
-                {form.formState.errors.name && (
-                  <span className="text-red-500 text-sm">
-                    {form.formState.errors.name.message}
-                  </span>
+                {form.formState.errors.manufacturer && (
+                  <span className="text-red-500 text-sm">{form.formState.errors.manufacturer.message}</span>
                 )}
               </div>
+
+              {/* 2 — Item Name + 2.1 Barcode */}
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="name">Item Name <span className="text-red-500">*</span></Label>
+                <Input id="name" placeholder="Item name" className="text-lg p-4" {...form.register("name")} />
+                {form.formState.errors.name && (
+                  <span className="text-red-500 text-sm">{form.formState.errors.name.message}</span>
+                )}
+                <Label htmlFor="barcode" className="text-xs text-muted-foreground mt-1">Barcode (optional)</Label>
+                <Input id="barcode" placeholder="Scan or enter barcode" className="text-sm p-3" {...form.register("barcode")} />
+              </div>
+
+              {/* 3 — Medicine Type */}
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="medicineType">Medicine Type <span className="text-red-500">*</span></Label>
+                <Select value={itemType} onValueChange={(v) => setItemType(v as ItemType)}>
+                  <SelectTrigger className="text-lg p-4 min-h-[48px]" id="medicineType">
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                  <SelectContent className="text-lg">
+                    <SelectItem className="text-lg" value={ItemType.MEDICINE}>Medicine</SelectItem>
+                    <SelectItem className="text-lg" value={ItemType.SYRUP}>Syrup</SelectItem>
+                    <SelectItem className="text-lg" value={ItemType.INJECTION}>Injection</SelectItem>
+                    <SelectItem className="text-lg" value={ItemType.SURGERY}>Surgery</SelectItem>
+                    <SelectItem className="text-lg" value={ItemType.GENERAL}>General</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* 4 — Quantity */}
               <div className="flex flex-col gap-2">
                 <Label htmlFor="quantity">Quantity <span className="text-red-500">*</span></Label>
                 <Input
-                  id="quantity"
-                  type="number"
-                  inputMode="numeric"
-                  placeholder="e.g. 100"
+                  id="quantity" type="number" inputMode="numeric" placeholder="e.g. 100"
                   className="text-lg p-4 min-h-[48px] touch-manipulation"
                   {...form.register("quantity")}
                 />
                 {form.formState.errors.quantity && (
-                  <span className="text-red-500 text-sm">
-                    {form.formState.errors.quantity.message}
-                  </span>
+                  <span className="text-red-500 text-sm">{form.formState.errors.quantity.message}</span>
                 )}
               </div>
-              {/* <div className="flex flex-col gap-2">
-                <Label htmlFor="productCode">Product Code</Label>
-                <Input
-                  id="productCode"
-                  placeholder="Product code"
-                  {...form.register("productCode")}
-                />
-              </div> */}
+
+              {/* 5 — Batch Number */}
               <div className="flex flex-col gap-2">
                 <Label htmlFor="batchNumber">Batch Number <span className="text-red-500">*</span></Label>
-                <Input
-                  id="batchNumber"
-                  placeholder="Batch number"
-                  className="text-lg p-4"
-                  {...form.register("batchNumber")}
-                />
+                <Input id="batchNumber" placeholder="Batch number" className="text-lg p-4" {...form.register("batchNumber")} />
                 {form.formState.errors.batchNumber && (
-                  <span className="text-red-500 text-sm">
-                    {form.formState.errors.batchNumber.message}
-                  </span>
+                  <span className="text-red-500 text-sm">{form.formState.errors.batchNumber.message}</span>
                 )}
               </div>
+
+              {/* 6 — Expiry Date */}
               <div className="flex flex-col gap-2">
                 <Label htmlFor="expiryDate">Expiry Date <span className="text-red-500">*</span></Label>
                 <div
                   className="flex rounded-md border border-input bg-background overflow-hidden min-h-[48px] [color-scheme:light] cursor-pointer active:bg-muted/50"
-                  onClick={() => {
-                    const el = document.getElementById("expiryDate") as HTMLInputElement | null;
-                    el?.focus();
-                    el?.click();
-                  }}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      const el = document.getElementById("expiryDate") as HTMLInputElement | null;
-                      el?.focus();
-                      el?.click();
-                    }
-                  }}
+                  onClick={() => { const el = document.getElementById("expiryDate") as HTMLInputElement | null; el?.focus(); el?.click(); }}
+                  role="button" tabIndex={0}
+                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); const el = document.getElementById("expiryDate") as HTMLInputElement | null; el?.focus(); el?.click(); } }}
                   aria-label="Open expiry date picker"
                 >
                   <Input
-                    id="expiryDate"
-                    type="date"
+                    id="expiryDate" type="date"
                     className="flex-1 min-w-0 text-lg py-3 px-4 touch-manipulation cursor-pointer border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 min-h-[48px]"
                     style={{ minHeight: "48px" }}
                     {...form.register("expiryDate")}
@@ -443,401 +425,168 @@ export default function InventoryManagement() {
                   </span>
                 </div>
                 {form.formState.errors.expiryDate && (
-                  <span className="text-red-500 text-sm">
-                    {form.formState.errors.expiryDate.message}
-                  </span>
+                  <span className="text-red-500 text-sm">{form.formState.errors.expiryDate.message}</span>
                 )}
               </div>
+
+              {/* 7 — Purchase Price */}
               <div className="flex flex-col gap-2">
-                <Label htmlFor="manufacturerDiscount">
-                  Manufacturer Discount (%)
-                </Label>
+                <Label htmlFor="purchasePrice">Purchase Price (cost)</Label>
+                <Input
+                  id="purchasePrice" type="number" inputMode="decimal" step="0.01" min={0} placeholder="e.g. 250"
+                  className="text-lg p-4 min-h-[48px] touch-manipulation"
+                  {...form.register("purchasePrice")}
+                />
+                {form.formState.errors.purchasePrice && (
+                  <span className="text-red-500 text-sm">{form.formState.errors.purchasePrice.message}</span>
+                )}
+              </div>
+
+              {/* 8 — Selling Price */}
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="price">Selling Price <span className="text-red-500">*</span></Label>
+                <Input
+                  id="price" type="number" inputMode="decimal" step="0.01" min={0} placeholder="e.g. 300"
+                  className="text-lg p-4 min-h-[48px] touch-manipulation"
+                  {...form.register("price")}
+                />
+                {form.formState.errors.price && (
+                  <span className="text-red-500 text-sm">{form.formState.errors.price.message}</span>
+                )}
+              </div>
+
+              {/* 9 — Vendor Discount */}
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="manufacturerDiscount">Vendor Discount (%)</Label>
                 <div className="flex items-center gap-2">
                   <Input
-                    id="manufacturerDiscount"
-                    placeholder="e.g. 10"
-                    type="number"
-                    inputMode="decimal"
-                    min={0}
-                    max={100}
-                    step="any"
+                    id="manufacturerDiscount" placeholder="e.g. 10" type="number" inputMode="decimal" min={0} max={100} step="any"
                     className="text-lg p-4 min-h-[48px] touch-manipulation"
                     {...form.register("manufacturerDiscount")}
                   />
                   <span className="text-lg font-medium text-gray-600">%</span>
                 </div>
                 {form.formState.errors.manufacturerDiscount && (
-                  <span className="text-red-500 text-sm">
-                    {form.formState.errors.manufacturerDiscount.message}
-                  </span>
+                  <span className="text-red-500 text-sm">{form.formState.errors.manufacturerDiscount.message}</span>
                 )}
               </div>
+
+              {/* Special Discount */}
               <div className="flex flex-col gap-2">
-                <Label htmlFor="specialCompanyDiscount">
-                  Special company discount (%)
-                </Label>
+                <Label htmlFor="specialCompanyDiscount">Special Discount (%)</Label>
                 <div className="flex items-center gap-2">
                   <Input
-                    id="specialCompanyDiscount"
-                    placeholder="e.g. 5 (optional)"
-                    type="number"
-                    inputMode="decimal"
-                    min={0}
-                    max={100}
-                    step="any"
+                    id="specialCompanyDiscount" placeholder="e.g. 5 (optional)" type="number" inputMode="decimal" min={0} max={100} step="any"
                     className="text-lg p-4 min-h-[48px] touch-manipulation"
                     {...form.register("specialCompanyDiscount")}
                   />
                   <span className="text-lg font-medium text-gray-600">%</span>
                 </div>
                 {form.formState.errors.specialCompanyDiscount && (
-                  <span className="text-red-500 text-sm">
-                    {form.formState.errors.specialCompanyDiscount.message}
-                  </span>
-                )}
-              </div>
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="customerDiscount">Customer discount (%)</Label>
-                <div className="flex items-center gap-2">
-                  <Input
-                    id="customerDiscount"
-                    placeholder="e.g. 10"
-                    type="number"
-                    inputMode="decimal"
-                    min={0}
-                    max={100}
-                    step="any"
-                    className="text-lg p-4 min-h-[48px] touch-manipulation"
-                    {...form.register("customerDiscount")}
-                  />
-                  <span className="text-lg font-medium text-gray-600">%</span>
-                </div>
-                {form.formState.errors.customerDiscount && (
-                  <span className="text-red-500 text-sm">
-                    {form.formState.errors.customerDiscount.message}
-                  </span>
-                )}
-              </div>
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="manufacturer">Manufacturer <span className="text-red-500">*</span></Label>
-                <Controller
-                  name="manufacturer"
-                  control={form.control}
-                  render={({ field }) => (
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <SelectTrigger className="text-lg p-4">
-                        <SelectValue
-                          placeholder="Select Manufacturer"
-                          className="text-lg p-4"
-                          defaultValue={
-                            manufacturers.find((m) => m.id === field.value)
-                              ?.companyName
-                          }
-                        />
-                      </SelectTrigger>
-                      <SelectContent className="text-lg">
-                        {manufacturers.map((manufacturer) => (
-                          <SelectItem
-                            className="text-lg"
-                            key={manufacturer.id}
-                            value={manufacturer.id}
-                          >
-                            {manufacturer.companyName}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                />
-                {form.formState.errors.manufacturer && (
-                  <span className="text-red-500 text-sm">
-                    {form.formState.errors.manufacturer.message}
-                  </span>
+                  <span className="text-red-500 text-sm">{form.formState.errors.specialCompanyDiscount.message}</span>
                 )}
               </div>
 
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="purchasePrice">Purchase Price (cost)</Label>
-                <Input
-                  id="purchasePrice"
-                  type="number"
-                  inputMode="decimal"
-                  step="0.01"
-                  min={0}
-                  placeholder="e.g. 250"
-                  className="text-lg p-4 min-h-[48px] touch-manipulation"
-                  {...form.register("purchasePrice")}
-                />
-                {form.formState.errors.purchasePrice && (
-                  <span className="text-red-500 text-sm">
-                    {form.formState.errors.purchasePrice.message}
-                  </span>
-                )}
-              </div>
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="price">Selling Price <span className="text-red-500">*</span></Label>
-                <Input
-                  id="price"
-                  type="number"
-                  inputMode="decimal"
-                  step="0.01"
-                  min={0}
-                  placeholder="e.g. 300"
-                  className="text-lg p-4 min-h-[48px] touch-manipulation"
-                  {...form.register("price")}
-                />
-                {form.formState.errors.price && (
-                  <span className="text-red-500 text-sm">
-                    {form.formState.errors.price.message}
-                  </span>
-                )}
-              </div>
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="barcode">Barcode (optional)</Label>
-                <Input
-                  id="barcode"
-                  placeholder="Scan or enter barcode"
-                  className="text-lg p-4"
-                  {...form.register("barcode")}
-                />
-              </div>
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="category">Category (optional)</Label>
-                <Input
-                  id="category"
-                  placeholder="e.g. Pain Relief, Vitamins"
-                  className="text-lg p-4"
-                  {...form.register("category")}
-                />
-              </div>
+              {/* 10 — Minimum Stock */}
               <div className="flex flex-col gap-2">
                 <Label htmlFor="minimumStock">Minimum Stock <span className="text-red-500">*</span></Label>
                 <Input
-                  id="minimumStock"
-                  type="number"
-                  inputMode="numeric"
-                  placeholder="e.g. 20"
+                  id="minimumStock" type="number" inputMode="numeric" placeholder="e.g. 20"
                   className="text-lg p-4 min-h-[48px] touch-manipulation"
                   {...form.register("minimumStock")}
                 />
                 {form.formState.errors.minimumStock && (
-                  <span className="text-red-500 text-sm">
-                    {form.formState.errors.minimumStock.message}
-                  </span>
+                  <span className="text-red-500 text-sm">{form.formState.errors.minimumStock.message}</span>
                 )}
               </div>
 
+              {/* 11 Generic Name | 12 Medicine Purpose — medicine/syrup only */}
               {itemTypeUsesMedicineFields(itemType) && (
                 <>
                   <div className="flex flex-col gap-2">
-                    <Label htmlFor="dosage">Dosage <span className="text-red-500">*</span></Label>
-                    <Input
-                      id="dosage"
-                      placeholder="Dosage"
-                      className="text-lg p-4"
-                      {...form.register("dosage")}
-                    />
-                    {form.formState.errors.dosage && (
-                      <span className="text-red-500 text-sm">
-                        {form.formState.errors.dosage.message}
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <Label htmlFor="activeIngredient">Active Ingredient <span className="text-red-500">*</span></Label>
-                    <Input
-                      id="activeIngredient"
-                      placeholder="Active ingredient"
-                      className="text-lg p-4"
-                      {...form.register("activeIngredient")}
-                    />
-                    {form.formState.errors.activeIngredient && (
-                      <span className="text-red-500 text-sm">
-                        {form.formState.errors.activeIngredient.message}
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex flex-col gap-2">
                     <Label htmlFor="genericName">Generic Name</Label>
-                    <Input
-                      id="genericName"
-                      placeholder="Generic name (optional)"
-                      className="text-lg p-4"
-                      {...form.register("genericName")}
-                    />
+                    <Input id="genericName" placeholder="Generic name (optional)" className="text-lg p-4" {...form.register("genericName")} />
                     {form.formState.errors.genericName && (
-                      <span className="text-red-500 text-sm">
-                        {form.formState.errors.genericName.message}
-                      </span>
+                      <span className="text-red-500 text-sm">{form.formState.errors.genericName.message}</span>
+                    )}
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <Label htmlFor="purpose">Medicine Purpose</Label>
+                    <Textarea id="purpose" placeholder="e.g. indication, usage note" className="text-lg resize-none" rows={3} {...form.register("purpose")} />
+                    {form.formState.errors.purpose && (
+                      <span className="text-red-500 text-sm">{form.formState.errors.purpose.message}</span>
                     )}
                   </div>
                 </>
               )}
 
+              {/* Injection fields */}
               {itemType === ItemType.INJECTION && (
                 <>
                   <div className="flex flex-col gap-2">
                     <Label htmlFor="volume">Volume (ml)</Label>
-                    <Input
-                      id="volume"
-                      type="number"
-                      inputMode="decimal"
-                      placeholder="e.g. 5"
-                      className="text-lg p-4 min-h-[48px] touch-manipulation"
-                      {...form.register("volume")}
-                    />
+                    <Input id="volume" type="number" inputMode="decimal" placeholder="e.g. 5" className="text-lg p-4 min-h-[48px] touch-manipulation" {...form.register("volume")} />
                     {form.formState.errors.volume && (
-                      <span className="text-red-500 text-sm">
-                        {form.formState.errors.volume.message}
-                      </span>
+                      <span className="text-red-500 text-sm">{form.formState.errors.volume.message}</span>
                     )}
                   </div>
                   <div className="flex flex-col gap-2">
                     <Label htmlFor="route">Route of Administration <span className="text-red-500">*</span></Label>
                     <Controller
-                      name="route"
-                      control={form.control}
+                      name="route" control={form.control}
                       render={({ field }) => (
-                        <Select
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
-                        >
-                          <SelectTrigger className="text-lg p-4">
-                            <SelectValue
-                              className="text-lg p-4"
-                              placeholder="Select route"
-                            />
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <SelectTrigger className="text-lg p-4 min-h-[48px]">
+                            <SelectValue placeholder="Select route" />
                           </SelectTrigger>
                           <SelectContent className="text-lg">
-                            <SelectItem
-                              className="text-lg"
-                              value="Intramuscular"
-                            >
-                              Intramuscular
-                            </SelectItem>
-                            <SelectItem className="text-lg" value="Intravenous">
-                              Intravenous
-                            </SelectItem>
-                            <SelectItem
-                              className="text-lg"
-                              value="Subcutaneous"
-                            >
-                              Subcutaneous
-                            </SelectItem>
+                            <SelectItem className="text-lg" value="Intramuscular">Intramuscular</SelectItem>
+                            <SelectItem className="text-lg" value="Intravenous">Intravenous</SelectItem>
+                            <SelectItem className="text-lg" value="Subcutaneous">Subcutaneous</SelectItem>
                           </SelectContent>
                         </Select>
                       )}
                     />
                     {form.formState.errors.route && (
-                      <span className="text-red-500 text-sm">
-                        {form.formState.errors.route.message}
-                      </span>
+                      <span className="text-red-500 text-sm">{form.formState.errors.route.message}</span>
                     )}
                   </div>
                 </>
               )}
 
+              {/* Surgery fields */}
               {itemType === ItemType.SURGERY && (
                 <>
                   <div className="flex flex-col gap-2">
-                    <Label htmlFor="sterilizationMethod">
-                      Sterilization Method <span className="text-red-500">*</span>
-                    </Label>
-                    <Input
-                      id="sterilizationMethod"
-                      placeholder="Sterilization method"
-                      className="text-lg p-4"
-                      {...form.register("sterilizationMethod")}
-                    />
+                    <Label htmlFor="sterilizationMethod">Sterilization Method <span className="text-red-500">*</span></Label>
+                    <Input id="sterilizationMethod" placeholder="Sterilization method" className="text-lg p-4" {...form.register("sterilizationMethod")} />
                     {form.formState.errors.sterilizationMethod && (
-                      <span className="text-red-500 text-sm">
-                        {form.formState.errors.sterilizationMethod.message}
-                      </span>
+                      <span className="text-red-500 text-sm">{form.formState.errors.sterilizationMethod.message}</span>
                     )}
                   </div>
                   <div className="flex flex-col gap-2">
                     <Label htmlFor="size">Size <span className="text-red-500">*</span></Label>
-                    <Input
-                      id="size"
-                      placeholder="Size"
-                      className="text-lg p-4"
-                      {...form.register("size")}
-                    />
+                    <Input id="size" placeholder="Size" className="text-lg p-4" {...form.register("size")} />
                     {form.formState.errors.size && (
-                      <span className="text-red-500 text-sm">
-                        {form.formState.errors.size.message}
-                      </span>
+                      <span className="text-red-500 text-sm">{form.formState.errors.size.message}</span>
                     )}
                   </div>
                 </>
               )}
 
+              {/* General fields */}
               {itemType === ItemType.GENERAL && (
-                <>
-                  <div className="flex flex-col gap-2">
-                    <Label htmlFor="category">Category</Label>
-                    <Input
-                      id="category"
-                      placeholder="Category"
-                      className="text-lg p-4"
-                      {...form.register("category")}
-                    />
-                    {form.formState.errors.category && (
-                      <span className="text-red-500 text-sm">
-                        {form.formState.errors.category.message}
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <Label htmlFor="unit">Unit</Label>
-                    <Input
-                      id="unit"
-                      type="number"
-                      inputMode="numeric"
-                      placeholder="e.g. 1"
-                      className="text-lg p-4 min-h-[48px] touch-manipulation"
-                      {...form.register("unit")}
-                    />
-                    {form.formState.errors.unit && (
-                      <span className="text-red-500 text-sm">
-                        {form.formState.errors.unit.message}
-                      </span>
-                    )}
-                  </div>
-                </>
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="unit">Unit</Label>
+                  <Input id="unit" type="number" inputMode="numeric" placeholder="e.g. 1" className="text-lg p-4 min-h-[48px] touch-manipulation" {...form.register("unit")} />
+                  {form.formState.errors.unit && (
+                    <span className="text-red-500 text-sm">{form.formState.errors.unit.message}</span>
+                  )}
+                </div>
               )}
             </div>
 
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
-                placeholder="Item description"
-                className="text-lg"
-                {...form.register("description")}
-              />
-              {form.formState.errors.description && (
-                <span className="text-red-500 text-sm">
-                  {form.formState.errors.description.message}
-                </span>
-              )}
-            </div>
-
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="purpose">Purpose</Label>
-              <Textarea
-                id="purpose"
-                placeholder="e.g. indication, usage note"
-                className="text-lg"
-                {...form.register("purpose")}
-              />
-              {form.formState.errors.purpose && (
-                <span className="text-red-500 text-sm">
-                  {form.formState.errors.purpose.message}
-                </span>
-              )}
-            </div>
-
+            {/* 12 — Item Image */}
             <div>
               <Label htmlFor="image">Item Image</Label>
               <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-dashed border-muted rounded-md">
