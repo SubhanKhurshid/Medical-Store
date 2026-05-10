@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Eye, RotateCcw, Download } from "lucide-react";
+import { Search, Eye, RotateCcw, Download, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/app/providers/AuthProvider";
 import { useInventory } from "@/app/context/InventoryContext";
@@ -135,6 +135,8 @@ const SalesTable = () => {
   const [refundQuantities, setRefundQuantities] = useState<Record<string, number>>({});
   const [refundReason, setRefundReason] = useState("");
   const [refundSubmitting, setRefundSubmitting] = useState(false);
+  const [saleToDelete, setSaleToDelete] = useState<Sale | null>(null);
+  const [deleteSubmitting, setDeleteSubmitting] = useState(false);
   const [exportingPdf, setExportingPdf] = useState(false);
   const { user } = useAuth();
   const accessToken = user?.access_token;
@@ -329,6 +331,28 @@ const SalesTable = () => {
     }
   };
 
+  const handleDeleteSale = async () => {
+    if (!saleToDelete || !accessToken) return;
+    setDeleteSubmitting(true);
+    try {
+      await axios.delete(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/sales/${saleToDelete.id}`,
+        { headers: { Authorization: `Bearer ${accessToken}` } },
+      );
+      toast.success("Sale deleted.");
+      if (viewSale?.id === saleToDelete.id) setViewSale(null);
+      if (refundSale?.id === saleToDelete.id) setRefundSale(null);
+      setSaleToDelete(null);
+      refetchInventory();
+      await loadSales();
+    } catch (e: unknown) {
+      const err = e as { response?: { data?: { message?: string } } };
+      toast.error(err.response?.data?.message ?? "Could not delete sale.");
+    } finally {
+      setDeleteSubmitting(false);
+    }
+  };
+
   const columns: ColumnDef<Sale>[] = [
     {
       accessorKey: "invoiceNumber",
@@ -396,7 +420,7 @@ const SalesTable = () => {
       header: "Actions",
       enableSorting: false,
       cell: ({ row }) => (
-        <div className="flex gap-1.5">
+        <div className="flex flex-wrap gap-1.5">
           <Button
             variant="outline"
             size="sm"
@@ -421,6 +445,18 @@ const SalesTable = () => {
           >
             <RotateCcw className="h-3.5 w-3.5 mr-1" />
             Refund
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              setSaleToDelete(row.original);
+            }}
+            className="text-destructive border-destructive/30 hover:bg-destructive/10 h-8 text-xs"
+          >
+            <Trash2 className="h-3.5 w-3.5 mr-1" />
+            Delete
           </Button>
         </div>
       ),
@@ -716,6 +752,37 @@ const SalesTable = () => {
                 </Button>
               </DialogFooter>
             </form>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={!!saleToDelete} onOpenChange={() => !deleteSubmitting && setSaleToDelete(null)}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="text-destructive">Delete sale permanently?</DialogTitle>
+            </DialogHeader>
+            {saleToDelete && (
+              <p className="text-sm text-gray-600">
+                This removes the sale record{saleToDelete.invoiceNumber ? ` (invoice ${saleToDelete.invoiceNumber})` : ""} from the system. Stock is adjusted for any quantities that were not already refunded. This cannot be undone.
+              </p>
+            )}
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={deleteSubmitting}
+                onClick={() => setSaleToDelete(null)}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                disabled={deleteSubmitting}
+                onClick={() => void handleDeleteSale()}
+              >
+                {deleteSubmitting ? "Deleting…" : "Delete sale"}
+              </Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
       </div>
