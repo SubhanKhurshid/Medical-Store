@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Building2, Phone, MapPin, User } from "lucide-react";
+import { X, Building2, Phone, MapPin, User, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAuth } from "@/app/providers/AuthProvider";
 import { sortByLocaleKey } from "@/lib/sort-alphabetical";
@@ -205,92 +206,126 @@ export default function VendorModal({ isOpen, onClose, onSave, editVendor }: Ven
 
             <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
               <div className="p-6 space-y-4 overflow-y-auto">
-                <div className="relative">
-                  <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                  <Input
-                    required
-                    placeholder="Vendor name"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="pl-10"
-                  />
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <select
-                    value={formData.vendorType}
-                    onChange={(e) => setFormData({ ...formData, vendorType: e.target.value })}
-                    className="w-full h-10 px-3 border rounded-md border-gray-200"
-                  >
-                    {VENDOR_TYPES.map((t) => (
-                      <option key={t} value={t}>
-                        {t.charAt(0) + t.slice(1).toLowerCase()}
-                      </option>
-                    ))}
-                  </select>
+
+                {/* 1 — Vendor Name */}
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-gray-600">Vendor Name <span className="text-red-500">*</span></Label>
                   <div className="relative">
-                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <Input
                       required
-                      placeholder="Phone"
-                      value={formData.phone}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                      className="pl-9"
+                      placeholder="e.g. Usman Traders"
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      className="pl-9 h-10 border-gray-200 focus:border-red-500"
                     />
                   </div>
                 </div>
+
+                {/* 2 + 3 — Vendor Type | Vendor Cell */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <Input
-                    placeholder="Cell / mobile"
-                    value={formData.cell}
-                    onChange={(e) => setFormData({ ...formData, cell: e.target.value })}
-                  />
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium text-gray-600">Vendor Type</Label>
+                    <select
+                      value={formData.vendorType}
+                      onChange={(e) => setFormData({ ...formData, vendorType: e.target.value })}
+                      className="w-full h-10 px-3 rounded-md border border-gray-200 bg-white text-sm focus:border-red-500 focus:outline-none"
+                    >
+                      {VENDOR_TYPES.map((t) => (
+                        <option key={t} value={t}>
+                          {t.charAt(0) + t.slice(1).toLowerCase()}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium text-gray-600">Vendor Cell <span className="text-red-500">*</span></Label>
+                    <div className="relative">
+                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <Input
+                        required
+                        placeholder="03xxxxxxxxx"
+                        value={formData.phone}
+                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                        className="pl-9 h-10 border-gray-200 focus:border-red-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* 4 + 5 — Sales Person Name | Sales Person Cell */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium text-gray-600">Sales Person Name</Label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <Input
+                        placeholder="Sales contact name"
+                        value={formData.salePersonName}
+                        onChange={(e) => setFormData({ ...formData, salePersonName: e.target.value })}
+                        className="pl-9 h-10 border-gray-200 focus:border-red-500"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium text-gray-600">Sales Person Cell</Label>
+                    <div className="relative">
+                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <Input
+                        placeholder="03xxxxxxxxx"
+                        value={formData.cell}
+                        onChange={(e) => setFormData({ ...formData, cell: e.target.value })}
+                        className="pl-9 h-10 border-gray-200 focus:border-red-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* 6 — Vendor Address */}
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-gray-600">Vendor Address</Label>
                   <div className="relative">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <Input
-                      placeholder="Sales contact name"
-                      value={formData.salePersonName}
-                      onChange={(e) => setFormData({ ...formData, salePersonName: e.target.value })}
-                      className="pl-9"
+                      placeholder="Street address"
+                      value={formData.address}
+                      onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                      className="pl-9 h-10 border-gray-200 focus:border-red-500"
                     />
                   </div>
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                  <Input
-                    placeholder="Country"
-                    value={formData.country}
-                    onChange={(e) => setFormData({ ...formData, country: e.target.value })}
-                  />
+
+                {/* 7 — City */}
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-gray-600">City</Label>
                   <Input
                     placeholder="City"
                     value={formData.city}
                     onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                  />
-                  <Input
-                    placeholder="Province"
-                    value={formData.province}
-                    onChange={(e) => setFormData({ ...formData, province: e.target.value })}
+                    className="h-10 border-gray-200 focus:border-red-500"
                   />
                 </div>
-                <div className="relative">
-                  <MapPin className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                  <Input
-                    placeholder="Address"
-                    value={formData.address}
-                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                    className="pl-9"
-                  />
-                </div>
-                <Input
-                  placeholder="Notes (optional)"
-                  value={formData.notes}
-                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                />
 
-                <div>
-                  <p className="text-sm font-medium text-gray-700 mb-2">
-                    Manufacturers this vendor supplies (drug companies)
-                  </p>
-                  <ScrollArea className="h-40 border rounded-md p-2">
+                {/* 8 — Notes */}
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-gray-600">Notes for Vendor</Label>
+                  <div className="relative">
+                    <MessageSquare className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Input
+                      placeholder="Any notes about this vendor"
+                      value={formData.notes}
+                      onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                      className="pl-9 h-10 border-gray-200 focus:border-red-500"
+                    />
+                  </div>
+                </div>
+
+                {/* 9 — Manufacturer Companies */}
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-gray-600">
+                    Vendor Medicine Companies
+                  </Label>
+                  <ScrollArea className="h-40 border border-gray-200 rounded-md p-2">
                     {manufacturers.length === 0 ? (
                       <p className="text-sm text-gray-500 p-2">Loading…</p>
                     ) : (
@@ -302,6 +337,7 @@ export default function VendorModal({ isOpen, onClose, onSave, editVendor }: Ven
                                 type="checkbox"
                                 checked={selectedMfgIds.has(m.id)}
                                 onChange={() => toggleMfg(m.id)}
+                                className="accent-red-700"
                               />
                               {m.companyName}
                             </label>
@@ -310,8 +346,8 @@ export default function VendorModal({ isOpen, onClose, onSave, editVendor }: Ven
                       </ul>
                     )}
                   </ScrollArea>
-                  <p className="text-xs text-gray-500 mt-1">
-                    Leave none selected to allow any manufacturer on purchases (validation off).
+                  <p className="text-xs text-gray-400">
+                    Leave none selected to allow any manufacturer on purchases.
                   </p>
                 </div>
               </div>
