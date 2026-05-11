@@ -248,9 +248,9 @@ export default function InventoryManagement() {
       expiryDate: new Date(data.expiryDate).toISOString(),
       type: itemType,
       ...(itemTypeUsesMedicineFields(itemType) && {
-        dosage: data.dosage,
-        activeIngredient: data.activeIngredient,
-        genericName: data.genericName,
+        ...(data.dosage?.trim() && { dosage: data.dosage.trim() }),
+        ...(data.activeIngredient?.trim() && { activeIngredient: data.activeIngredient.trim() }),
+        ...(data.genericName?.trim() && { genericName: data.genericName.trim() }),
       }),
       ...(itemType === ItemType.INJECTION && {
         volume: data.volume,
