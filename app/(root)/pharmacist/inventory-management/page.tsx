@@ -28,6 +28,7 @@ import { Calendar } from "lucide-react";
 import { toast } from "sonner";
 import axios from "axios";
 import Link from "next/link";
+import { sortByLocaleKey } from "@/lib/sort-alphabetical";
 
 function apiErrorMessage(err: unknown): string {
   if (axios.isAxiosError(err)) {
@@ -185,7 +186,9 @@ export default function InventoryManagement() {
         // Ensure data is in an array
         const manufacturersArray = Array.isArray(data) ? data : [data];
 
-        setManufacturers(manufacturersArray);
+        setManufacturers(
+          sortByLocaleKey(manufacturersArray, (m) => m.companyName),
+        );
       } catch (error) {
         console.error("Error fetching manufacturers:", error);
       }
