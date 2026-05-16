@@ -32,6 +32,7 @@ import {
 import { Upload, X, Save } from "lucide-react";
 import { toast } from "sonner";
 import { Calendar } from "lucide-react";
+import { isValidExpiryDateString } from "@/lib/expiry-date";
 
 // Coerce empty string to number; used for optional numeric fields
 const optionalNum = (min = 0) =>
@@ -53,7 +54,10 @@ const baseSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
   quantity: requiredNum(0, "Quantity is required"),
   batchNumber: z.string().min(1, "Batch number is required"),
-  expiryDate: z.string().min(1, "Expiry date is required"),
+  expiryDate: z
+    .string()
+    .min(1, "Expiry date is required")
+    .refine(isValidExpiryDateString, "Invalid expiry date (use year 2000–2100)"),
   manufacturer: z.string().min(1, "Manufacturer is required"),
   price: requiredNum(0, "Selling price is required"),
   purchasePrice: optionalNum(0),
@@ -254,7 +258,7 @@ export default function EditInventoryModal({
         type: itemType,
         quantity: Number((data as any).quantity),
         batchNumber: data.batchNumber,
-        expiryDate: new Date(data.expiryDate).toISOString(),
+        expiryDate: data.expiryDate,
         manufacturerId: data.manufacturer,
         price: Number((data as any).price),
         sellingPrice: Number((data as any).price),
@@ -465,6 +469,8 @@ export default function EditInventoryModal({
                       <Input
                         id="expiryDate"
                         type="date"
+                        min="2000-01-01"
+                        max="2100-12-31"
                         className="flex-1 border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 h-11 text-gray-900 placeholder:text-gray-400"
                         {...form.register("expiryDate")}
                       />

@@ -29,6 +29,7 @@ import { toast } from "sonner";
 import axios from "axios";
 import Link from "next/link";
 import { sortByLocaleKey } from "@/lib/sort-alphabetical";
+import { isValidExpiryDateString } from "@/lib/expiry-date";
 
 function apiErrorMessage(err: unknown): string {
   if (axios.isAxiosError(err)) {
@@ -59,7 +60,10 @@ const baseSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
   quantity: requiredNum(0, "Quantity is required"),
   batchNumber: z.string().min(1, "Batch number is required"),
-  expiryDate: z.string().min(1, "Expiry date is required"),
+  expiryDate: z
+    .string()
+    .min(1, "Expiry date is required")
+    .refine(isValidExpiryDateString, "Invalid expiry date (use year 2000–2100)"),
   manufacturer: z.string().min(1, "Manufacturer is required"),
   price: requiredNum(0, "Selling price is required"),
   purchasePrice: optionalNum(0),
@@ -248,7 +252,7 @@ export default function InventoryManagement() {
       ...(data.category && data.category.trim() && { category: data.category.trim() }),
       ...(data.purpose && data.purpose.trim() && { purpose: data.purpose.trim() }),
       manufacturerId: data.manufacturer,
-      expiryDate: new Date(data.expiryDate).toISOString(),
+      expiryDate: data.expiryDate,
       type: itemType,
       ...(itemTypeUsesMedicineFields(itemType) && {
         ...(data.dosage?.trim() && { dosage: data.dosage.trim() }),
@@ -418,6 +422,8 @@ export default function InventoryManagement() {
                 >
                   <Input
                     id="expiryDate" type="date"
+                    min="2000-01-01"
+                    max="2100-12-31"
                     className="flex-1 min-w-0 text-lg py-3 px-4 touch-manipulation cursor-pointer border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 min-h-[48px]"
                     style={{ minHeight: "48px" }}
                     {...form.register("expiryDate")}
