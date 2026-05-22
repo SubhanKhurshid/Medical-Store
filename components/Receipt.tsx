@@ -16,7 +16,7 @@ interface CartItem {
 
 export type PaymentMethodDisplay = "CASH" | "CARD" | "ONLINE" | "DONATION" | "CREDIT";
 
-interface ReceiptProps {
+export interface ReceiptProps {
   cart: CartItem[];
   discount: string;
   totalBill: number;
