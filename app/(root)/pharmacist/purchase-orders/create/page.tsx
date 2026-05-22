@@ -43,6 +43,7 @@ import type { ColumnDef } from "@tanstack/react-table";
 import axios from "axios";
 import { useAuth } from "@/app/providers/AuthProvider";
 import { dispatchLowStockInvalidated } from "@/lib/low-stock-events";
+import { isLowStock } from "@/lib/low-stock";
 import { dispatchExpiringInvalidated } from "@/lib/expiring-events";
 import { sortByLocaleKey } from "@/lib/sort-alphabetical";
 import { TableEmptyState } from "@/components/shared/TableEmptyState";
@@ -60,8 +61,11 @@ export interface ReorderItem {
   manufacturerId?: string | null;
   /** List purchase (before discounts); from inventory when available. */
   listPurchase?: number;
+  sellingPrice?: number;
   manufacturerDiscount?: number;
   specialCompanyDiscount?: number;
+  customerDiscount?: number;
+  batchNumber?: string;
   /** Display: "Low Stock", "Expiring Soon", or "Low Stock, Expiring Soon" */
   issueLabel: string;
   isLowStock: boolean;
@@ -71,6 +75,13 @@ export interface ReorderItem {
 const getAuthHeaders = (token: string | undefined) =>
   token ? { Authorization: `Bearer ${token}` } : {};
 
+/** Visible bordered inputs inside dialog (default Input border too faint on gray panels). */
+const PO_FIELD_INPUT_CLASS =
+  "h-10 border border-gray-300 bg-white text-sm tabular-nums shadow-sm focus-visible:ring-2 focus-visible:ring-red-500/25 focus-visible:border-red-500";
+
+const PO_TEXT_FIELD_CLASS =
+  "h-10 border border-gray-300 bg-white text-sm shadow-sm focus-visible:ring-2 focus-visible:ring-red-500/25 focus-visible:border-red-500";
+
 function toReorderItemFromInventory(row: {
   id: string;
   name: string;
@@ -79,8 +90,11 @@ function toReorderItemFromInventory(row: {
   manufacturer?: string;
   manufacturerId?: string | null;
   purchasePrice?: number;
+  sellingPrice?: number;
   manufacturerDiscount?: number;
   specialCompanyDiscount?: number;
+  customerDiscount?: number;
+  batchNumber?: string;
 }): ReorderItem {
   return {
     id: row.id,
@@ -90,8 +104,11 @@ function toReorderItemFromInventory(row: {
     manufacturer: row.manufacturer ?? "",
     manufacturerId: row.manufacturerId ?? null,
     listPurchase: row.purchasePrice,
+    sellingPrice: row.sellingPrice,
     manufacturerDiscount: row.manufacturerDiscount,
     specialCompanyDiscount: row.specialCompanyDiscount,
+    customerDiscount: row.customerDiscount,
+    batchNumber: row.batchNumber,
     issueLabel: "Reorder",
     isLowStock: false,
     isExpiringSoon: false,
@@ -100,10 +117,23 @@ function toReorderItemFromInventory(row: {
 
 function pricingFromInventoryRow(item: Record<string, unknown>): Pick<
   ReorderItem,
-  "listPurchase" | "manufacturerDiscount" | "specialCompanyDiscount"
+  | "listPurchase"
+  | "sellingPrice"
+  | "manufacturerDiscount"
+  | "specialCompanyDiscount"
+  | "customerDiscount"
+  | "batchNumber"
 > {
   return {
     listPurchase: typeof item.purchasePrice === "number" ? item.purchasePrice : undefined,
+    batchNumber:
+      typeof item.batchNumber === "string" ? item.batchNumber : undefined,
+    sellingPrice:
+      typeof item.sellingPrice === "number"
+        ? item.sellingPrice
+        : typeof item.price === "number"
+          ? item.price
+          : undefined,
     manufacturerDiscount:
       typeof item.manufacturerDiscount === "number"
         ? item.manufacturerDiscount
@@ -112,7 +142,30 @@ function pricingFromInventoryRow(item: Record<string, unknown>): Pick<
       typeof item.specialCompanyDiscount === "number"
         ? item.specialCompanyDiscount
         : undefined,
+    customerDiscount:
+      typeof item.customerDiscount === "number" ? item.customerDiscount : undefined,
   };
+}
+
+function netPurchasePerUnit(
+  list: number,
+  mfgPct: number,
+  specialPct: number,
+): number {
+  const afterMfg = list * (1 - Math.min(100, Math.max(0, mfgPct)) / 100);
+  return afterMfg * (1 - Math.min(100, Math.max(0, specialPct)) / 100);
+}
+
+function parseNonNegative(raw: string): number | null {
+  const n = parseFloat(raw.trim());
+  if (!Number.isFinite(n) || n < 0) return null;
+  return n;
+}
+
+function parseDiscountPct(raw: string): number | null {
+  const n = parseFloat(raw.trim());
+  if (!Number.isFinite(n) || n < 0 || n > 100) return null;
+  return n;
 }
 
 function mergeLowStockAndExpiring(lowStock: any[], expiring: any[]): ReorderItem[] {
@@ -143,9 +196,7 @@ function mergeLowStockAndExpiring(lowStock: any[], expiring: any[]): ReorderItem
         existing.manufacturerId = item.manufacturerId;
       }
       if (existing.listPurchase == null && pricing.listPurchase != null) {
-        existing.listPurchase = pricing.listPurchase;
-        existing.manufacturerDiscount = pricing.manufacturerDiscount;
-        existing.specialCompanyDiscount = pricing.specialCompanyDiscount;
+        Object.assign(existing, pricing);
       }
     } else {
       map.set(item.id, {
@@ -181,6 +232,12 @@ export default function CreatePurchaseOrdersPage() {
   const [selectedItem, setSelectedItem] = useState<ReorderItem | null>(null);
   /** String so the field can be cleared while typing (no stuck "0") */
   const [orderQuantityInput, setOrderQuantityInput] = useState("");
+  const [orderPurchasePrice, setOrderPurchasePrice] = useState("");
+  const [orderSellingPrice, setOrderSellingPrice] = useState("");
+  const [orderMfgDiscount, setOrderMfgDiscount] = useState("");
+  const [orderSpecialDiscount, setOrderSpecialDiscount] = useState("");
+  const [orderCustomerDiscount, setOrderCustomerDiscount] = useState("");
+  const [orderBatchNumber, setOrderBatchNumber] = useState("");
   const [creatingOrder, setCreatingOrder] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [removeLowStockDialogOpen, setRemoveLowStockDialogOpen] = useState(false);
@@ -256,8 +313,12 @@ export default function CreatePurchaseOrdersPage() {
           manufacturer?: string;
           manufacturerId?: string | null;
           purchasePrice?: number;
+          sellingPrice?: number;
+          price?: number;
           manufacturerDiscount?: number;
           specialCompanyDiscount?: number;
+          customerDiscount?: number;
+          batchNumber?: string;
         }) =>
           toReorderItemFromInventory({
             id: r.id,
@@ -267,8 +328,11 @@ export default function CreatePurchaseOrdersPage() {
             manufacturer: r.manufacturer,
             manufacturerId: r.manufacturerId,
             purchasePrice: r.purchasePrice,
+            sellingPrice: r.sellingPrice ?? r.price,
             manufacturerDiscount: r.manufacturerDiscount,
             specialCompanyDiscount: r.specialCompanyDiscount,
+            customerDiscount: r.customerDiscount,
+            batchNumber: r.batchNumber,
           })
         )
       );
@@ -299,10 +363,20 @@ export default function CreatePurchaseOrdersPage() {
     ).slice(0, 20);
   }, [allInventory, inventorySearch]);
 
+  const fillOrderFieldsFromItem = (item: ReorderItem) => {
+    setOrderPurchasePrice(String(item.listPurchase ?? 0));
+    setOrderSellingPrice(String(item.sellingPrice ?? 0));
+    setOrderMfgDiscount(String(item.manufacturerDiscount ?? 0));
+    setOrderSpecialDiscount(String(item.specialCompanyDiscount ?? 0));
+    setOrderCustomerDiscount(String(item.customerDiscount ?? 0));
+    setOrderBatchNumber(item.batchNumber ?? "");
+  };
+
   const openOrderDialog = (item: ReorderItem) => {
     setSelectedItem(item);
     const suggested = Math.max(item.minimumStock * 2 - item.quantity, 10);
     setOrderQuantityInput(String(suggested));
+    fillOrderFieldsFromItem(item);
     const mid = item.manufacturerId;
     const eligible = vendors.filter(
       (v) =>
@@ -341,12 +415,46 @@ export default function CreatePurchaseOrdersPage() {
       });
       return;
     }
+    const purchasePrice = parseNonNegative(orderPurchasePrice);
+    const sellingPrice = parseNonNegative(orderSellingPrice);
+    const manufacturerDiscount = parseDiscountPct(orderMfgDiscount);
+    const specialCompanyDiscount = parseDiscountPct(orderSpecialDiscount);
+    const customerDiscount = parseDiscountPct(orderCustomerDiscount);
+    if (
+      purchasePrice == null ||
+      sellingPrice == null ||
+      manufacturerDiscount == null ||
+      specialCompanyDiscount == null ||
+      customerDiscount == null
+    ) {
+      toast.error("Check pricing fields", {
+        description: "Prices must be ≥ 0. Discounts must be 0–100%.",
+      });
+      return;
+    }
+    const batchNumber = orderBatchNumber.trim();
+    if (!batchNumber) {
+      toast.error("Batch number required", {
+        description: "Enter the batch number for this purchase.",
+      });
+      return;
+    }
     const headers = getAuthHeaders(user?.access_token);
     setCreatingOrder(true);
     try {
       await axios.post(
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/purchase-order`,
-        { inventoryItemId: selectedItem.id, quantityOrdered: qty, vendorId: selectedVendorId },
+        {
+          inventoryItemId: selectedItem.id,
+          quantityOrdered: qty,
+          vendorId: selectedVendorId,
+          purchasePrice,
+          sellingPrice,
+          manufacturerDiscount,
+          specialCompanyDiscount,
+          customerDiscount,
+          batchNumber,
+        },
         { headers }
       );
       toast.success("Purchase order created", {
@@ -783,12 +891,18 @@ export default function CreatePurchaseOrdersPage() {
           if (!open) {
             setSelectedItem(null);
             setOrderQuantityInput("");
+            setOrderPurchasePrice("");
+            setOrderSellingPrice("");
+            setOrderMfgDiscount("");
+            setOrderSpecialDiscount("");
+            setOrderCustomerDiscount("");
+            setOrderBatchNumber("");
             setSelectedVendorId("");
             setCreatingOrder(false);
           }
         }}
       >
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-red-800">
               <ShoppingCart className="h-5 w-5 shrink-0" aria-hidden />
@@ -798,7 +912,7 @@ export default function CreatePurchaseOrdersPage() {
               {selectedItem ? (
                 <>
                   Order stock for <span className="font-medium text-foreground">{selectedItem.name}</span>.
-                  Quantity is added to inventory when this order is marked delivered.
+                  Edit batch, prices, discounts if they changed. When marked <strong>delivered</strong>, new qty is added and these values apply to <strong>all</strong> existing stock of this item.
                 </>
               ) : (
                 "Choose an item from the list to create an order."
@@ -832,7 +946,7 @@ export default function CreatePurchaseOrdersPage() {
                       </TableCell>
                       <TableCell
                         className={`py-2.5 text-sm tabular-nums ${
-                          selectedItem.quantity < selectedItem.minimumStock
+                          isLowStock(selectedItem.quantity, selectedItem.minimumStock)
                             ? "text-red-600 font-semibold"
                             : ""
                         }`}
@@ -848,42 +962,6 @@ export default function CreatePurchaseOrdersPage() {
                         {selectedItem.minimumStock}
                       </TableCell>
                     </TableRow>
-                    {(selectedItem.listPurchase != null && selectedItem.listPurchase > 0) ||
-                    (selectedItem.manufacturerDiscount ?? 0) > 0 ||
-                    (selectedItem.specialCompanyDiscount ?? 0) > 0 ? (
-                      <>
-                        {selectedItem.listPurchase != null && selectedItem.listPurchase > 0 && (
-                          <TableRow className="hover:bg-transparent">
-                            <TableCell className="py-2.5 text-sm text-gray-500 font-medium">
-                              List purchase
-                            </TableCell>
-                            <TableCell className="py-2.5 text-sm tabular-nums">
-                              {selectedItem.listPurchase}
-                            </TableCell>
-                          </TableRow>
-                        )}
-                        {(selectedItem.manufacturerDiscount ?? 0) > 0 && (
-                          <TableRow className="hover:bg-transparent">
-                            <TableCell className="py-2.5 text-sm text-gray-500 font-medium">
-                              Manufacturer discount
-                            </TableCell>
-                            <TableCell className="py-2.5 text-sm tabular-nums">
-                              {selectedItem.manufacturerDiscount}%
-                            </TableCell>
-                          </TableRow>
-                        )}
-                        {(selectedItem.specialCompanyDiscount ?? 0) > 0 && (
-                          <TableRow className="hover:bg-transparent">
-                            <TableCell className="py-2.5 text-sm text-gray-500 font-medium">
-                              Special company discount
-                            </TableCell>
-                            <TableCell className="py-2.5 text-sm tabular-nums">
-                              {selectedItem.specialCompanyDiscount}%
-                            </TableCell>
-                          </TableRow>
-                        )}
-                      </>
-                    ) : null}
                     {(selectedItem.isLowStock || selectedItem.isExpiringSoon) && (
                       <TableRow className="hover:bg-transparent bg-amber-50/50">
                         <TableCell className="py-2.5 text-sm text-gray-500 font-medium">
@@ -900,6 +978,116 @@ export default function CreatePurchaseOrdersPage() {
                     )}
                   </TableBody>
                 </Table>
+              </div>
+
+              <div className="rounded-lg border border-gray-200 bg-white p-4 space-y-3">
+                <p className="text-sm font-medium text-gray-800">Batch & pricing for this order</p>
+                <div className="space-y-1.5">
+                  <Label htmlFor="po-batch-number" className="text-xs text-gray-600">
+                    Batch number
+                  </Label>
+                  <Input
+                    id="po-batch-number"
+                    type="text"
+                    autoComplete="off"
+                    placeholder="e.g. BN-2026-A"
+                    value={orderBatchNumber}
+                    onChange={(e) => setOrderBatchNumber(e.target.value)}
+                    className={`${PO_TEXT_FIELD_CLASS} font-mono`}
+                  />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="po-purchase-price" className="text-xs text-gray-600">
+                      Purchase price (list cost)
+                    </Label>
+                    <Input
+                      id="po-purchase-price"
+                      type="number"
+                      inputMode="decimal"
+                      min={0}
+                      step="0.01"
+                      value={orderPurchasePrice}
+                      onChange={(e) => setOrderPurchasePrice(e.target.value)}
+                      className={PO_FIELD_INPUT_CLASS}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="po-selling-price" className="text-xs text-gray-600">
+                      Selling price
+                    </Label>
+                    <Input
+                      id="po-selling-price"
+                      type="number"
+                      inputMode="decimal"
+                      min={0}
+                      step="0.01"
+                      value={orderSellingPrice}
+                      onChange={(e) => setOrderSellingPrice(e.target.value)}
+                      className={PO_FIELD_INPUT_CLASS}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="po-mfg-discount" className="text-xs text-gray-600">
+                      Vendor discount (%)
+                    </Label>
+                    <Input
+                      id="po-mfg-discount"
+                      type="number"
+                      inputMode="decimal"
+                      min={0}
+                      max={100}
+                      step="any"
+                      value={orderMfgDiscount}
+                      onChange={(e) => setOrderMfgDiscount(e.target.value)}
+                      className={PO_FIELD_INPUT_CLASS}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="po-special-discount" className="text-xs text-gray-600">
+                      Special discount (%)
+                    </Label>
+                    <Input
+                      id="po-special-discount"
+                      type="number"
+                      inputMode="decimal"
+                      min={0}
+                      max={100}
+                      step="any"
+                      value={orderSpecialDiscount}
+                      onChange={(e) => setOrderSpecialDiscount(e.target.value)}
+                      className={PO_FIELD_INPUT_CLASS}
+                    />
+                  </div>
+                  <div className="space-y-1.5 sm:col-span-2">
+                    <Label htmlFor="po-customer-discount" className="text-xs text-gray-600">
+                      Default customer discount (%)
+                    </Label>
+                    <Input
+                      id="po-customer-discount"
+                      type="number"
+                      inputMode="decimal"
+                      min={0}
+                      max={100}
+                      step="any"
+                      value={orderCustomerDiscount}
+                      onChange={(e) => setOrderCustomerDiscount(e.target.value)}
+                      className={PO_FIELD_INPUT_CLASS}
+                    />
+                  </div>
+                </div>
+                {parseNonNegative(orderPurchasePrice) != null && (
+                  <p className="text-xs text-gray-600">
+                    Net purchase per unit:{" "}
+                    <span className="font-semibold text-red-800 tabular-nums">
+                      {netPurchasePerUnit(
+                        parseNonNegative(orderPurchasePrice)!,
+                        parseDiscountPct(orderMfgDiscount) ?? 0,
+                        parseDiscountPct(orderSpecialDiscount) ?? 0,
+                      ).toFixed(2)}
+                    </span>
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -946,7 +1134,7 @@ export default function CreatePurchaseOrdersPage() {
                   placeholder="e.g. 50"
                   value={orderQuantityInput}
                   onChange={(e) => onOrderQuantityChange(e.target.value)}
-                  className="h-10 text-sm tabular-nums"
+                  className={PO_FIELD_INPUT_CLASS}
                   aria-describedby="order-qty-hint"
                 />
                 <p id="order-qty-hint" className="text-xs text-gray-500">

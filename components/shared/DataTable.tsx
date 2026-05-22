@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, Package2, AlertCircle, X, Pill, Inbox } from "lucide-react";
+import { isLowStock } from "@/lib/low-stock";
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
@@ -204,9 +205,11 @@ export function DataTable<TData extends Record<string, any>, TValue>({
                   <Badge variant="secondary" className="text-sm">
                     {selectedRow?.type}
                   </Badge>
-                  {selectedRow?.quantity &&
-                    selectedRow.quantity <=
-                    (selectedRow?.minimumStock || 0) && (
+                  {selectedRow?.quantity != null &&
+                    isLowStock(
+                      selectedRow.quantity,
+                      selectedRow?.minimumStock ?? 0,
+                    ) && (
                       <Badge variant="destructive" className="text-sm">
                         Low Stock
                       </Badge>
@@ -279,8 +282,11 @@ export function DataTable<TData extends Record<string, any>, TValue>({
                 )}
 
                 {/* Stock Warning */}
-                {selectedRow?.quantity &&
-                  selectedRow.quantity <= (selectedRow?.minimumStock || 0) && (
+                {selectedRow?.quantity != null &&
+                  isLowStock(
+                    selectedRow.quantity,
+                    selectedRow?.minimumStock ?? 0,
+                  ) && (
                     <div className="flex items-start gap-3 p-4 bg-destructive/10 text-destructive rounded-lg">
                       <AlertCircle className="h-5 w-5 mt-0.5 flex-shrink-0" />
                       <div>
@@ -288,7 +294,7 @@ export function DataTable<TData extends Record<string, any>, TValue>({
                           Low Stock Warning
                         </h4>
                         <p className="text-sm">
-                          Current quantity ({selectedRow.quantity}) is below
+                          Current quantity ({selectedRow.quantity}) is at or below
                           minimum stock level ({selectedRow.minimumStock})
                         </p>
                       </div>

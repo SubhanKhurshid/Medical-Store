@@ -288,6 +288,9 @@ const SalesPage = () => {
         })),
         discount: discountPercent,
         paymentMethod,
+        ...(paymentMethod === "CASH" && cashReceivedInput.trim() !== ""
+          ? { cashReceived: parseFloat(cashReceivedInput) }
+          : {}),
       };
 
       const response = await axios.post(
@@ -804,7 +807,13 @@ const SalesPage = () => {
       {/* Off-screen receipt — only visible during react-to-print */}
       <div
         aria-hidden="true"
-        style={{ position: "fixed", top: "-9999px", left: 0, width: "80mm" }}
+        style={{
+          position: "fixed",
+          top: "-9999px",
+          left: "50%",
+          transform: "translateX(-50%)",
+          width: "80mm",
+        }}
       >
         <div ref={receiptRef}>
         <Receipt

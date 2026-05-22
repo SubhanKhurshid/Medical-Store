@@ -8,15 +8,17 @@ import { DialogContent } from "@/components/ui/dialog";
 
 import { Dialog } from "@/components/ui/dialog";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { AlertCircle, CheckCircle, XCircle } from "lucide-react";
+import { AlertCircle, CheckCircle, Search, XCircle } from "lucide-react";
 import Loading from "@/components/shared/Loading";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -53,6 +55,24 @@ interface PurchaseOrder {
   vendorName: string;
   status: "PENDING" | "DELIVERED" | "CANCELLED";
   createdAt: string;
+  orderDate: string;
+}
+
+function startOfDayLocal(dateStr: string): Date {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  return new Date(y, m - 1, d, 0, 0, 0, 0);
+}
+
+function endOfDayLocal(dateStr: string): Date {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  return new Date(y, m - 1, d, 23, 59, 59, 999);
+}
+
+function isWithinDateRange(isoDate: string, from: string, to: string): boolean {
+  const d = new Date(isoDate);
+  if (from && d < startOfDayLocal(from)) return false;
+  if (to && d > endOfDayLocal(to)) return false;
+  return true;
 }
 
 export default function ViewPurchaseOrdersPage() {
@@ -60,8 +80,10 @@ export default function ViewPurchaseOrdersPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedRow, setSelectedRow] = useState<PurchaseOrder | null>(null);
+  const [search, setSearch] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
 
-  // Function to format date
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-US", {
       year: "numeric",
@@ -69,6 +91,32 @@ export default function ViewPurchaseOrdersPage() {
       day: "numeric",
     });
   };
+
+  const dateRangeInvalid = Boolean(dateFrom && dateTo && dateFrom > dateTo);
+
+  const filteredOrders = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (dateRangeInvalid) return [];
+    return purchaseOrders.filter((order) => {
+      if (dateFrom || dateTo) {
+        if (!isWithinDateRange(order.createdAt, dateFrom, dateTo)) return false;
+      }
+      if (!q) return true;
+      return (
+        order.orderNumber.toLowerCase().includes(q) ||
+        order.itemName.toLowerCase().includes(q)
+      );
+    });
+  }, [purchaseOrders, search, dateFrom, dateTo, dateRangeInvalid]);
+
+  const filterSummary = useMemo(() => {
+    const units = filteredOrders.reduce((s, o) => s + o.quantityOrdered, 0);
+    return { count: filteredOrders.length, units };
+  }, [filteredOrders]);
+
+  const hasActiveFilters = Boolean(
+    search.trim() || dateFrom || dateTo
+  );
 
   // Handle row click
   const handleRowClick = (order: PurchaseOrder) => {
@@ -149,7 +197,7 @@ export default function ViewPurchaseOrdersPage() {
     },
     {
       accessorKey: "createdAt",
-      header: "Date Created",
+      header: "Order Date",
       cell: ({ row }) => formatDate(row.getValue("createdAt")),
     },
     {
@@ -197,14 +245,14 @@ export default function ViewPurchaseOrdersPage() {
   ];
 
   const table = useReactTable({
-    data: purchaseOrders,
+    data: filteredOrders,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     initialState: {
-      pagination: { pageSize: 5 },
-      sorting: [{ id: "itemName", desc: false }],
+      pagination: { pageSize: 10 },
+      sorting: [{ id: "createdAt", desc: true }],
     },
   });
 
@@ -221,6 +269,7 @@ export default function ViewPurchaseOrdersPage() {
           itemName: order.inventoryItem?.name || "N/A",
           manufacturer: order.manufacturer?.companyName || "N/A",
           vendorName: order.vendor?.name || "—",
+          orderDate: order.orderDate ?? order.createdAt,
           orderNumber: `PO-${new Date(
             order.createdAt
           ).getFullYear()}-${order.id.slice(-4)}`,
@@ -264,7 +313,7 @@ export default function ViewPurchaseOrdersPage() {
               Purchase Orders
             </motion.h1>
             <motion.p className="mt-1 text-sm text-gray-500" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }}>
-              View and manage purchase orders.
+              Search by order or product name. Filter by date to see purchases in a period.
             </motion.p>
             <div className="mt-4 h-px bg-gradient-to-r from-red-200/80 via-red-100/50 to-transparent rounded-full" />
           </div>
@@ -276,6 +325,93 @@ export default function ViewPurchaseOrdersPage() {
             Print Company-wise Orders
           </Button>
         </header>
+
+        <Card className="overflow-hidden bg-white border border-gray-100 rounded-xl shadow-sm hover:shadow-md transition-shadow mb-6">
+          <div className="border-l-4 border-l-red-500 bg-red-50/30 px-5 py-3">
+            <h2 className="text-base font-semibold text-red-800">Search & date filter</h2>
+            <p className="text-xs text-gray-500 mt-0.5">
+              Order number or product name. From–to dates for purchase volume in that window.
+            </p>
+          </div>
+          <CardContent className="p-4 sm:p-5 space-y-4">
+            <div className="relative max-w-md">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <Input
+                type="search"
+                placeholder="Search order number or product name…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-9"
+                aria-label="Search purchase orders"
+              />
+            </div>
+            <div className="flex flex-wrap items-end gap-4">
+              <div>
+                <Label htmlFor="po-date-from" className="text-xs text-gray-600">
+                  From date
+                </Label>
+                <Input
+                  id="po-date-from"
+                  type="date"
+                  value={dateFrom}
+                  onChange={(e) => setDateFrom(e.target.value)}
+                  className="mt-1 w-[160px]"
+                />
+              </div>
+              <div>
+                <Label htmlFor="po-date-to" className="text-xs text-gray-600">
+                  To date
+                </Label>
+                <Input
+                  id="po-date-to"
+                  type="date"
+                  value={dateTo}
+                  onChange={(e) => setDateTo(e.target.value)}
+                  className="mt-1 w-[160px]"
+                />
+              </div>
+              {hasActiveFilters && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="border-gray-200"
+                  onClick={() => {
+                    setSearch("");
+                    setDateFrom("");
+                    setDateTo("");
+                  }}
+                >
+                  Clear filters
+                </Button>
+              )}
+            </div>
+            {dateRangeInvalid && (
+              <p className="text-sm text-amber-800 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
+                <strong>From</strong> must be on or before <strong>To</strong>.
+              </p>
+            )}
+            {purchaseOrders.length > 0 && (
+              <p className="text-sm text-gray-600">
+                Showing{" "}
+                <span className="font-semibold text-red-800">{filterSummary.count}</span>{" "}
+                order{filterSummary.count !== 1 ? "s" : ""}
+                {hasActiveFilters ? " (filtered)" : ""} ·{" "}
+                <span className="font-semibold">{filterSummary.units}</span> units ordered
+                {(dateFrom || dateTo) && !dateRangeInvalid && (
+                  <>
+                    {" "}
+                    {dateFrom && dateTo
+                      ? `from ${formatDate(startOfDayLocal(dateFrom).toISOString())} to ${formatDate(endOfDayLocal(dateTo).toISOString())}`
+                      : dateFrom
+                        ? `from ${formatDate(startOfDayLocal(dateFrom).toISOString())}`
+                        : `until ${formatDate(endOfDayLocal(dateTo).toISOString())}`}
+                  </>
+                )}
+              </p>
+            )}
+          </CardContent>
+        </Card>
 
         <Card className="overflow-hidden bg-white border border-gray-100 rounded-xl shadow-sm hover:shadow-md transition-shadow">
           <div className="border-l-4 border-l-red-500 bg-red-50/30 px-5 py-3">
@@ -306,9 +442,23 @@ export default function ViewPurchaseOrdersPage() {
                   There are no purchase orders yet. Create one from the low stock page.
                 </p>
               </motion.div>
+            ) : filteredOrders.length === 0 ? (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="flex flex-col items-center justify-center py-12 px-4 rounded-lg bg-gray-50/80"
+              >
+                <div className="h-14 w-14 rounded-full bg-gray-100 flex items-center justify-center mb-3">
+                  <Search className="h-7 w-7 text-gray-400" />
+                </div>
+                <p className="text-sm font-medium text-gray-600">No matching orders</p>
+                <p className="text-xs text-gray-500 mt-0.5 text-center max-w-sm">
+                  Change search or date range, or clear filters to see all orders.
+                </p>
+              </motion.div>
             ) : (
               <div className="rounded-lg border border-gray-100 overflow-hidden">
-                <Table wrapperClassName={purchaseOrders.length > 0 ? "min-h-[260px]" : undefined}>
+                <Table wrapperClassName={filteredOrders.length > 0 ? "min-h-[260px]" : undefined}>
                   <TableHeader>
                     {table.getHeaderGroups().map((headerGroup) => (
                       <TableRow key={headerGroup.id}>
@@ -444,7 +594,7 @@ export default function ViewPurchaseOrdersPage() {
 
               <div>
                 <h4 className="text-base font-medium text-muted-foreground mb-2">
-                  Date Created
+                  Order Date
                 </h4>
                 <p className="text-lg">{formatDate(selectedRow.createdAt)}</p>
               </div>

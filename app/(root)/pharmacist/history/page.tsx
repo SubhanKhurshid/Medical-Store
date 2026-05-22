@@ -21,7 +21,8 @@ import { useInventory } from "@/app/context/InventoryContext";
 import axios from "axios";
 import { toast } from "sonner";
 import Loading from "@/components/shared/Loading";
-import { sortByLocaleKey } from "@/lib/sort-alphabetical";
+import { SaleInvoiceDialog } from "@/components/sales/SaleInvoiceDialog";
+import type { SaleForReceipt } from "@/lib/sale-receipt";
 import {
   Select,
   SelectContent,
@@ -49,16 +50,9 @@ const PAYMENT_LABELS: Record<string, string> = {
 
 type DateRangeMode = "all" | "day" | "month" | "year" | "custom";
 
-interface Sale {
-  id: string;
-  invoiceNumber?: string | null;
+interface Sale extends SaleForReceipt {
   quantity: number;
   salePrice: number;
-  totalPrice: number;
-  discount?: number;
-  refundedAmount?: number;
-  paymentMethod?: string;
-  soldAt: string;
   customerName?: string | null;
   customerPhone?: string | null;
   saleItems: {
@@ -106,6 +100,18 @@ function apiRange(
     default:
       return {};
   }
+}
+
+/** Newest sale first; tie-break by invoice # descending. */
+function sortSalesNewestFirst(rows: Sale[]): Sale[] {
+  return [...rows].sort((a, b) => {
+    const byDate =
+      new Date(b.soldAt).getTime() - new Date(a.soldAt).getTime();
+    if (byDate !== 0) return byDate;
+    const invA = a.invoiceNumber ?? "";
+    const invB = b.invoiceNumber ?? "";
+    return invB.localeCompare(invA, undefined, { numeric: true });
+  });
 }
 
 function rangeDescription(
@@ -209,7 +215,7 @@ const SalesTable = () => {
           (sale.customerPhone ?? "").toLowerCase().includes(s),
       );
     }
-    return rows;
+    return sortSalesNewestFirst(rows);
   }, [sales, paymentFilter, search]);
 
   const formatCurrency = useCallback(
@@ -381,6 +387,9 @@ const SalesTable = () => {
     {
       accessorKey: "soldAt",
       header: "Date",
+      sortingFn: (a, b) =>
+        new Date(a.original.soldAt).getTime() -
+        new Date(b.original.soldAt).getTime(),
       cell: ({ row }) => (
         <span className="text-muted-foreground">
           {new Date(row.original.soldAt).toLocaleDateString()}
@@ -431,7 +440,7 @@ const SalesTable = () => {
             className="text-red-700 border-red-200 hover:bg-red-50 h-8 text-xs"
           >
             <Eye className="h-3.5 w-3.5 mr-1" />
-            View
+            Invoice
           </Button>
           <Button
             variant="outline"
@@ -530,7 +539,7 @@ const SalesTable = () => {
                     type="date"
                     value={customFrom}
                     onChange={(e) => setCustomFrom(e.target.value)}
-                    className="mt-1 w-[160px]"
+                    className="mt-1 w-[160px] border border-gray-300 bg-white shadow-sm"
                   />
                 </div>
                 <div>
@@ -539,7 +548,7 @@ const SalesTable = () => {
                     type="date"
                     value={customTo}
                     onChange={(e) => setCustomTo(e.target.value)}
-                    className="mt-1 w-[160px]"
+                    className="mt-1 w-[160px] border border-gray-300 bg-white shadow-sm"
                   />
                 </div>
               </div>
@@ -562,7 +571,7 @@ const SalesTable = () => {
             <div>
               <h2 className="text-base font-semibold text-red-800">Sales records</h2>
               <p className="text-xs text-gray-500 mt-0.5">
-                Search by invoice, customer name, or phone. PDF matches filters below ({displaySales.length}{" "}
+                Newest invoices first. Search and payment below; dates in bar above. PDF uses same filters ({displaySales.length}{" "}
                 rows).
               </p>
             </div>
@@ -588,7 +597,7 @@ const SalesTable = () => {
                     placeholder="Search sales..."
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    className="pl-9 h-10 border-gray-200 focus:border-red-500 focus:ring-red-500/20"
+                    className="pl-9 h-10 border border-gray-300 bg-white shadow-sm focus:border-red-500 focus:ring-red-500/20"
                   />
                 </div>
               </div>
@@ -599,7 +608,7 @@ const SalesTable = () => {
                   value={paymentFilter}
                   onValueChange={(val) => setPaymentFilter(val as typeof paymentFilter)}
                 >
-                  <SelectTrigger className="mt-1 h-10 border-gray-200 focus:border-red-500 focus:ring-red-500/20">
+                  <SelectTrigger className="mt-1 h-10 border border-gray-300 bg-white shadow-sm focus:border-red-500 focus:ring-red-500/20">
                     <SelectValue placeholder="All payments" />
                   </SelectTrigger>
                   <SelectContent>
@@ -629,7 +638,7 @@ const SalesTable = () => {
                     columns={columns}
                     data={displaySales}
                     disableRowClick={true}
-                    initialSorting={[{ id: "customerName", desc: false }]}
+                    initialSorting={[{ id: "soldAt", desc: true }]}
                   />
                 </motion.div>
               </AnimatePresence>
@@ -637,54 +646,13 @@ const SalesTable = () => {
           </CardContent>
         </Card>
 
-        <Dialog open={!!viewSale} onOpenChange={() => setViewSale(null)}>
-          <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="text-red-800">
-                Sale {viewSale?.invoiceNumber ?? viewSale?.id}
-              </DialogTitle>
-            </DialogHeader>
-            {viewSale && (
-              <div className="space-y-3 text-sm">
-                <div className="grid grid-cols-2 gap-2">
-                  <span className="text-gray-500">Date</span>
-                  <span>{new Date(viewSale.soldAt).toLocaleString()}</span>
-                  <span className="text-gray-500">Customer</span>
-                  <span>{viewSale.customerName || "—"}</span>
-                  <span className="text-gray-500">Phone</span>
-                  <span>{viewSale.customerPhone || "—"}</span>
-                  <span className="text-gray-500">Payment</span>
-                  <span>
-                    {PAYMENT_LABELS[viewSale.paymentMethod as string] ??
-                      viewSale.paymentMethod ??
-                      "—"}
-                  </span>
-                  <span className="text-gray-500">Total</span>
-                  <span>Rs {viewSale.totalPrice}</span>
-                  {(Number(viewSale.refundedAmount) || 0) > 0 && (
-                    <>
-                      <span className="text-gray-500">Refunded</span>
-                      <span className="text-amber-600">Rs {viewSale.refundedAmount}</span>
-                    </>
-                  )}
-                </div>
-                <div>
-                  <p className="font-medium text-gray-700 mb-2">Items</p>
-                  <ul className="border rounded p-2 space-y-1">
-                    {sortByLocaleKey(viewSale.saleItems ?? [], (si) => si.inventoryItem?.name ?? si.inventoryItemId).map((si) => (
-                      <li key={si.id} className="flex justify-between">
-                        <span>{si.inventoryItem?.name ?? si.inventoryItemId}</span>
-                        <span>
-                          {si.quantity} × Rs {si.salePrice} = Rs {si.totalPrice}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-            )}
-          </DialogContent>
-        </Dialog>
+        <SaleInvoiceDialog
+          sale={viewSale}
+          open={!!viewSale}
+          onOpenChange={(open) => {
+            if (!open) setViewSale(null);
+          }}
+        />
 
         <Dialog open={!!refundSale} onOpenChange={() => setRefundSale(null)}>
           <DialogContent className="max-w-md">
