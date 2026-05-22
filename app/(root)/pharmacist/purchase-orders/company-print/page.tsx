@@ -30,6 +30,14 @@ import { AlertCircle, Printer } from "lucide-react";
 import { useAuth } from "@/app/providers/AuthProvider";
 
 const ALL_VENDORS = "__all__";
+const ALL_STATUSES = "__all__";
+
+const STATUS_OPTIONS = [
+  { value: ALL_STATUSES, label: "All statuses" },
+  { value: "PENDING", label: "Pending" },
+  { value: "DELIVERED", label: "Delivered" },
+  { value: "CANCELLED", label: "Cancelled" },
+] as const;
 
 interface Vendor {
   id: string;
@@ -93,6 +101,7 @@ export default function CompanyPurchaseOrderPrintPage() {
   const { user } = useAuth();
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [selectedVendorId, setSelectedVendorId] = useState<string>(ALL_VENDORS);
+  const [selectedStatus, setSelectedStatus] = useState<string>(ALL_STATUSES);
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [orders, setOrders] = useState<CompanyPurchaseOrder[]>([]);
@@ -147,6 +156,9 @@ export default function CompanyPurchaseOrderPrintPage() {
       }
       if (dateFrom) qs.set("startDate", dateFrom);
       if (dateTo) qs.set("endDate", dateTo);
+      if (selectedStatus && selectedStatus !== ALL_STATUSES) {
+        qs.set("status", selectedStatus);
+      }
       const query = qs.toString() ? `?${qs.toString()}` : "";
       const { data } = await axios.get(
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/purchase-orders/pending-for-print${query}`,
@@ -170,6 +182,7 @@ export default function CompanyPurchaseOrderPrintPage() {
     }
   }, [
     selectedVendorId,
+    selectedStatus,
     dateFrom,
     dateTo,
     dateRangeInvalid,
@@ -198,6 +211,10 @@ export default function CompanyPurchaseOrderPrintPage() {
     selectedVendorId === ALL_VENDORS
       ? "All vendors"
       : selectedVendor?.name ?? "Vendor";
+
+  const statusLabel =
+    STATUS_OPTIONS.find((s) => s.value === selectedStatus)?.label ??
+    "All statuses";
 
   if (loading) {
     return (
@@ -246,7 +263,7 @@ export default function CompanyPurchaseOrderPrintPage() {
 
         <Card className="mb-6 print:hidden border border-gray-100">
           <CardContent className="p-4 sm:p-5">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div>
                 <Label className="text-xs text-gray-600">Vendor</Label>
                 <Select value={selectedVendorId} onValueChange={setSelectedVendorId}>
@@ -258,6 +275,21 @@ export default function CompanyPurchaseOrderPrintPage() {
                     {vendors.map((v) => (
                       <SelectItem key={v.id} value={v.id}>
                         {v.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-xs text-gray-600">Status</Label>
+                <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+                  <SelectTrigger className="mt-1 h-10 border-gray-300">
+                    <SelectValue placeholder="All statuses" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {STATUS_OPTIONS.map((s) => (
+                      <SelectItem key={s.value} value={s.value}>
+                        {s.label}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -320,6 +352,10 @@ export default function CompanyPurchaseOrderPrintPage() {
               <p>
                 <span className="font-semibold text-gray-700">Vendor: </span>
                 {vendorLabel}
+              </p>
+              <p>
+                <span className="font-semibold text-gray-700">Status: </span>
+                {statusLabel}
               </p>
               <p>
                 <span className="font-semibold text-gray-700">Period: </span>
