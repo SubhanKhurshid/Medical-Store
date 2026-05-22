@@ -187,13 +187,13 @@ export default function PharmacyStats({
     },
     {
       index: 3,
-      title: "Earned This Month",
+      title: "Net Profit (Month)",
       value: formatCurrency(earnedThisMonth),
       change: {
         value: Math.abs(Number(earnedChange.toFixed(1))),
         trend: earnedTrend,
       },
-      changeLabel: "vs. last month",
+      changeLabel: "vs. last month (after expenses)",
       icon: BarChart3,
       accent: "emerald",
     },

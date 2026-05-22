@@ -8,13 +8,21 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import Loading from "@/components/shared/Loading";
 
-
 type Period = "day" | "month" | "year";
+
+interface PersonalExpensesSummary {
+  totalDebit: number;
+  totalCredit: number;
+  net: number;
+  count: number;
+}
 
 interface ProfitLossData {
   period: string;
   totalRevenue: number;
   totalCost: number;
+  grossProfit?: number;
+  personalExpenses?: PersonalExpensesSummary;
   profit: number;
   from: string;
   to: string;
@@ -53,6 +61,10 @@ export default function ProfitLossReportPage() {
       maximumFractionDigits: 0,
     }).format(n);
 
+  const gross =
+    data?.grossProfit ?? (data ? data.totalRevenue - data.totalCost : 0);
+  const expenses = data?.personalExpenses;
+
   return (
     <div className="min-h-screen bg-gray-50/80">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
@@ -78,7 +90,11 @@ export default function ProfitLossReportPage() {
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.4, delay: 0.1 }}
               >
-                Revenue, cost, and profit analytics for business performance. Cost of goods uses each item’s net unit cost (list purchase after manufacturer and special company discounts).
+                Revenue, cost of goods, personal expenses, and net profit. Manage expenses on{" "}
+                <Link href="/pharmacist/personal-expenses" className="text-red-700 underline">
+                  Personal Expenses
+                </Link>
+                .
               </motion.p>
             </div>
           </div>
@@ -115,31 +131,50 @@ export default function ProfitLossReportPage() {
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="grid gap-6 sm:grid-cols-3"
+                className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5"
               >
-                <div className="rounded-xl border border-green-100 bg-green-50/20 p-6 flex flex-col items-center sm:items-start group transition-all hover:bg-green-50/40">
+                <div className="rounded-xl border border-green-100 bg-green-50/20 p-5">
                   <p className="text-sm font-medium text-green-700 mb-1">Total Revenue</p>
-                  <p className="text-3xl font-bold text-green-600 tracking-tight group-hover:scale-105 transition-transform">
+                  <p className="text-2xl font-bold text-green-600">
                     {formatCurrency(data.totalRevenue)}
                   </p>
                 </div>
-                <div className="rounded-xl border border-amber-100 bg-amber-50/20 p-6 flex flex-col items-center sm:items-start group transition-all hover:bg-amber-50/40">
-                  <p className="text-sm font-medium text-amber-700 mb-1">Total Cost</p>
-                  <p className="text-3xl font-bold text-amber-600 tracking-tight group-hover:scale-105 transition-transform">
+                <div className="rounded-xl border border-amber-100 bg-amber-50/20 p-5">
+                  <p className="text-sm font-medium text-amber-700 mb-1">Total Cost (COGS)</p>
+                  <p className="text-2xl font-bold text-amber-600">
                     {formatCurrency(data.totalCost)}
                   </p>
                 </div>
-                <div className={`rounded-xl border p-6 flex flex-col items-center sm:items-start group transition-all ${data.profit >= 0
-                  ? "border-green-100 bg-green-50/20 hover:bg-green-50/40"
-                  : "border-red-100 bg-red-50/20 hover:bg-red-50/40"
+                <div className="rounded-xl border border-sky-100 bg-sky-50/20 p-5">
+                  <p className="text-sm font-medium text-sky-700 mb-1">Gross Profit</p>
+                  <p className="text-2xl font-bold text-sky-600">
+                    {formatCurrency(gross)}
+                  </p>
+                </div>
+                <div className="rounded-xl border border-rose-100 bg-rose-50/20 p-5">
+                  <p className="text-sm font-medium text-rose-700 mb-1">Personal Expenses</p>
+                  <p className="text-2xl font-bold text-rose-600">
+                    {formatCurrency(expenses?.net ?? 0)}
+                  </p>
+                  {expenses && expenses.count > 0 && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      {expenses.count} entries · Dr {formatCurrency(expenses.totalDebit)} · Cr{" "}
+                      {formatCurrency(expenses.totalCredit)}
+                    </p>
+                  )}
+                </div>
+                <div className={`rounded-xl border p-5 sm:col-span-2 lg:col-span-1 ${data.profit >= 0
+                  ? "border-green-100 bg-green-50/20"
+                  : "border-red-100 bg-red-50/20"
                   }`}>
                   <p className={`text-sm font-medium mb-1 ${data.profit >= 0 ? "text-green-700" : "text-red-700"}`}>
                     Net Profit
                   </p>
-                  <p className={`text-3xl font-bold tracking-tight group-hover:scale-105 transition-transform ${data.profit >= 0 ? "text-green-600" : "text-red-600"
+                  <p className={`text-2xl font-bold ${data.profit >= 0 ? "text-green-600" : "text-red-600"
                     }`}>
                     {formatCurrency(data.profit)}
                   </p>
+                  <p className="text-xs text-gray-500 mt-1">After COGS and personal expenses</p>
                 </div>
               </motion.div>
             ) : (
@@ -153,4 +188,3 @@ export default function ProfitLossReportPage() {
     </div>
   );
 }
-
