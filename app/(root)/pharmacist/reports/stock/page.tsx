@@ -35,6 +35,13 @@ interface StockReportData {
     totalValueAtCost: number;
     totalValueAtSelling: number;
     totalNetProfit: number;
+    personalExpenses?: {
+      totalDebit: number;
+      totalCredit: number;
+      net: number;
+      count: number;
+    } | null;
+    netProfitAfterPersonalExpenses?: number | null;
   };
   items: Array<{
     id: string;
@@ -502,6 +509,38 @@ export default function StockReportPage() {
                   </CardContent>
                 </Card>
               </motion.div>
+              {data?.summary?.personalExpenses && (
+                <>
+                  <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.38 }}>
+                    <Card className="border-gray-100 shadow-sm overflow-hidden bg-white">
+                      <CardHeader className="pb-2 bg-rose-50/40 border-b border-rose-100">
+                        <CardTitle className="text-xs font-semibold text-rose-800 uppercase tracking-wider">Personal expenses</CardTitle>
+                      </CardHeader>
+                      <CardContent className="pt-4 pb-6">
+                        <p className="text-3xl font-bold text-rose-700">
+                          {formatCurrency(data.summary.personalExpenses.net)}
+                        </p>
+                        <p className="text-xs text-rose-600 mt-1">Same date range as filter</p>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                  {data.summary.netProfitAfterPersonalExpenses != null && (
+                    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
+                      <Card className="border-gray-100 shadow-sm overflow-hidden bg-white">
+                        <CardHeader className="pb-2 bg-violet-50/40 border-b border-violet-100">
+                          <CardTitle className="text-xs font-semibold text-violet-800 uppercase tracking-wider">After expenses</CardTitle>
+                        </CardHeader>
+                        <CardContent className="pt-4 pb-6">
+                          <p className="text-3xl font-bold text-violet-700">
+                            {formatCurrency(data.summary.netProfitAfterPersonalExpenses)}
+                          </p>
+                          <p className="text-xs text-violet-600 mt-1">Stock margin − personal expenses</p>
+                        </CardContent>
+                      </Card>
+                    </motion.div>
+                  )}
+                </>
+              )}
             </div>
 
             <Card className="mb-6 border-gray-100 shadow-sm">

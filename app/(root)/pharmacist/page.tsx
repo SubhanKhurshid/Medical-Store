@@ -190,34 +190,24 @@ const PharmacistPage = () => {
   }, []);
 
   useEffect(() => {
-    const fetchEarned = async () => {
+    const fetchNetProfit = async () => {
       if (!user?.access_token) return;
       const base = process.env.NEXT_PUBLIC_API_BASE_URL;
       const headers = { Authorization: `Bearer ${user.access_token}` };
       try {
-        const thisMonth = getMonthRange(0);
-        const lastMonth = getMonthRange(-1);
         const [resThis, resLast] = await Promise.all([
-          fetch(
-            `${base}/pharmacist/sales?startDate=${thisMonth.start.toISOString()}&endDate=${thisMonth.end.toISOString()}`,
-            { headers }
-          ),
-          fetch(
-            `${base}/pharmacist/sales?startDate=${lastMonth.start.toISOString()}&endDate=${lastMonth.end.toISOString()}`,
-            { headers }
-          ),
+          fetch(`${base}/pharmacist/reports/profit-loss?period=month&offset=0`, { headers }),
+          fetch(`${base}/pharmacist/reports/profit-loss?period=month&offset=1`, { headers }),
         ]);
         const dataThis = await resThis.json();
         const dataLast = await resLast.json();
-        const salesThis = dataThis?.success && Array.isArray(dataThis?.data) ? dataThis.data : [];
-        const salesLast = dataLast?.success && Array.isArray(dataLast?.data) ? dataLast.data : [];
-        setEarnedThisMonth(salesThis.reduce((sum: number, s: { totalPrice?: number; refundedAmount?: number }) => sum + (s.totalPrice ?? 0) - (s.refundedAmount ?? 0), 0));
-        setEarnedLastMonth(salesLast.reduce((sum: number, s: { totalPrice?: number; refundedAmount?: number }) => sum + (s.totalPrice ?? 0) - (s.refundedAmount ?? 0), 0));
+        setEarnedThisMonth(typeof dataThis?.profit === "number" ? dataThis.profit : 0);
+        setEarnedLastMonth(typeof dataLast?.profit === "number" ? dataLast.profit : 0);
       } catch (e) {
-        console.error("Error fetching sales for stats:", e);
+        console.error("Error fetching profit for stats:", e);
       }
     };
-    fetchEarned();
+    fetchNetProfit();
   }, [user?.access_token]);
 
   if (user?.role !== "pharmacist") {

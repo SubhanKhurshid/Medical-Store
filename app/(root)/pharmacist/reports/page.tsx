@@ -12,6 +12,7 @@ import {
   Wallet,
   Building2,
   Truck,
+  Receipt,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -26,11 +27,19 @@ const reportCards = [
   // },
   {
     title: "Profit & Loss Report",
-    description: "Revenue, cost, and profit for a selected period.",
+    description: "Revenue, cost, personal expenses, and net profit for a period.",
     href: "/pharmacist/reports/profit-loss",
     icon: TrendingUp,
     color: "text-blue-600",
     bg: "bg-blue-50",
+  },
+  {
+    title: "Personal Expenses",
+    description: "Bills, salaries, and other costs — deducted from net profit on all reports.",
+    href: "/pharmacist/personal-expenses",
+    icon: Receipt,
+    color: "text-rose-600",
+    bg: "bg-rose-50",
   },
   {
     title: "Stock Report",

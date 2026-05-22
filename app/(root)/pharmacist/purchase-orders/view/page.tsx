@@ -322,7 +322,7 @@ export default function ViewPurchaseOrdersPage() {
             className="bg-red-800 hover:bg-red-700 text-white shadow-sm"
             onClick={() => window.location.assign("/pharmacist/purchase-orders/company-print")}
           >
-            Print Company-wise Orders
+            Print purchase orders
           </Button>
         </header>
 

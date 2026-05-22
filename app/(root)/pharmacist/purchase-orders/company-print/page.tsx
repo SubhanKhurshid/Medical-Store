@@ -1,23 +1,37 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import axios from "axios";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 import Loading from "@/components/shared/Loading";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle, Printer } from "lucide-react";
+import { useAuth } from "@/app/providers/AuthProvider";
 
-interface PendingManufacturer {
-  id: string;
-  companyName: string;
-}
+const ALL_VENDORS = "__all__";
 
-interface PendingVendor {
+interface Vendor {
   id: string;
   name: string;
 }
@@ -35,80 +49,138 @@ interface CompanyPurchaseOrder {
   manufacturer: {
     id: string;
     companyName: string;
-    phone?: string | null;
-    address?: string | null;
   };
+  vendor?: {
+    id: string;
+    name: string;
+  } | null;
+}
+
+function statusBadge(status: CompanyPurchaseOrder["status"]) {
+  switch (status) {
+    case "PENDING":
+      return (
+        <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100 text-[10px]">
+          Pending
+        </Badge>
+      );
+    case "DELIVERED":
+      return (
+        <Badge className="bg-green-100 text-green-800 hover:bg-green-100 text-[10px]">
+          Delivered
+        </Badge>
+      );
+    case "CANCELLED":
+      return (
+        <Badge className="bg-red-100 text-red-800 hover:bg-red-100 text-[10px]">
+          Cancelled
+        </Badge>
+      );
+    default:
+      return <Badge variant="secondary">{status}</Badge>;
+  }
+}
+
+function dateRangeLabel(from: string, to: string): string {
+  if (!from && !to) return "All dates (full history)";
+  if (from && to) return `${from} → ${to}`;
+  if (from) return `From ${from}`;
+  return `Until ${to}`;
 }
 
 export default function CompanyPurchaseOrderPrintPage() {
   const router = useRouter();
-  const [groupBy, setGroupBy] = useState<"vendor" | "manufacturer">("vendor");
-  const [manufacturers, setManufacturers] = useState<PendingManufacturer[]>([]);
-  const [vendors, setVendors] = useState<PendingVendor[]>([]);
-  const [selectedManufacturerId, setSelectedManufacturerId] = useState<string>("");
-  const [selectedVendorId, setSelectedVendorId] = useState<string>("");
+  const { user } = useAuth();
+  const [vendors, setVendors] = useState<Vendor[]>([]);
+  const [selectedVendorId, setSelectedVendorId] = useState<string>(ALL_VENDORS);
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [orders, setOrders] = useState<CompanyPurchaseOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingOrders, setLoadingOrders] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const headers = user?.access_token
+    ? { Authorization: `Bearer ${user.access_token}` }
+    : undefined;
+
+  const dateRangeInvalid = Boolean(dateFrom && dateTo && dateFrom > dateTo);
+
   useEffect(() => {
-    const load = async () => {
+    const loadVendors = async () => {
       try {
         setLoading(true);
-        const [mRes, vRes] = await Promise.all([
-          axios.get(
-            `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/purchase-orders/pending-manufacturers`
-          ),
-          axios.get(
-            `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/purchase-orders/pending-vendors`
-          ),
-        ]);
-        const mData = mRes.data ?? [];
-        const vData = vRes.data ?? [];
-        setManufacturers(mData);
-        setVendors(vData);
-        if (vData.length > 0) {
-          setSelectedVendorId(vData[0].id);
-        }
-        if (mData.length > 0) {
-          setSelectedManufacturerId(mData[0].id);
-        }
+        const { data } = await axios.get(
+          `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/vendor`,
+          { headers },
+        );
+        const list = Array.isArray(data) ? data : [];
+        setVendors(
+          list.map((v: { id: string; name: string }) => ({
+            id: v.id,
+            name: v.name,
+          })),
+        );
+        setError(null);
       } catch (err) {
         console.error(err);
-        setError("Failed to load pending purchase order groups");
+        setError("Failed to load vendors");
+        setVendors([]);
       } finally {
         setLoading(false);
       }
     };
-    load();
-  }, []);
+    loadVendors();
+  }, [user?.access_token]);
 
-  useEffect(() => {
-    const id = groupBy === "vendor" ? selectedVendorId : selectedManufacturerId;
-    if (!id) {
+  const fetchOrders = useCallback(async () => {
+    if (dateRangeInvalid) {
       setOrders([]);
+      setError(null);
       return;
     }
-    const fetchOrders = async () => {
-      try {
-        setLoadingOrders(true);
-        const path =
-          groupBy === "vendor"
-            ? `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/purchase-orders/by-vendor/${id}`
-            : `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/purchase-orders/by-manufacturer/${id}`;
-        const { data } = await axios.get(path);
-        setOrders(data ?? []);
-        setError(null);
-      } catch (err) {
-        console.error(err);
-        setError("Failed to load purchase orders for this selection");
-      } finally {
-        setLoadingOrders(false);
+    try {
+      setLoadingOrders(true);
+      const qs = new URLSearchParams();
+      if (selectedVendorId && selectedVendorId !== ALL_VENDORS) {
+        qs.set("vendorId", selectedVendorId);
       }
-    };
-    fetchOrders();
-  }, [groupBy, selectedManufacturerId, selectedVendorId]);
+      if (dateFrom) qs.set("startDate", dateFrom);
+      if (dateTo) qs.set("endDate", dateTo);
+      const query = qs.toString() ? `?${qs.toString()}` : "";
+      const { data } = await axios.get(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/purchase-orders/pending-for-print${query}`,
+        { headers },
+      );
+      setOrders(data ?? []);
+      setError(null);
+    } catch (err) {
+      console.error(err);
+      if (axios.isAxiosError(err)) {
+        setError(
+          (err.response?.data as { message?: string })?.message ??
+            "Failed to load purchase orders",
+        );
+      } else {
+        setError("Failed to load purchase orders");
+      }
+      setOrders([]);
+    } finally {
+      setLoadingOrders(false);
+    }
+  }, [
+    selectedVendorId,
+    dateFrom,
+    dateTo,
+    dateRangeInvalid,
+    user?.access_token,
+  ]);
+
+  useEffect(() => {
+    if (!loading) {
+      void fetchOrders();
+    }
+  }, [loading, fetchOrders]);
 
   const handlePrint = () => {
     window.print();
@@ -121,6 +193,12 @@ export default function CompanyPurchaseOrderPrintPage() {
       day: "numeric",
     });
 
+  const selectedVendor = vendors.find((v) => v.id === selectedVendorId);
+  const vendorLabel =
+    selectedVendorId === ALL_VENDORS
+      ? "All vendors"
+      : selectedVendor?.name ?? "Vendor";
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50/80">
@@ -129,13 +207,9 @@ export default function CompanyPurchaseOrderPrintPage() {
     );
   }
 
-  const selectedManufacturer = manufacturers.find((m) => m.id === selectedManufacturerId);
-  const selectedVendor = vendors.find((v) => v.id === selectedVendorId);
-
   return (
     <div id="company-po-print-root" className="min-h-screen bg-gray-50/80 print:bg-white">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 print:px-0 print:py-0">
-        {/* Screen header (not printed) */}
         <header className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 print:hidden">
           <div>
             <motion.h1
@@ -144,7 +218,7 @@ export default function CompanyPurchaseOrderPrintPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4 }}
             >
-              Pending purchase orders (print)
+              Print purchase orders
             </motion.h1>
             <motion.p
               className="mt-1 text-sm text-gray-500"
@@ -152,7 +226,7 @@ export default function CompanyPurchaseOrderPrintPage() {
               animate={{ opacity: 1 }}
               transition={{ delay: 0.1 }}
             >
-              Group by vendor (supplier) or by drug manufacturer (legacy).
+              All statuses (pending, delivered, cancelled). Filter by vendor and order date.
             </motion.p>
           </div>
           <div className="flex gap-2">
@@ -162,7 +236,7 @@ export default function CompanyPurchaseOrderPrintPage() {
             <Button
               className="bg-red-800 hover:bg-red-700 text-white"
               onClick={handlePrint}
-              disabled={!orders.length}
+              disabled={!orders.length || dateRangeInvalid}
             >
               <Printer className="mr-2 h-4 w-4" />
               Print
@@ -170,16 +244,68 @@ export default function CompanyPurchaseOrderPrintPage() {
           </div>
         </header>
 
+        <Card className="mb-6 print:hidden border border-gray-100">
+          <CardContent className="p-4 sm:p-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div>
+                <Label className="text-xs text-gray-600">Vendor</Label>
+                <Select value={selectedVendorId} onValueChange={setSelectedVendorId}>
+                  <SelectTrigger className="mt-1 h-10 border-gray-300">
+                    <SelectValue placeholder="Select vendor" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={ALL_VENDORS}>All vendors</SelectItem>
+                    {vendors.map((v) => (
+                      <SelectItem key={v.id} value={v.id}>
+                        {v.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="po-from" className="text-xs text-gray-600">
+                  From date
+                </Label>
+                <Input
+                  id="po-from"
+                  type="date"
+                  value={dateFrom}
+                  onChange={(e) => setDateFrom(e.target.value)}
+                  className="mt-1 h-10 border-gray-300"
+                />
+              </div>
+              <div>
+                <Label htmlFor="po-to" className="text-xs text-gray-600">
+                  To date
+                </Label>
+                <Input
+                  id="po-to"
+                  type="date"
+                  value={dateTo}
+                  onChange={(e) => setDateTo(e.target.value)}
+                  className="mt-1 h-10 border-gray-300"
+                />
+              </div>
+            </div>
+            {dateRangeInvalid && (
+              <p className="text-sm text-amber-800 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2 mt-3">
+                From date must be on or before To date.
+              </p>
+            )}
+            <p className="text-xs text-gray-500 mt-3">
+              Leave dates empty for full history. {dateRangeLabel(dateFrom, dateTo)}.
+            </p>
+          </CardContent>
+        </Card>
+
         <Card className="bg-white border border-gray-100 rounded-xl shadow-sm print:shadow-none print:border print:border-black/40">
           <CardContent className="p-4 sm:p-5 print:p-4">
-            {/* Print heading */}
             <div className="mb-4 border-b border-gray-200 pb-3 text-center">
               <h1 className="text-xl font-bold tracking-wide text-gray-900 print:text-lg">
                 NS Ibrahim Medical Store
               </h1>
-              <p className="text-xs text-gray-600">
-                Pending Purchase Orders — {groupBy === "vendor" ? "by vendor" : "by manufacturer"}
-              </p>
+              <p className="text-xs text-gray-600">Purchase Orders Report</p>
               <p className="mt-1 text-[11px] text-gray-500">
                 Printed on{" "}
                 {new Date().toLocaleDateString("en-US", {
@@ -190,59 +316,18 @@ export default function CompanyPurchaseOrderPrintPage() {
               </p>
             </div>
 
-            {/* Company + meta */}
-            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-4">
-              <div>
-                <p className="text-xs font-semibold text-gray-700">
-                  {groupBy === "vendor" ? "Vendor" : "Drug manufacturer"}:
-                </p>
-                <p className="text-sm font-semibold text-gray-900 mt-0.5">
-                  {groupBy === "vendor"
-                    ? selectedVendor?.name || "Select vendor"
-                    : selectedManufacturer?.companyName || "Select manufacturer"}
-                </p>
-              </div>
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 print:hidden">
-                <Select
-                  value={groupBy}
-                  onValueChange={(v) => setGroupBy(v as "vendor" | "manufacturer")}
-                >
-                  <SelectTrigger className="w-44">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="vendor">By vendor</SelectItem>
-                    <SelectItem value="manufacturer">By manufacturer</SelectItem>
-                  </SelectContent>
-                </Select>
-                {groupBy === "vendor" ? (
-                  <Select value={selectedVendorId} onValueChange={setSelectedVendorId}>
-                    <SelectTrigger className="w-60">
-                      <SelectValue placeholder="Select vendor" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {vendors.map((m) => (
-                        <SelectItem key={m.id} value={m.id}>
-                          {m.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                ) : (
-                  <Select value={selectedManufacturerId} onValueChange={setSelectedManufacturerId}>
-                    <SelectTrigger className="w-60">
-                      <SelectValue placeholder="Select manufacturer" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {manufacturers.map((m) => (
-                        <SelectItem key={m.id} value={m.id}>
-                          {m.companyName}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              </div>
+            <div className="mb-4 text-sm">
+              <p>
+                <span className="font-semibold text-gray-700">Vendor: </span>
+                {vendorLabel}
+              </p>
+              <p>
+                <span className="font-semibold text-gray-700">Period: </span>
+                {dateRangeLabel(dateFrom, dateTo)}
+              </p>
+              <p className="text-xs text-gray-500 mt-1">
+                {orders.length} order{orders.length !== 1 ? "s" : ""} in this report
+              </p>
             </div>
 
             {error && (
@@ -259,26 +344,29 @@ export default function CompanyPurchaseOrderPrintPage() {
               </div>
             ) : !orders.length ? (
               <div className="py-12 text-center text-sm text-gray-500">
-                No pending purchase orders for this selection.
+                No purchase orders match these filters.
               </div>
             ) : (
               <div className="border border-gray-200 rounded-md overflow-hidden">
                 <Table>
                   <TableHeader className="bg-gray-50 print:bg-gray-100">
                     <TableRow>
-                      <TableHead className="text-xs font-semibold text-gray-700">
-                        Item
-                      </TableHead>
-                      {groupBy === "vendor" && (
+                      {selectedVendorId === ALL_VENDORS && (
                         <TableHead className="text-xs font-semibold text-gray-700">
-                          Mfg.
+                          Vendor
                         </TableHead>
                       )}
                       <TableHead className="text-xs font-semibold text-gray-700">
-                        Barcode
+                        Item
                       </TableHead>
                       <TableHead className="text-xs font-semibold text-gray-700">
-                        Qty Ordered
+                        Mfg.
+                      </TableHead>
+                      <TableHead className="text-xs font-semibold text-gray-700">
+                        Status
+                      </TableHead>
+                      <TableHead className="text-xs font-semibold text-gray-700">
+                        Qty
                       </TableHead>
                       <TableHead className="text-xs font-semibold text-gray-700">
                         Order Date
@@ -288,16 +376,22 @@ export default function CompanyPurchaseOrderPrintPage() {
                   <TableBody>
                     {orders.map((order) => (
                       <TableRow key={order.id}>
-                        <TableCell className="text-xs">
-                          {order.inventoryItem?.name ?? "N/A"}
-                        </TableCell>
-                        {groupBy === "vendor" && (
+                        {selectedVendorId === ALL_VENDORS && (
                           <TableCell className="text-xs">
-                            {order.manufacturer?.companyName ?? "—"}
+                            {order.vendor?.name ?? "—"}
                           </TableCell>
                         )}
                         <TableCell className="text-xs">
-                          {order.inventoryItem?.barcode || "-"}
+                          {order.inventoryItem?.name ?? "N/A"}
+                        </TableCell>
+                        <TableCell className="text-xs">
+                          {order.manufacturer?.companyName ?? "—"}
+                        </TableCell>
+                        <TableCell className="text-xs print:[&_*]:border-0">
+                          <span className="print:hidden">{statusBadge(order.status)}</span>
+                          <span className="hidden print:inline capitalize text-[10px]">
+                            {order.status.toLowerCase()}
+                          </span>
                         </TableCell>
                         <TableCell className="text-xs">
                           {order.quantityOrdered}
@@ -326,7 +420,6 @@ export default function CompanyPurchaseOrderPrintPage() {
             background: white !important;
           }
 
-          /* Show only our dedicated print root */
           body * {
             visibility: hidden;
           }
@@ -345,4 +438,3 @@ export default function CompanyPurchaseOrderPrintPage() {
     </div>
   );
 }
-
