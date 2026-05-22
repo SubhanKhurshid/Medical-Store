@@ -70,7 +70,7 @@ export function ExpiringSoonBanner() {
     if (shouldShowToast) {
       sessionStorage.setItem(EXPIRING_TOAST_KEY, String(now));
       toast.warning(
-        `⚠️ ${expiringCount} item(s) expiring within 30 days — Reorder or discard to avoid waste.`,
+        `⚠️ ${expiringCount} item(s) expiring within 3 months — Reorder or discard to avoid waste.`,
         {
           duration: 15000,
           action: {
@@ -98,7 +98,7 @@ export function ExpiringSoonBanner() {
           </div>
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-semibold text-orange-900">
-              Expiring soon — {expiringCount} item{expiringCount !== 1 ? "s" : ""} within 30 days
+              Expiring soon — {expiringCount} item{expiringCount !== 1 ? "s" : ""} within 3 months
             </p>
             <p className="mt-0.5 truncate text-xs text-orange-800/90">
               Reorder to restock or discard to write off.

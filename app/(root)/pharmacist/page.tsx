@@ -287,7 +287,7 @@ const PharmacistPage = () => {
                   Expiring Soon
                 </h2>
                 <p className="text-xs text-gray-500 mt-0.5">
-                  Items expiring within 30 days — reorder or discard as needed.
+                  Items expiring within 3 months — reorder or discard as needed.
                 </p>
               </div>
               <div className="p-4 sm:p-5">

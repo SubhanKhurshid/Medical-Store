@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { format } from "date-fns";
 import Barcode from "react-barcode";
+import logo from "@/public/Ibrahim Clinic.png";
 
 const BARCODE_PLACEHOLDER = "00000";
 
@@ -20,14 +21,13 @@ interface ReceiptProps {
   discount: string;
   totalBill: number;
   discountedTotal: number;
-  /** Invoice number from backend after sale is created */
   invoiceNumber?: string | null;
-  /** Payment method used for this sale */
   paymentMethod?: PaymentMethodDisplay | string | null;
-  /** For cash sales: amount the customer gave (shows change due). */
   cashReceived?: number | null;
   customerName?: string;
   customerPhone?: string;
+  soldAt?: string | Date;
+  refundedAmount?: number;
 }
 
 const PAYMENT_LABELS: Record<string, string> = {
@@ -36,6 +36,18 @@ const PAYMENT_LABELS: Record<string, string> = {
   ONLINE: "Online",
   DONATION: "Donation",
   CREDIT: "Credit",
+};
+
+const row: React.CSSProperties = {
+  display: "flex",
+  justifyContent: "space-between",
+  gap: "4px",
+  lineHeight: 1.15,
+};
+
+const divider: React.CSSProperties = {
+  borderTop: "1px dashed #000",
+  margin: "3px 0",
 };
 
 export function Receipt({
@@ -48,17 +60,27 @@ export function Receipt({
   cashReceived,
   customerName,
   customerPhone,
+  soldAt,
+  refundedAmount,
 }: ReceiptProps) {
-  const orderNumber = invoiceNumber?.trim() || "— pending";
+  const orderNumber = invoiceNumber?.trim() || "—";
   const barcodeValue = invoiceNumber?.trim() || BARCODE_PLACEHOLDER;
-
-  const now = useMemo(() => new Date(), []);
-
-  const paymentLabel = paymentMethod ? (PAYMENT_LABELS[String(paymentMethod)] ?? String(paymentMethod)) : "Cash";
+  const saleDate = useMemo(
+    () => (soldAt ? new Date(soldAt) : new Date()),
+    [soldAt],
+  );
+  const refunded = Number(refundedAmount) || 0;
+  const paymentLabel = paymentMethod
+    ? (PAYMENT_LABELS[String(paymentMethod)] ?? String(paymentMethod))
+    : "Cash";
   const cashIn =
-    cashReceived != null && Number.isFinite(cashReceived) && cashReceived > 0 ? cashReceived : null;
+    cashReceived != null && Number.isFinite(cashReceived) && cashReceived > 0
+      ? cashReceived
+      : null;
   const changeDue =
-    cashIn != null && String(paymentMethod) === "CASH" ? Math.max(0, cashIn - discountedTotal) : 0;
+    cashIn != null && String(paymentMethod) === "CASH"
+      ? Math.max(0, cashIn - discountedTotal)
+      : 0;
 
   return (
     <div
@@ -67,156 +89,181 @@ export function Receipt({
         width: "80mm",
         maxWidth: "80mm",
         margin: "0 auto",
-        padding: "8px 4px",
+        padding: "4px 3px",
         backgroundColor: "white",
         fontFamily: "Arial, sans-serif",
-        fontSize: "12px",
-        lineHeight: "1.2",
+        fontSize: "10px",
+        lineHeight: 1.15,
         color: "black",
         pageBreakInside: "avoid",
         boxSizing: "border-box",
+        textAlign: "center",
       }}
     >
-      {/* Title */}
-      <div style={{ textAlign: "center", marginBottom: "8px" }}>
-        <h1 style={{ margin: "0", fontSize: "16px", fontWeight: "bold" }}>
-          NS Ibrahim Medical
-        </h1>
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          width: "100%",
+          marginBottom: "4px",
+        }}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={typeof logo === "string" ? logo : logo.src}
+          alt="S Medical"
+          style={{
+            display: "block",
+            margin: "0 auto",
+            width: "100%",
+            maxWidth: "46mm",
+            maxHeight: "22mm",
+            height: "auto",
+            objectFit: "contain",
+            objectPosition: "center center",
+          }}
+        />
         <div
           style={{
-            marginTop: "4px",
+            marginTop: "2px",
+            width: "100%",
             display: "flex",
             justifyContent: "center",
             alignItems: "center",
-            width: "100%",
           }}
         >
           <Barcode
             value={barcodeValue}
-            width={1.2}
-            height={40}
-            fontSize={12}
+            width={1}
+            height={28}
+            fontSize={10}
             margin={0}
           />
         </div>
       </div>
 
-      {/* Basic Info */}
-      <div style={{ fontSize: "11px", marginBottom: "8px" }}>
-        <div style={{ display: "flex", justifyContent: "space-between" }}>
-          <span>Invoice #:</span>
-          <span>{orderNumber}</span>
-        </div>
-        <div style={{ display: "flex", justifyContent: "space-between" }}>
-          <span>Order Date:</span>
-          <span>{format(now, "MM/dd/yyyy")}</span>
-        </div>
-        <div style={{ display: "flex", justifyContent: "space-between" }}>
-          <span>Order Time:</span>
-          <span>{format(now, "hh:mm:ss a")}</span>
-        </div>
-        <div style={{ display: "flex", justifyContent: "space-between" }}>
-          <span>Register:</span>
-          <span>1</span>
-        </div>
-        <div style={{ display: "flex", justifyContent: "space-between" }}>
-          <span>Order Type:</span>
-          <span>Quick Sale</span>
+      <div style={{ fontSize: "9px", marginBottom: "2px", width: "100%", textAlign: "left" }}>
+        <div style={row}>
+          <span>Inv # {orderNumber}</span>
+          <span>
+            {format(saleDate, "dd/MM/yy")} {format(saleDate, "h:mm a")}
+          </span>
         </div>
         {customerName && (
-          <div style={{ display: "flex", justifyContent: "space-between" }}>
-            <span>Customer:</span>
-            <span>{customerName}</span>
+          <div style={row}>
+            <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>
+              {customerName}
+            </span>
+            {customerPhone ? <span>{customerPhone}</span> : null}
           </div>
         )}
-        {customerPhone && (
-          <div style={{ display: "flex", justifyContent: "space-between" }}>
-            <span>Cell #:</span>
+        {!customerName && customerPhone && (
+          <div style={row}>
+            <span>Cell</span>
             <span>{customerPhone}</span>
           </div>
         )}
       </div>
 
-      <div style={{ borderTop: "1px dashed #000", margin: "4px 0" }}></div>
+      <div style={divider} />
 
-      {/* Items Table Header */}
-      <div style={{ display: "flex", fontWeight: "bold", fontSize: "11px", marginBottom: "4px" }}>
+      <div
+        style={{
+          display: "flex",
+          fontWeight: "bold",
+          fontSize: "9px",
+          marginBottom: "2px",
+          width: "100%",
+          textAlign: "left",
+        }}
+      >
         <span style={{ flex: 1 }}>Item</span>
-        <span style={{ width: "60px", textAlign: "right" }}>Total</span>
+        <span style={{ width: "52px", textAlign: "right" }}>Amt</span>
       </div>
 
-      <div style={{ borderTop: "1px dashed #000", margin: "4px 0" }}></div>
-
-      {/* Cart Items */}
-      <div style={{ marginBottom: "8px" }}>
-        {cart.map((item) => (
-          <div key={item.id} className="receipt-item" style={{ marginBottom: "6px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", fontWeight: "bold" }}>
-              <span>{item.name}</span>
-              <span>Rs {item.price.toFixed(2)}</span>
+      <div style={{ marginBottom: "3px", width: "100%", textAlign: "left" }}>
+        {cart.map((item) => {
+          const lineTotal = item.price * item.quantity;
+          return (
+            <div
+              key={item.id}
+              style={{
+                ...row,
+                marginBottom: "2px",
+                alignItems: "baseline",
+              }}
+            >
+              <span style={{ flex: 1, paddingRight: "4px" }}>
+                {item.name}{" "}
+                <span style={{ fontWeight: "normal", color: "#444" }}>
+                  x{item.quantity}
+                </span>
+              </span>
+              <span style={{ width: "52px", textAlign: "right", fontWeight: 600 }}>
+                {lineTotal.toFixed(0)}
+              </span>
             </div>
-            <div style={{ fontSize: "10px", color: "#555" }}>x {item.quantity}</div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
-      <div style={{ borderTop: "1px dashed #000", margin: "4px 0" }}></div>
+      <div style={divider} />
 
-      {/* Calculation info */}
-      <div style={{ fontSize: "11px", marginBottom: "8px" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "2px" }}>
+      <div style={{ fontSize: "9px", marginBottom: "3px", width: "100%", textAlign: "left" }}>
+        <div style={row}>
           <span>Subtotal</span>
           <span>Rs {totalBill.toFixed(2)}</span>
         </div>
         {Number(discount) > 0 && (
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "2px", fontWeight: "bold", color: "#d32f2f" }}>
-            <span>Discount ({discount}%)</span>
+          <div style={{ ...row, color: "#c62828", fontWeight: 600 }}>
+            <span>Disc ({discount}%)</span>
             <span>- Rs {(totalBill - discountedTotal).toFixed(2)}</span>
           </div>
         )}
-        <div style={{ display: "flex", justifyContent: "space-between", fontWeight: "bold", fontSize: "13px", marginTop: "4px" }}>
+        <div style={{ ...row, fontWeight: "bold", fontSize: "11px" }}>
           <span>Total</span>
           <span>Rs {discountedTotal.toFixed(2)}</span>
         </div>
       </div>
 
-      <div style={{ borderTop: "1px dashed #000", margin: "4px 0" }}></div>
+      <div style={divider} />
 
-      {/* Payment and Change */}
-      <div style={{ fontSize: "11px", marginBottom: "8px" }}>
-        <div style={{ display: "flex", justifyContent: "space-between" }}>
-          <span>Payment ({paymentLabel})</span>
+      <div style={{ fontSize: "9px", marginBottom: "3px", width: "100%", textAlign: "left" }}>
+        <div style={row}>
+          <span>Pay ({paymentLabel})</span>
           <span>Rs {discountedTotal.toFixed(2)}</span>
         </div>
         {cashIn != null && String(paymentMethod) === "CASH" && (
-          <div style={{ display: "flex", justifyContent: "space-between" }}>
-            <span>Cash received</span>
-            <span>Rs {cashIn.toFixed(2)}</span>
-          </div>
+          <>
+            <div style={row}>
+              <span>Cash in</span>
+              <span>Rs {cashIn.toFixed(2)}</span>
+            </div>
+            <div style={{ ...row, fontWeight: "bold" }}>
+              <span>Change</span>
+              <span>Rs {changeDue.toFixed(2)}</span>
+            </div>
+          </>
         )}
-        <div style={{ display: "flex", justifyContent: "space-between" }}>
-          <span>CHANGE DUE</span>
-          <span>
-            Rs{" "}
-            {cashIn != null && String(paymentMethod) === "CASH"
-              ? changeDue.toFixed(2)
-              : "0.00"}
-          </span>
-        </div>
       </div>
 
-      {/* Footer in Urdu */}
+      {refunded > 0 && (
+        <div style={{ fontSize: "9px", textAlign: "center", fontWeight: "bold" }}>
+          Refunded: Rs {refunded.toFixed(2)}
+        </div>
+      )}
+
       <div
         style={{
-          marginTop: "2rem",
-          paddingTop: "0.8rem",
+          marginTop: "6px",
+          paddingTop: "4px",
           borderTop: "1px solid black",
           textAlign: "center",
           direction: "rtl",
-          fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
         }}
       >
-        <p style={{ margin: "4px 0", fontSize: "14px", fontWeight: "bold" }}>
+        <p style={{ margin: 0, fontSize: "11px", fontWeight: "bold" }}>
           ادویات ڈاکٹر کے مشورے سے استعمال کریں۔
         </p>
       </div>

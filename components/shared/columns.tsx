@@ -1,5 +1,6 @@
 import { ColumnDef } from "@tanstack/react-table";
 import { InventoryItem } from "@/app/context/InventoryContext";
+import { isLowStock } from "@/lib/low-stock";
 import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
@@ -78,7 +79,7 @@ export const inventoryColumns: ColumnDef<InventoryItem>[] = [
       const qty = row.getValue("quantity") as number;
       const min = row.original.minimumStock ?? 0;
       const excluded = row.original.excludeFromLowStockAlerts === true;
-      const isLow = min > 0 && qty < min && !excluded;
+      const isLow = !excluded && isLowStock(qty, min);
       if (isLow) {
         return (
           <div className="inline-flex items-center gap-1.5 rounded-md bg-destructive/10 px-2 py-1 border border-destructive/20">
