@@ -48,6 +48,8 @@ const PAYMENT_LABELS: Record<string, string> = {
   CREDIT: "Credit",
 };
 
+const PAYMENT_METHOD_ORDER = ["CASH", "CARD", "ONLINE", "DONATION", "CREDIT"] as const;
+
 type DateRangeMode = "all" | "day" | "month" | "year" | "custom";
 
 interface Sale extends SaleForReceipt {
@@ -255,8 +257,42 @@ const SalesTable = () => {
       doc.text(`Generated: ${new Date().toLocaleString("en-GB")}`, margin, y);
       y += 20;
 
+      const totals = displaySales.reduce(
+        (acc, sale) => {
+          const total = Number(sale.totalPrice) || 0;
+          const refunded = Number(sale.refundedAmount) || 0;
+          acc.total += total;
+          acc.refunded += refunded;
+          acc.net += total - refunded;
+          return acc;
+        },
+        { total: 0, refunded: 0, net: 0 },
+      );
+
+      const paymentSummary = PAYMENT_METHOD_ORDER.map((method) => {
+        const methodRows = displaySales.filter((sale) => sale.paymentMethod === method);
+        const methodTotals = methodRows.reduce(
+          (acc, sale) => {
+            const total = Number(sale.totalPrice) || 0;
+            const refunded = Number(sale.refundedAmount) || 0;
+            acc.total += total;
+            acc.refunded += refunded;
+            acc.net += total - refunded;
+            return acc;
+          },
+          { total: 0, refunded: 0, net: 0 },
+        );
+
+        return {
+          method,
+          count: methodRows.length,
+          ...methodTotals,
+        };
+      });
+
       const body = displaySales.map((s) => {
         const refunded = Number(s.refundedAmount) || 0;
+        const net = (Number(s.totalPrice) || 0) - refunded;
         return [
           s.invoiceNumber ?? "—",
           new Date(s.soldAt).toLocaleString("en-GB"),
@@ -265,15 +301,59 @@ const SalesTable = () => {
           PAYMENT_LABELS[s.paymentMethod as string] ?? s.paymentMethod ?? "—",
           formatCurrency(s.totalPrice),
           refunded > 0 ? formatCurrency(refunded) : "—",
+          formatCurrency(net),
         ];
       });
 
       autoTable(doc, {
-        head: [["Invoice #", "Date", "Customer", "Phone", "Payment", "Total", "Refunded"]],
+        head: [["Invoice #", "Date", "Customer", "Phone", "Payment", "Total", "Refunded", "Net"]],
         body,
+        foot: [
+          [
+            "Totals",
+            "—",
+            "—",
+            "—",
+            `${displaySales.length} payments`,
+            formatCurrency(totals.total),
+            formatCurrency(totals.refunded),
+            formatCurrency(totals.net),
+          ],
+        ],
         startY: y,
         styles: { fontSize: 8, cellPadding: 5 },
         headStyles: { fillColor: [185, 28, 28], textColor: 255 },
+        footStyles: { fillColor: [243, 244, 246], textColor: 17, fontStyle: "bold" },
+        margin: { left: margin, right: margin },
+      });
+
+      const finalY =
+        (doc as unknown as { lastAutoTable?: { finalY?: number } }).lastAutoTable?.finalY ??
+        y;
+
+      autoTable(doc, {
+        head: [["Payment method", "Payments", "Total", "Refunded", "Net"]],
+        body: [
+          ...paymentSummary.map((row) => [
+            PAYMENT_LABELS[row.method],
+            String(row.count),
+            formatCurrency(row.total),
+            formatCurrency(row.refunded),
+            formatCurrency(row.net),
+          ]),
+          [
+            "All",
+            String(displaySales.length),
+            formatCurrency(totals.total),
+            formatCurrency(totals.refunded),
+            formatCurrency(totals.net),
+          ],
+        ],
+        startY: finalY + 18,
+        styles: { fontSize: 8, cellPadding: 5 },
+        headStyles: { fillColor: [127, 29, 29], textColor: 255 },
+        bodyStyles: { textColor: 30 },
+        alternateRowStyles: { fillColor: [249, 250, 251] },
         margin: { left: margin, right: margin },
       });
 

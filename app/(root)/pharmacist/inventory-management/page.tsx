@@ -40,6 +40,24 @@ function apiErrorMessage(err: unknown): string {
   return "Something went wrong. Please try again.";
 }
 
+function money(n: number) {
+  return new Intl.NumberFormat("en-PK", {
+    style: "currency",
+    currency: "PKR",
+    maximumFractionDigits: 2,
+  }).format(n);
+}
+
+function parseFormNumber(value: unknown) {
+  if (value === "" || value === undefined || value === null) return 0;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function clampPercent(n: number) {
+  return Math.min(100, Math.max(0, n));
+}
+
 // Coerce empty string to number; used for optional numeric fields (default 0)
 const optionalNum = (min = 0) =>
   z
@@ -176,6 +194,36 @@ export default function InventoryManagement() {
       unit: "",
     } as unknown as FormValues,
   });
+
+  const watchedPurchasePrice = form.watch("purchasePrice");
+  const watchedSellingPrice = form.watch("price");
+  const watchedManufacturerDiscount = form.watch("manufacturerDiscount");
+  const watchedSpecialCompanyDiscount = form.watch("specialCompanyDiscount");
+  const watchedCustomerDiscount = form.watch("customerDiscount");
+
+  const purchasePricePreview = parseFormNumber(watchedPurchasePrice);
+  const sellingPricePreview = parseFormNumber(watchedSellingPrice);
+  const manufacturerDiscountPreview = clampPercent(
+    parseFormNumber(watchedManufacturerDiscount),
+  );
+  const specialCompanyDiscountPreview = clampPercent(
+    parseFormNumber(watchedSpecialCompanyDiscount),
+  );
+  const customerDiscountPreview = clampPercent(
+    parseFormNumber(watchedCustomerDiscount),
+  );
+  const netPurchasePreview =
+    purchasePricePreview *
+    (1 - manufacturerDiscountPreview / 100) *
+    (1 - specialCompanyDiscountPreview / 100);
+  const netSellingPreview =
+    sellingPricePreview * (1 - customerDiscountPreview / 100);
+  const profitPerUnitPreview = netSellingPreview - netPurchasePreview;
+  const profitPercentPreview =
+    netPurchasePreview > 0
+      ? (profitPerUnitPreview / netPurchasePreview) * 100
+      : 0;
+  const showProfitPreview = purchasePricePreview > 0 && sellingPricePreview > 0;
 
   useEffect(() => {
     const fetchManufacturers = async () => {
@@ -463,6 +511,53 @@ export default function InventoryManagement() {
                   <span className="text-red-500 text-sm">{form.formState.errors.price.message}</span>
                 )}
               </div>
+
+              {showProfitPreview && (
+                <div className="md:col-span-2 rounded-xl border border-emerald-200 bg-emerald-50/60 p-4 shadow-sm">
+                  <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                    <div>
+                      <p className="text-sm font-semibold text-emerald-900">
+                        Estimated profit per item
+                      </p>
+                      <p className="text-xs text-emerald-700">
+                        Uses net purchase and net selling after entered discounts.
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-3">
+                      <div className="rounded-lg bg-white/80 px-3 py-2">
+                        <p className="text-xs text-gray-500">Net cost</p>
+                        <p className="font-semibold text-gray-900">
+                          {money(netPurchasePreview)}
+                        </p>
+                      </div>
+                      <div className="rounded-lg bg-white/80 px-3 py-2">
+                        <p className="text-xs text-gray-500">Profit</p>
+                        <p
+                          className={
+                            profitPerUnitPreview >= 0
+                              ? "font-semibold text-emerald-700"
+                              : "font-semibold text-red-700"
+                          }
+                        >
+                          {money(profitPerUnitPreview)}
+                        </p>
+                      </div>
+                      <div className="rounded-lg bg-white/80 px-3 py-2">
+                        <p className="text-xs text-gray-500">Profit %</p>
+                        <p
+                          className={
+                            profitPercentPreview >= 0
+                              ? "font-semibold text-emerald-700"
+                              : "font-semibold text-red-700"
+                          }
+                        >
+                          {profitPercentPreview.toFixed(2)}%
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* 9 — Vendor Discount */}
               <div className="flex flex-col gap-2">

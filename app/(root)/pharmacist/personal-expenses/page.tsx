@@ -34,13 +34,15 @@ import {
 import { toast } from "sonner";
 import axios from "axios";
 
+const OTHER_EXPENSE_NAME = "Other expenses";
+
 const QUICK_NAMES = [
   "Electricity bill",
   "Gas bill",
   "Salaries",
   "Full expenses",
   "Mobile expenses",
-  "Other expenses",
+  OTHER_EXPENSE_NAME,
 ];
 
 /** Visible fields in dialogs (default shadcn border too faint). */
@@ -52,9 +54,14 @@ const SELECT_CLASS =
 
 const LABEL_CLASS = "text-sm font-semibold text-gray-800";
 
+function isOtherExpenseName(value: string) {
+  return value.trim().toLowerCase() === OTHER_EXPENSE_NAME.toLowerCase();
+}
+
 export interface PersonalExpenseRow {
   id: string;
   name: string;
+  otherExpenseDetail: string | null;
   expenseDate: string;
   accountNumber: string | null;
   debit: number;
@@ -91,11 +98,13 @@ export default function PersonalExpensesPage() {
   const [deleting, setDeleting] = useState(false);
 
   const [name, setName] = useState("");
+  const [otherExpenseDetail, setOtherExpenseDetail] = useState("");
   const [expenseDate, setExpenseDate] = useState(toDateInput(new Date()));
   const [accountNumber, setAccountNumber] = useState("");
   const [debit, setDebit] = useState("");
   const [credit, setCredit] = useState("");
   const [notes, setNotes] = useState("");
+  const isOtherExpense = isOtherExpenseName(name);
 
   const fetchRows = useCallback(async () => {
     if (!token) return;
@@ -140,6 +149,7 @@ export default function PersonalExpensesPage() {
   const resetForm = () => {
     setEditId(null);
     setName("");
+    setOtherExpenseDetail("");
     setExpenseDate(toDateInput(new Date()));
     setAccountNumber("");
     setDebit("");
@@ -155,6 +165,7 @@ export default function PersonalExpensesPage() {
   const openEdit = (row: PersonalExpenseRow) => {
     setEditId(row.id);
     setName(row.name);
+    setOtherExpenseDetail(row.otherExpenseDetail ?? "");
     setExpenseDate(toDateInput(new Date(row.expenseDate)));
     setAccountNumber(row.accountNumber ?? "");
     setDebit(row.debit > 0 ? String(row.debit) : "");
@@ -171,6 +182,11 @@ export default function PersonalExpensesPage() {
       toast.error("Name required");
       return;
     }
+    const cleanOtherExpenseDetail = otherExpenseDetail.trim();
+    if (isOtherExpense && !cleanOtherExpenseDetail) {
+      toast.error("Add what the other expense was about");
+      return;
+    }
     if (d <= 0 && c <= 0) {
       toast.error("Enter debit or credit");
       return;
@@ -179,6 +195,7 @@ export default function PersonalExpensesPage() {
     try {
       const body = {
         name: name.trim(),
+        otherExpenseDetail: isOtherExpense ? cleanOtherExpenseDetail : null,
         expenseDate,
         accountNumber: accountNumber.trim() || undefined,
         debit: d,
@@ -372,6 +389,7 @@ export default function PersonalExpensesPage() {
                   <thead>
                     <tr className="bg-red-50/80 border-b text-left text-red-900">
                       <th className="p-3 font-semibold">Name</th>
+                      <th className="p-3 font-semibold">About</th>
                       <th className="p-3 font-semibold">Date</th>
                       <th className="p-3 font-semibold">Account no</th>
                       <th className="p-3 font-semibold text-right">Debit</th>
@@ -386,7 +404,7 @@ export default function PersonalExpensesPage() {
                     {rows.length === 0 ? (
                       <tr>
                         <td
-                          colSpan={7}
+                          colSpan={8}
                           className="p-8 text-center text-gray-500"
                         >
                           No expenses yet. Add electricity, gas, salaries, etc.
@@ -399,6 +417,7 @@ export default function PersonalExpensesPage() {
                           className="border-b hover:bg-gray-50/50"
                         >
                           <td className="p-3">{row.name}</td>
+                          <td className="p-3">{row.otherExpenseDetail || "—"}</td>
                           <td className="p-3 whitespace-nowrap">
                             {new Date(row.expenseDate).toLocaleDateString(
                               "en-PK",
@@ -444,7 +463,7 @@ export default function PersonalExpensesPage() {
                   {rows.length > 0 && (
                     <tfoot>
                       <tr className="bg-gray-50 font-semibold border-t">
-                        <td colSpan={3} className="p-3 text-right">
+                        <td colSpan={4} className="p-3 text-right">
                           Totals
                         </td>
                         <td className="p-3 text-right">
@@ -490,7 +509,10 @@ export default function PersonalExpensesPage() {
               <Label className={LABEL_CLASS}>Quick pick</Label>
               <Select
                 onValueChange={(v) => {
-                  if (v !== "__none__") setName(v);
+                  if (v !== "__none__") {
+                    setName(v);
+                    if (!isOtherExpenseName(v)) setOtherExpenseDetail("");
+                  }
                 }}
                 value={QUICK_NAMES.includes(name) ? name : "__none__"}
               >
@@ -519,6 +541,21 @@ export default function PersonalExpensesPage() {
                 className={FIELD_CLASS}
               />
             </div>
+
+            {isOtherExpense && (
+              <div className="space-y-1.5">
+                <Label className={LABEL_CLASS}>
+                  Other expense was about{" "}
+                  <span className="text-red-600">*</span>
+                </Label>
+                <Input
+                  value={otherExpenseDetail}
+                  onChange={(e) => setOtherExpenseDetail(e.target.value)}
+                  placeholder="e.g. Petrol, repairs, tea"
+                  className={FIELD_CLASS}
+                />
+              </div>
+            )}
 
             <div className="space-y-1.5">
               <Label className={LABEL_CLASS}>
