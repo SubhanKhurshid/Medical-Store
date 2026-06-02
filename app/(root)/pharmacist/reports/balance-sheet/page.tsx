@@ -6,7 +6,7 @@ import { motion, animate, AnimatePresence } from "framer-motion";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { ArrowLeft, Plus, Trash2, Check, AlertTriangle, Settings2, ChevronDown, RefreshCw } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Check, AlertTriangle, Settings2, ChevronDown, RefreshCw, Download } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -155,6 +155,7 @@ export default function BalanceSheetPage() {
   const [newExpense, setNewExpense]           = useState({ label: "", amount: "" });
   const [addingExpense, setAddingExpense]     = useState(false);
   const [savingExpense, setSavingExpense]     = useState(false);
+  const [exportingPdf, setExportingPdf]       = useState(false);
 
   const hdrs = useCallback(() => ({ Authorization: `Bearer ${user?.access_token}` }), [user?.access_token]);
 
@@ -333,6 +334,183 @@ export default function BalanceSheetPage() {
     await fetchAccruedExpenses(); await fetchBS();
   }
 
+  const exportPdf = useCallback(async () => {
+    if (!data) return;
+    setExportingPdf(true);
+    try {
+      const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
+        import("jspdf"),
+        import("jspdf-autotable"),
+      ]);
+      const doc = new jsPDF({ orientation: "portrait", unit: "pt", format: "a4" });
+      const margin = 40;
+      let y = margin;
+
+      // Header
+      doc.setFontSize(18);
+      doc.setTextColor(127, 29, 29);
+      doc.text("Balance Sheet", margin, y);
+      y += 24;
+      doc.setFontSize(10);
+      doc.setTextColor(80, 80, 80);
+      doc.text(`Net Profit Period: ${from}  →  ${to}`, margin, y);
+      y += 14;
+      doc.text(`Generated: ${new Date().toLocaleString()}`, margin, y);
+      y += 20;
+
+      // Summary
+      doc.setFontSize(9);
+      doc.setFont("helvetica", "bold");
+      doc.text(`Total Assets: ${fmt(data.assets.total)}`, margin, y);
+      doc.text(`Total Liabilities: ${fmt(data.liabilities.total)}`, margin + 160, y);
+      doc.text(`Total Equity: ${fmt(data.equity.total)}`, margin + 320, y);
+      y += 14;
+      doc.text(`Balance Check: ${data.balanced ? "BALANCED" : "NOT BALANCED"}`, margin, y);
+      doc.setFont("helvetica", "normal");
+      y += 20;
+
+      // Assets table
+      doc.setFontSize(11);
+      doc.setTextColor(30, 64, 175);
+      doc.text("1. Assets", margin, y);
+      y += 6;
+
+      const assetRows: (string | number)[][] = [
+        ["CURRENT ASSETS", ""],
+        ["Cash in Hand", fmt(data.assets.current.cashInHand)],
+        ["Cash at Bank", fmt(data.assets.current.cashAtBank)],
+        ["Good Stock (Fresh Dawaiyan)", fmt(data.assets.current.goodStock)],
+        ["Less: Expired / Damaged Stock", `(${fmt(data.assets.current.expiredStock)})`],
+        ["Net Inventory", fmt(data.assets.current.netInventory)],
+        ["Accounts Receivable (Udhar)", fmt(data.assets.current.accountsReceivable)],
+        ["Total Current Assets", fmt(data.assets.current.total)],
+        ["FIXED ASSETS", ""],
+        ...data.assets.fixed.items.flatMap(a => [
+          [a.name, ""],
+          [`  Initial Cost`, fmt(a.initialCost)],
+          [`  Less: Depreciation (${a.depreciationRate}%)`, `(${fmt(a.depreciation)})`],
+          [`  Net Book Value`, fmt(a.netValue)],
+        ]),
+        ["Total Fixed Assets", fmt(data.assets.fixed.total)],
+        ["TOTAL ASSETS", fmt(data.assets.total)],
+      ];
+
+      autoTable(doc, {
+        head: [["Description", "Amount (PKR)"]],
+        body: assetRows,
+        startY: y,
+        styles: { fontSize: 8, cellPadding: 4 },
+        headStyles: { fillColor: [30, 64, 175], textColor: 255 },
+        columnStyles: { 0: { cellWidth: 350 }, 1: { halign: "right", cellWidth: 150 } },
+        didParseCell(data) {
+          const val = data.row.raw as string[];
+          if (val[1] === "" && data.column.index === 0) {
+            data.cell.styles.fontStyle = "bold";
+            data.cell.styles.fillColor = [241, 245, 249];
+            data.cell.styles.textColor = [71, 85, 105];
+            data.cell.styles.fontSize = 7;
+          }
+          if (val[0] === "TOTAL ASSETS") {
+            data.cell.styles.fontStyle = "bold";
+            data.cell.styles.fillColor = [30, 64, 175];
+            data.cell.styles.textColor = [255, 255, 255];
+          }
+          if (val[0].startsWith("Total ")) {
+            data.cell.styles.fontStyle = "bold";
+          }
+        },
+        margin: { left: margin, right: margin },
+      });
+
+      y = (doc as any).lastAutoTable.finalY + 20;
+
+      // Liabilities table
+      doc.setFontSize(11);
+      doc.setTextColor(185, 28, 28);
+      doc.text("2. Liabilities", margin, y);
+      y += 6;
+
+      const liabilityRows: (string | number)[][] = [
+        ["ACCOUNTS PAYABLE", ""],
+        ...data.liabilities.accountsPayable.map(v => [v.name, fmt(v.balance)]),
+        ["Total Accounts Payable", fmt(data.liabilities.totalAccountsPayable)],
+        ["ACCRUED EXPENSES", ""],
+        ...data.liabilities.accruedExpenses.map(e => [e.label, fmt(e.amount)]),
+        ["Total Accrued Expenses", fmt(data.liabilities.totalAccruedExpenses)],
+        ["TOTAL LIABILITIES", fmt(data.liabilities.total)],
+      ];
+
+      autoTable(doc, {
+        head: [["Description", "Amount (PKR)"]],
+        body: liabilityRows,
+        startY: y,
+        styles: { fontSize: 8, cellPadding: 4 },
+        headStyles: { fillColor: [185, 28, 28], textColor: 255 },
+        columnStyles: { 0: { cellWidth: 350 }, 1: { halign: "right", cellWidth: 150 } },
+        didParseCell(data) {
+          const val = data.row.raw as string[];
+          if (val[1] === "" && data.column.index === 0) {
+            data.cell.styles.fontStyle = "bold";
+            data.cell.styles.fillColor = [241, 245, 249];
+            data.cell.styles.textColor = [71, 85, 105];
+            data.cell.styles.fontSize = 7;
+          }
+          if (val[0] === "TOTAL LIABILITIES") {
+            data.cell.styles.fontStyle = "bold";
+            data.cell.styles.fillColor = [185, 28, 28];
+            data.cell.styles.textColor = [255, 255, 255];
+          }
+          if (val[0].startsWith("Total ")) {
+            data.cell.styles.fontStyle = "bold";
+          }
+        },
+        margin: { left: margin, right: margin },
+      });
+
+      y = (doc as any).lastAutoTable.finalY + 20;
+
+      // Equity table
+      doc.setFontSize(11);
+      doc.setTextColor(21, 128, 61);
+      doc.text("3. Owner's Equity", margin, y);
+      y += 6;
+
+      const equityRows: (string | number)[][] = [
+        ["Capital (Initial Investment)", fmt(data.equity.capital)],
+        [`Net Profit / Retained Earnings (${from} → ${to})`, fmt(data.equity.netProfit)],
+        ["Total Equity", fmt(data.equity.total)],
+        ["TOTAL LIABILITIES & EQUITY", fmt(data.totalLiabilitiesAndEquity)],
+      ];
+
+      autoTable(doc, {
+        head: [["Description", "Amount (PKR)"]],
+        body: equityRows,
+        startY: y,
+        styles: { fontSize: 8, cellPadding: 4 },
+        headStyles: { fillColor: [21, 128, 61], textColor: 255 },
+        columnStyles: { 0: { cellWidth: 350 }, 1: { halign: "right", cellWidth: 150 } },
+        didParseCell(data) {
+          const val = data.row.raw as string[];
+          if (val[0] === "TOTAL LIABILITIES & EQUITY") {
+            data.cell.styles.fontStyle = "bold";
+            data.cell.styles.fillColor = [127, 29, 29];
+            data.cell.styles.textColor = [255, 255, 255];
+          }
+          if (val[0].startsWith("Total ")) {
+            data.cell.styles.fontStyle = "bold";
+          }
+        },
+        margin: { left: margin, right: margin },
+      });
+
+      doc.save(`balance-sheet-${from}-to-${to}.pdf`);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setExportingPdf(false);
+    }
+  }, [data, from, to]);
+
   return (
     <>
     <style>{`
@@ -374,6 +552,15 @@ export default function BalanceSheetPage() {
               <Input type="date" value={to} onChange={e => setTo(e.target.value)} className="h-8 text-sm w-36" />
               <Button size="sm" onClick={fetchBS} className="bg-red-800 hover:bg-red-700 text-white h-8 gap-1.5">
                 <RefreshCw className="h-3.5 w-3.5" /> Refresh
+              </Button>
+              <Button
+                type="button" variant="outline" size="sm"
+                className="border-red-200 text-red-800 hover:bg-red-50 h-8 gap-1.5"
+                disabled={!data || exportingPdf}
+                onClick={() => void exportPdf()}
+              >
+                <Download className="h-3.5 w-3.5" />
+                {exportingPdf ? "Preparing PDF…" : "Export PDF"}
               </Button>
             </div>
           </div>
