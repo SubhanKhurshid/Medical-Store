@@ -13,6 +13,7 @@ import {
   Building2,
   Truck,
   Receipt,
+  Scale,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -96,6 +97,14 @@ const reportCards = [
     icon: Truck,
     color: "text-teal-600",
     bg: "bg-teal-50",
+  },
+  {
+    title: "Balance Sheet",
+    description: "Assets, liabilities, and equity — full financial snapshot with balance check.",
+    href: "/pharmacist/reports/balance-sheet",
+    icon: Scale,
+    color: "text-emerald-600",
+    bg: "bg-emerald-50",
   },
 ];
 
