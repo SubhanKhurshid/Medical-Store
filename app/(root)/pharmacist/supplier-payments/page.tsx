@@ -20,6 +20,7 @@ import {
 import { useAuth } from "@/app/providers/AuthProvider";
 import { toast } from "sonner";
 import axios from "axios";
+import { PaginationControls } from "@/components/shared/PaginationControls";
 
 interface Payment {
     id: string;
@@ -36,6 +37,10 @@ const SupplierPayments = () => {
     const [payments, setPayments] = useState<Payment[]>([]);
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [page, setPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+    const [total, setTotal] = useState(0);
+    const LIMIT = 20;
     const [editPayment, setEditPayment] = useState<SupplierPaymentEdit | null>(null);
     const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
     const [paymentToDelete, setPaymentToDelete] = useState<Payment | null>(null);
@@ -43,7 +48,7 @@ const SupplierPayments = () => {
     const { user } = useAuth();
     const accessToken = user?.access_token;
 
-    const fetchPayments = useCallback(async () => {
+    const fetchPayments = useCallback(async (targetPage = 1) => {
         setLoading(true);
         try {
             const headers: HeadersInit = {};
@@ -52,15 +57,16 @@ const SupplierPayments = () => {
             }
 
             const response = await fetch(
-                `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/supplier-payments`,
+                `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/supplier-payments?page=${targetPage}&limit=${LIMIT}`,
                 { headers },
             );
             if (!response.ok) {
                 throw new Error("Failed to fetch payments");
             }
 
-            const data = await response.json();
-            const mappedData = data.map((item: {
+            const result = await response.json();
+            const items = result.data ?? result;
+            const mappedData = items.map((item: {
                 id: string;
                 vendorId?: string;
                 vendor?: { id: string; name: string };
@@ -83,16 +89,20 @@ const SupplierPayments = () => {
             }));
 
             setPayments(mappedData);
+            if (result.meta) {
+                setTotalPages(result.meta.totalPages);
+                setTotal(result.meta.total);
+            }
         } catch (error) {
             console.error("Error fetching payments:", error);
             toast.error("Failed to load supplier payments");
         } finally {
             setLoading(false);
         }
-    }, [accessToken]);
+    }, [accessToken, LIMIT]);
 
     useEffect(() => {
-        fetchPayments();
+        fetchPayments(1);
     }, [fetchPayments]);
 
     const openCreateModal = () => {
@@ -291,6 +301,17 @@ const SupplierPayments = () => {
                                 </motion.div>
                             )}
                         </AnimatePresence>
+                        <PaginationControls
+                            page={page}
+                            totalPages={totalPages}
+                            total={total}
+                            limit={LIMIT}
+                            loading={loading}
+                            onPageChange={(p) => {
+                                setPage(p);
+                                fetchPayments(p);
+                            }}
+                        />
                     </CardContent>
                 </Card>
 

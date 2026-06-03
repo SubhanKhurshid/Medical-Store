@@ -45,6 +45,7 @@ import axios from "axios";
 import { dispatchLowStockInvalidated } from "@/lib/low-stock-events";
 import { TableEmptyState } from "@/components/shared/TableEmptyState";
 import { FileText } from "lucide-react";
+import { PaginationControls } from "@/components/shared/PaginationControls";
 
 interface PurchaseOrder {
   id: string;
@@ -79,6 +80,10 @@ export default function ViewPurchaseOrdersPage() {
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [serverPage, setServerPage] = useState(1);
+  const [serverTotalPages, setServerTotalPages] = useState(1);
+  const [serverTotal, setServerTotal] = useState(0);
+  const SERVER_LIMIT = 50;
   const [selectedRow, setSelectedRow] = useState<PurchaseOrder | null>(null);
   const [search, setSearch] = useState("");
   const [dateFrom, setDateFrom] = useState("");
@@ -256,38 +261,41 @@ export default function ViewPurchaseOrdersPage() {
     },
   });
 
-  useEffect(() => {
-    const fetchPurchaseOrders = async () => {
-      try {
-        setLoading(true);
-        const { data } = await axios.get(
-          `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/purchase-orders`
-        );
+  const fetchPurchaseOrders = async (targetPage = serverPage) => {
+    try {
+      setLoading(true);
+      const { data: response } = await axios.get(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/purchase-orders?page=${targetPage}&limit=${SERVER_LIMIT}`
+      );
 
-        const transformedData = data.map((order: any) => ({
-          ...order,
-          itemName: order.inventoryItem?.name || "N/A",
-          manufacturer: order.manufacturer?.companyName || "N/A",
-          vendorName: order.vendor?.name || "—",
-          orderDate: order.orderDate ?? order.createdAt,
-          orderNumber: `PO-${new Date(
-            order.createdAt
-          ).getFullYear()}-${order.id.slice(-4)}`,
-        }));
+      const orders = response.data ?? response;
+      const transformedData = orders.map((order: any) => ({
+        ...order,
+        itemName: order.inventoryItem?.name || "N/A",
+        manufacturer: order.manufacturer?.companyName || "N/A",
+        vendorName: order.vendor?.name || "—",
+        orderDate: order.orderDate ?? order.createdAt,
+        orderNumber: `PO-${new Date(order.createdAt).getFullYear()}-${order.id.slice(-4)}`,
+      }));
 
-        setPurchaseOrders(transformedData);
-      } catch (error) {
-        console.error("Error fetching purchase orders:", error);
-        setError(
-          axios.isAxiosError(error)
-            ? error.response?.data?.message || "Failed to load orders"
-            : "Failed to load orders"
-        );
-      } finally {
-        setLoading(false);
+      setPurchaseOrders(transformedData);
+      if (response.meta) {
+        setServerTotalPages(response.meta.totalPages);
+        setServerTotal(response.meta.total);
       }
-    };
+    } catch (error) {
+      console.error("Error fetching purchase orders:", error);
+      setError(
+        axios.isAxiosError(error)
+          ? error.response?.data?.message || "Failed to load orders"
+          : "Failed to load orders"
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchPurchaseOrders();
   }, []);
 
@@ -537,6 +545,18 @@ export default function ViewPurchaseOrdersPage() {
           </div>
           </CardContent>
         </Card>
+
+        <PaginationControls
+          page={serverPage}
+          totalPages={serverTotalPages}
+          total={serverTotal}
+          limit={SERVER_LIMIT}
+          loading={loading}
+          onPageChange={(p) => {
+            setServerPage(p);
+            fetchPurchaseOrders(p);
+          }}
+        />
 
       {/* Order Details Dialog - Would be expanded with more details in a real application */}
       <Dialog open={!!selectedRow} onOpenChange={closeModal}>

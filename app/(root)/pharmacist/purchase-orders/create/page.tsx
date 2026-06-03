@@ -303,7 +303,7 @@ export default function CreatePurchaseOrdersPage() {
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist`,
         { headers }
       );
-      const rows = Array.isArray(res.data) ? res.data : [];
+      const rows = Array.isArray(res.data) ? res.data : (res.data?.data ?? []);
       setAllInventory(
         rows.map((r: {
           id: string;

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -37,6 +37,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Receipt } from "@/components/Receipt";
 import Loading from "@/components/shared/Loading";
 import { useReactToPrint } from "react-to-print";
+import { PaginationControls } from "@/components/shared/PaginationControls";
 
 interface Product {
   id: string;
@@ -54,7 +55,13 @@ interface CartItem extends Product {
 
 const SalesPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
-  const [searchResults, setSearchResults] = useState<Product[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [productCache, setProductCache] = useState<Map<string, Product>>(new Map());
+  const [productPage, setProductPage] = useState(1);
+  const [productTotalPages, setProductTotalPages] = useState(1);
+  const [productTotal, setProductTotal] = useState(0);
+  const PRODUCT_LIMIT = 20;
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout>>();
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
   const [discount, setDiscount] = useState<string>("");
@@ -65,12 +72,12 @@ const SalesPage = () => {
   const [paymentMethod, setPaymentMethod] = useState<"CASH" | "CARD" | "ONLINE" | "DONATION" | "CREDIT">("CASH");
   const [completedSale, setCompletedSale] = useState<{ invoiceNumber: string; paymentMethod: string } | null>(null);
   const [isStockErrorOpen, setIsStockErrorOpen] = useState(false);
-  const [products, setProducts] = useState<Product[]>([]);
   const { user } = useAuth();
   const accessToken = user?.access_token;
   const { refetchInventory } = useInventory();
   const [isProcessing, setIsProcessing] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [productsLoading, setProductsLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [cashReceivedInput, setCashReceivedInput] = useState("");
   const barcodeInputRef = useRef<HTMLInputElement>(null);
   const receiptRef = useRef<HTMLDivElement>(null);
@@ -83,39 +90,57 @@ const SalesPage = () => {
     focusBarcodeInput();
   }, [focusBarcodeInput]);
 
-  const fetchProducts = async () => {
-    setLoading(true);
+  const fetchProducts = useCallback(async (targetPage: number, search: string) => {
+    if (!accessToken) return;
+    setProductsLoading(true);
     try {
+      const params = new URLSearchParams();
+      params.append("page", String(targetPage));
+      params.append("limit", String(PRODUCT_LIMIT));
+      if (search.trim()) params.append("search", search.trim());
+
       const response = await axios.get(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist`,
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        }
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist?${params}`,
+        { headers: { Authorization: `Bearer ${accessToken}` } }
       );
-      const fetchedProducts = response.data.map((product: any) => ({
-        ...product,
-        quantity: product.quantity || 0,
-        // Backend stores inventory image under `image` (not `imageUrl`).
-        // Keep `imageUrl` as the UI-friendly field with backward compatibility.
-        imageUrl: product.image ?? product.imageUrl ?? "",
+
+      const result = response.data;
+      const items: Product[] = (result.data ?? result).map((p: any) => ({
+        ...p,
+        quantity: p.quantity || 0,
+        imageUrl: p.image ?? p.imageUrl ?? "",
       }));
-      console.log("Fetched products:", fetchedProducts);
-      setProducts(sortByLocaleKey(fetchedProducts, (p) => p.name));
+
+      setProducts(items);
+      setProductCache((prev) => {
+        const next = new Map(prev);
+        items.forEach((p) => next.set(p.id, p));
+        return next;
+      });
+      if (result.meta) {
+        setProductTotalPages(result.meta.totalPages);
+        setProductTotal(result.meta.total);
+        setProductPage(result.meta.page);
+      }
     } catch (error) {
       console.error("Failed to fetch products", error);
       toast.error("Failed to fetch products");
     } finally {
-      setLoading(false);
+      setProductsLoading(false);
     }
-  };
+  }, [accessToken, PRODUCT_LIMIT]);
 
   useEffect(() => {
-    if (accessToken) {
-      fetchProducts();
-    }
-  }, [accessToken]);
+    fetchProducts(1, "");
+  }, [fetchProducts]);
+
+  useEffect(() => {
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    searchDebounceRef.current = setTimeout(() => {
+      fetchProducts(1, searchTerm);
+    }, 300);
+    return () => clearTimeout(searchDebounceRef.current!);
+  }, [searchTerm, fetchProducts]);
 
   const getProductIcon = (type: string) => {
     switch (type) {
@@ -134,21 +159,6 @@ const SalesPage = () => {
     }
   };
 
-  useEffect(() => {
-    if (searchTerm) {
-      const results = sortByLocaleKey(
-        products.filter((product) => {
-          const productName = product.name ? product.name.toLowerCase() : "";
-          const genericName = product.genericName ? product.genericName.toLowerCase() : "";
-          return productName.includes(searchTerm.toLowerCase()) || genericName.includes(searchTerm.toLowerCase());
-        }),
-        (p) => p.name,
-      );
-      setSearchResults(results);
-    } else {
-      setSearchResults(sortByLocaleKey(products.slice(0, 10), (p) => p.name));
-    }
-  }, [searchTerm, products]);
 
   const addByBarcode = async () => {
     const code = barcodeInput?.trim();
@@ -167,10 +177,7 @@ const SalesPage = () => {
         type: data.type ?? "GENERAL",
         genericName: data.genericName,
       };
-      setProducts((prev) => {
-        if (prev.some((p) => p.id === product.id)) return prev;
-        return sortByLocaleKey([...prev, product], (p) => p.name);
-      });
+      setProductCache((prev) => new Map(prev).set(product.id, product));
       addToCart(product, 1);
       setBarcodeInput("");
       toast.success(`Added ${product.name} to cart`);
@@ -182,8 +189,7 @@ const SalesPage = () => {
   };
 
   const addToCart = (product: Product, quantity: number = 1) => {
-    // Get the freshest product data from state
-    const currentProductData = products.find((p) => p.id === product.id);
+    const currentProductData = productCache.get(product.id) ?? product;
 
     if (!currentProductData) {
       toast.error("Product not found in inventory.");
@@ -233,7 +239,7 @@ const SalesPage = () => {
   };
 
   const updateCartItemQuantity = (productId: string, newQuantity: number) => {
-    const currentProduct = products.find((p) => p.id === productId);
+    const currentProduct = productCache.get(productId);
 
     if (!currentProduct) {
       toast.error("Product not found in inventory.");
@@ -307,7 +313,7 @@ const SalesPage = () => {
         });
         toast.success("Sale recorded! Invoice #" + (created.invoiceNumber ?? ""));
         refetchInventory();
-        fetchProducts();
+        fetchProducts(productPage, searchTerm);
       } else {
         toast.error("Failed to record sale.");
       }
@@ -369,7 +375,7 @@ const SalesPage = () => {
         </header>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {loading ? (
+          {productsLoading && products.length === 0 ? (
             <div className="lg:col-span-2 py-20 bg-white/50 backdrop-blur-sm rounded-xl border border-gray-100 flex items-center justify-center shadow-sm">
               <Loading />
             </div>
@@ -427,12 +433,12 @@ const SalesPage = () => {
                           const q = searchTerm.trim();
                           if (!q) return;
                           e.preventDefault();
-                          if (searchResults.length === 0) {
+                          if (products.length === 0) {
                             toast.error("No items match your search.");
                             return;
                           }
-                          if (searchResults.length === 1) {
-                            addToCart(searchResults[0]);
+                          if (products.length === 1) {
+                            addToCart(products[0]);
                             setSearchTerm("");
                             return;
                           }
@@ -445,7 +451,9 @@ const SalesPage = () => {
                     </div>
                     <div className="space-y-3 max-h-[calc(100vh-420px)] overflow-y-auto">
                       <AnimatePresence>
-                        {searchResults.length === 0 ? (
+                        {productsLoading ? (
+                          <div className="flex justify-center py-6"><Loading /></div>
+                        ) : products.length === 0 ? (
                           <motion.div
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
@@ -458,7 +466,7 @@ const SalesPage = () => {
                             <p className="text-xs text-gray-500 mt-0.5">Search by name or scan barcode above.</p>
                           </motion.div>
                         ) : (
-                          searchResults.map((product) => (
+                          products.map((product) => (
                             <motion.div
                               key={product.id}
                               initial={{ opacity: 0, y: 8 }}
@@ -489,6 +497,14 @@ const SalesPage = () => {
                         )}
                       </AnimatePresence>
                     </div>
+                    <PaginationControls
+                      page={productPage}
+                      totalPages={productTotalPages}
+                      total={productTotal}
+                      limit={PRODUCT_LIMIT}
+                      loading={productsLoading}
+                      onPageChange={(p) => fetchProducts(p, searchTerm)}
+                    />
                   </CardContent>
                 </Card>
               </motion.div>
