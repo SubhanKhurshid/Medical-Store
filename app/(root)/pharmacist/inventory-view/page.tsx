@@ -52,8 +52,8 @@ const Inventory = () => {
       setLoading(true);
       const lowStock = await getLowStockItems();
       const expiring = await getExpiringItems();
-      setLowStockItems(lowStock);
-      setExpiringItems(expiring);
+      setLowStockItems(lowStock.data);
+      setExpiringItems(expiring.data);
       setLoading(false);
     };
     fetchData();

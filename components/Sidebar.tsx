@@ -44,8 +44,8 @@ const Sidebar = () => {
       return;
     }
 
-    const refreshLow = () => getLowStockItems().then((items) => setLowStockCount(items.length));
-    const refreshExpiring = () => getExpiringItems().then((items) => setExpiringCount(items.length));
+    const refreshLow = () => getLowStockItems().then((r) => setLowStockCount(r.meta.total));
+    const refreshExpiring = () => getExpiringItems().then((r) => setExpiringCount(r.meta.total));
     const refresh = () => {
       refreshLow();
       refreshExpiring();

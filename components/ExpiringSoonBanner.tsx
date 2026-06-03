@@ -21,9 +21,9 @@ export function ExpiringSoonBanner() {
   const fetchExpiring = useCallback(async () => {
     if (user?.role !== "pharmacist") return;
     try {
-      const items = await getExpiringItems();
-      setExpiringCount(items.length);
-      return items.length;
+      const result = await getExpiringItems();
+      setExpiringCount(result.meta.total);
+      return result.meta.total;
     } catch {
       setExpiringCount(0);
       return 0;

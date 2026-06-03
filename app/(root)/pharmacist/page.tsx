@@ -31,6 +31,7 @@ import axios from "axios";
 import { toast } from "sonner";
 import { dispatchExpiringInvalidated } from "@/lib/expiring-events";
 import { EXPIRING_INVALIDATED_EVENT } from "@/lib/expiring-events";
+import { PaginationControls } from "@/components/shared/PaginationControls";
 import type { ColumnDef } from "@tanstack/react-table";
 
 function getMonthRange(monthOffset: number) {
@@ -52,6 +53,11 @@ const PharmacistPage = () => {
   const [expiringItems, setExpiringItems] = useState<InventoryItem[]>([]);
   const [lowStockCount, setLowStockCount] = useState(0);
   const [expiringCount, setExpiringCount] = useState(0);
+  const [lowStockPage, setLowStockPage] = useState(1);
+  const [lowStockTotalPages, setLowStockTotalPages] = useState(1);
+  const [expiringPage, setExpiringPage] = useState(1);
+  const [expiringTotalPages, setExpiringTotalPages] = useState(1);
+  const TABLE_LIMIT = 20;
   const [earnedThisMonth, setEarnedThisMonth] = useState(0);
   const [earnedLastMonth, setEarnedLastMonth] = useState(0);
   const [itemToDiscard, setItemToDiscard] = useState<InventoryItem | null>(null);
@@ -68,14 +74,25 @@ const PharmacistPage = () => {
     transition: { duration: 0.6 },
   };
 
+  const fetchLowStock = useCallback(async (page = 1) => {
+    const result = await getLowStockItems(page, TABLE_LIMIT);
+    setLowStockItems(result.data);
+    setLowStockCount(result.meta.total);
+    setLowStockPage(result.meta.page);
+    setLowStockTotalPages(result.meta.totalPages);
+  }, [getLowStockItems, TABLE_LIMIT]);
+
+  const fetchExpiring = useCallback(async (page = 1) => {
+    const result = await getExpiringItems(page, TABLE_LIMIT);
+    setExpiringItems(result.data);
+    setExpiringCount(result.meta.total);
+    setExpiringPage(result.meta.page);
+    setExpiringTotalPages(result.meta.totalPages);
+  }, [getExpiringItems, TABLE_LIMIT]);
+
   const fetchData = useCallback(async () => {
-    const lowStock = await getLowStockItems();
-    const expiring = await getExpiringItems();
-    setLowStockItems(lowStock);
-    setExpiringItems(expiring);
-    setLowStockCount(lowStock.length);
-    setExpiringCount(expiring.length);
-  }, [getLowStockItems, getExpiringItems]);
+    await Promise.all([fetchLowStock(1), fetchExpiring(1)]);
+  }, [fetchLowStock, fetchExpiring]);
 
   useEffect(() => {
     fetchData();
@@ -262,6 +279,7 @@ const PharmacistPage = () => {
               </div>
               <div className="p-4 sm:p-5">
                 <DataTable columns={expiringTableColumns} data={lowStockItems} />
+                <PaginationControls page={lowStockPage} totalPages={lowStockTotalPages} total={lowStockCount} limit={TABLE_LIMIT} onPageChange={(p) => fetchLowStock(p)} />
               </div>
             </Card>
           </motion.div>
@@ -282,6 +300,7 @@ const PharmacistPage = () => {
               </div>
               <div className="p-4 sm:p-5">
                 <DataTable columns={dashboardExpiringColumns} data={expiringItems} disableRowClick />
+                <PaginationControls page={expiringPage} totalPages={expiringTotalPages} total={expiringCount} limit={TABLE_LIMIT} onPageChange={(p) => fetchExpiring(p)} />
               </div>
             </Card>
           </motion.div>

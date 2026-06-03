@@ -257,8 +257,8 @@ export default function CreatePurchaseOrdersPage() {
         axios.get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/low-stock`, { headers }),
         axios.get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/expiring`, { headers }),
       ]);
-      const lowStock = lowRes.data ?? [];
-      const expiring = expiringRes.data ?? [];
+      const lowStock = lowRes.data?.data ?? lowRes.data ?? [];
+      const expiring = expiringRes.data?.data ?? expiringRes.data ?? [];
       const merged = mergeLowStockAndExpiring(lowStock, expiring);
       setItems(merged);
       setError(null);
