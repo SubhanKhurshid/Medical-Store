@@ -15,7 +15,7 @@ const LOW_STOCK_TOAST_KEY = "low-stock-toast-last-shown";
 
 export function LowStockReminderBanner() {
   const { user } = useAuth();
-  const { getLowStockItems } = useInventory();
+  const { getLowStockCount } = useInventory();
   const pathname = usePathname();
   const [lowStockCount, setLowStockCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
@@ -23,16 +23,16 @@ export function LowStockReminderBanner() {
   const fetchLowStock = useCallback(async () => {
     if (user?.role !== "pharmacist") return;
     try {
-      const result = await getLowStockItems();
-      setLowStockCount(result.meta.total);
-      return result.meta.total;
+      const count = await getLowStockCount();
+      setLowStockCount(count);
+      return count;
     } catch {
       setLowStockCount(0);
       return 0;
     } finally {
       setIsLoading(false);
     }
-  }, [user?.role, getLowStockItems]);
+  }, [user?.role, getLowStockCount]);
 
   useEffect(() => {
     if (user?.role !== "pharmacist") return;

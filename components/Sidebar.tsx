@@ -26,7 +26,7 @@ const Sidebar = () => {
   const pathname = usePathname();
   const role = user?.role;
   const router = useRouter();
-  const { getLowStockItems, getExpiringItems } = useInventory();
+  const { getLowStockCount, getExpiringCount } = useInventory();
   const [lowStockCount, setLowStockCount] = useState(0);
   const [expiringCount, setExpiringCount] = useState(0);
 
@@ -44,8 +44,8 @@ const Sidebar = () => {
       return;
     }
 
-    const refreshLow = () => getLowStockItems().then((r) => setLowStockCount(r.meta.total));
-    const refreshExpiring = () => getExpiringItems().then((r) => setExpiringCount(r.meta.total));
+    const refreshLow = () => getLowStockCount().then(setLowStockCount);
+    const refreshExpiring = () => getExpiringCount().then(setExpiringCount);
     const refresh = () => {
       refreshLow();
       refreshExpiring();
@@ -57,7 +57,7 @@ const Sidebar = () => {
       window.removeEventListener(LOW_STOCK_INVALIDATED_EVENT, refreshLow);
       window.removeEventListener(EXPIRING_INVALIDATED_EVENT, refreshExpiring);
     };
-  }, [role, pathname, getLowStockItems, getExpiringItems]);
+  }, [role, pathname, getLowStockCount, getExpiringCount]);
 
   const handleLogout = (event: React.MouseEvent) => {
     event.preventDefault();
