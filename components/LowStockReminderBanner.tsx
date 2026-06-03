@@ -23,9 +23,9 @@ export function LowStockReminderBanner() {
   const fetchLowStock = useCallback(async () => {
     if (user?.role !== "pharmacist") return;
     try {
-      const items = await getLowStockItems();
-      setLowStockCount(items.length);
-      return items.length;
+      const result = await getLowStockItems();
+      setLowStockCount(result.meta.total);
+      return result.meta.total;
     } catch {
       setLowStockCount(0);
       return 0;

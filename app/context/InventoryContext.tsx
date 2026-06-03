@@ -60,6 +60,18 @@ const initialState: InventoryState = {
   items: [],
 };
 
+export interface PaginationMeta {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+export interface PaginatedResult<T> {
+  data: T[];
+  meta: PaginationMeta;
+}
+
 const InventoryContext = createContext<{
   state: InventoryState;
   dispatch: React.Dispatch<InventoryAction>;
@@ -71,8 +83,8 @@ const InventoryContext = createContext<{
     item: Omit<InventoryItem, "id" | "createdAt" | "updatedAt">
   ) => Promise<void>;
   deleteItem: (id: string) => Promise<void>;
-  getLowStockItems: () => Promise<InventoryItem[]>;
-  getExpiringItems: () => Promise<InventoryItem[]>;
+  getLowStockItems: (page?: number, limit?: number) => Promise<PaginatedResult<InventoryItem>>;
+  getExpiringItems: (page?: number, limit?: number) => Promise<PaginatedResult<InventoryItem>>;
   /** Refetch inventory from API (e.g. after sale or refund) so quantities stay in sync */
   refetchInventory: () => Promise<void>;
 } | null>(null);
@@ -182,29 +194,25 @@ export const InventoryProvider = ({
     }
   };
 
-  const getLowStockItems = async (): Promise<InventoryItem[]> => {
+  const getLowStockItems = useCallback(async (page = 1, limit = 20): Promise<PaginatedResult<InventoryItem>> => {
     const response = await axios.get(
-      `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/low-stock`,
-      {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      }
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/low-stock?page=${page}&limit=${limit}`,
+      { headers: { Authorization: `Bearer ${accessToken}` } }
     );
-    return sortByLocaleKey(response.data as InventoryItem[], (i) => i.name);
-  };
+    const result = response.data;
+    const data = sortByLocaleKey(result.data ?? result, (i: InventoryItem) => i.name);
+    return { data, meta: result.meta ?? { total: data.length, page, limit, totalPages: 1 } };
+  }, [accessToken]);
 
-  const getExpiringItems = async (): Promise<InventoryItem[]> => {
+  const getExpiringItems = useCallback(async (page = 1, limit = 20): Promise<PaginatedResult<InventoryItem>> => {
     const response = await axios.get(
-      `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/expiring`,
-      {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      }
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/expiring?page=${page}&limit=${limit}`,
+      { headers: { Authorization: `Bearer ${accessToken}` } }
     );
-    return sortByLocaleKey(response.data as InventoryItem[], (i) => i.name);
-  };
+    const result = response.data;
+    const data = sortByLocaleKey(result.data ?? result, (i: InventoryItem) => i.name);
+    return { data, meta: result.meta ?? { total: data.length, page, limit, totalPages: 1 } };
+  }, [accessToken]);
 
   return (
     <InventoryContext.Provider

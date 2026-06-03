@@ -22,6 +22,7 @@ import { useAuth } from "@/app/providers/AuthProvider";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import VendorModal, { type VendorRaw } from "./Modal";
+import { PaginationControls } from "@/components/shared/PaginationControls";
 
 interface VendorRow {
   id: string;
@@ -38,6 +39,10 @@ export default function VendorsPage() {
   const [search, setSearch] = useState("");
   const [vendorsRaw, setVendorsRaw] = useState<VendorRaw[]>([]);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
+  const LIMIT = 20;
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editVendor, setEditVendor] = useState<VendorRaw | null>(null);
   const [selected, setSelected] = useState<VendorRow | null>(null);
@@ -46,18 +51,23 @@ export default function VendorsPage() {
   const { user } = useAuth();
   const accessToken = user?.access_token;
 
-  const fetchVendors = async () => {
+  const fetchVendors = async (targetPage = 1) => {
     setLoading(true);
     try {
       const headers: HeadersInit = {};
       if (accessToken) {
         (headers as Record<string, string>).Authorization = `Bearer ${accessToken}`;
       }
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/vendor`, { headers });
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/vendor?page=${targetPage}&limit=${LIMIT}`, { headers });
       if (!res.ok) throw new Error("Failed to fetch vendors");
-      const data: VendorRaw[] = await res.json();
-      const list = Array.isArray(data) ? data : [];
+      const result = await res.json();
+      const list: VendorRaw[] = Array.isArray(result) ? result : (result.data ?? []);
       setVendorsRaw(list);
+      if (result.meta) {
+        setTotalPages(result.meta.totalPages);
+        setTotal(result.meta.total);
+        setPage(result.meta.page);
+      }
     } catch (e) {
       console.error(e);
     } finally {
@@ -260,6 +270,7 @@ export default function VendorsPage() {
                 </motion.div>
               )}
             </AnimatePresence>
+            <PaginationControls page={page} totalPages={totalPages} total={total} limit={LIMIT} loading={loading} onPageChange={(p) => { setPage(p); fetchVendors(p); }} />
           </CardContent>
         </Card>
 

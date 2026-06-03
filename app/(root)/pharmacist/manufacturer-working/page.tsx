@@ -36,6 +36,7 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import ManufacturerModal from "./Modal";
+import { PaginationControls } from "@/components/shared/PaginationControls";
 
 interface ManufacturerRow {
   id: string;
@@ -69,6 +70,10 @@ const Manufacturer = () => {
   const [manufacturers, setManufacturers] = useState<ManufacturerRow[]>([]);
   const [manufacturersRaw, setManufacturersRaw] = useState<ManufacturerRaw[]>([]);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
+  const LIMIT = 20;
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedManufacturer, setSelectedManufacturer] = useState<ManufacturerRow | null>(null);
   const [viewManufacturer, setViewManufacturer] = useState<ManufacturerRaw | null>(null);
@@ -77,19 +82,18 @@ const Manufacturer = () => {
   const { user } = useAuth();
   const accessToken = user?.access_token;
 
-  const fetchManufacturers = async () => {
+  const fetchManufacturers = async (targetPage = 1) => {
     setLoading(true);
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/manufacturer`
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/manufacturer?page=${targetPage}&limit=${LIMIT}`
       );
       if (!response.ok) {
         throw new Error("Failed to fetch manufacturers");
       }
 
-      const data = await response.json();
-
-      const manufacturersArray = Array.isArray(data) ? data : [data];
+      const result = await response.json();
+      const manufacturersArray = Array.isArray(result) ? result : (result.data ?? []);
 
       const mappedData = manufacturersArray.map((item: any) => ({
         id: item.id,
@@ -107,6 +111,11 @@ const Manufacturer = () => {
 
       setManufacturers(mappedData);
       setManufacturersRaw(manufacturersArray);
+      if (result.meta) {
+        setTotalPages(result.meta.totalPages);
+        setTotal(result.meta.total);
+        setPage(result.meta.page);
+      }
     } catch (error) {
       console.error("Error fetching manufacturers:", error);
     } finally {
@@ -318,6 +327,7 @@ const Manufacturer = () => {
               </motion.div>
             )}
           </AnimatePresence>
+          <PaginationControls page={page} totalPages={totalPages} total={total} limit={LIMIT} loading={loading} onPageChange={(p) => { setPage(p); fetchManufacturers(p); }} />
           </CardContent>
         </Card>
 
