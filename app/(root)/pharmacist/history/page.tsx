@@ -39,6 +39,7 @@ import {
   startOfYear,
   endOfYear,
 } from "date-fns";
+import { PaginationControls } from "@/components/shared/PaginationControls";
 
 const PAYMENT_LABELS: Record<string, string> = {
   CASH: "Cash",
@@ -138,6 +139,10 @@ const SalesTable = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [sales, setSales] = useState<Sale[]>([]);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
+  const LIMIT = 50;
   const [viewSale, setViewSale] = useState<Sale | null>(null);
   const [refundSale, setRefundSale] = useState<Sale | null>(null);
   const [refundQuantities, setRefundQuantities] = useState<Record<string, number>>({});
@@ -150,7 +155,7 @@ const SalesTable = () => {
   const accessToken = user?.access_token;
   const { refetchInventory } = useInventory();
 
-  const loadSales = useCallback(async () => {
+  const loadSales = useCallback(async (targetPage = page) => {
     if (!accessToken) return;
     const range = apiRange(dateRangeMode, customFrom, customTo);
     if (range === null) {
@@ -165,6 +170,8 @@ const SalesTable = () => {
       const queryParams = new URLSearchParams();
       if (range.start) queryParams.append("startDate", range.start);
       if (range.end) queryParams.append("endDate", range.end);
+      queryParams.append("page", String(targetPage));
+      queryParams.append("limit", String(LIMIT));
 
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/sales?${queryParams}`,
@@ -186,6 +193,8 @@ const SalesTable = () => {
 
       if (result?.success && Array.isArray(result.data)) {
         setSales(result.data);
+        setTotalPages(result.meta?.totalPages ?? 1);
+        setTotal(result.meta?.total ?? 0);
       } else {
         setSales([]);
         setError("Unexpected response from server.");
@@ -197,7 +206,11 @@ const SalesTable = () => {
     } finally {
       setLoading(false);
     }
-  }, [accessToken, dateRangeMode, customFrom, customTo]);
+  }, [accessToken, dateRangeMode, customFrom, customTo, page, LIMIT]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [dateRangeMode, customFrom, customTo]);
 
   useEffect(() => {
     void loadSales();
@@ -668,6 +681,11 @@ const SalesTable = () => {
             </Button>
           </div>
           <CardContent className="p-4 sm:p-5">
+            {total > 0 && !loading && (
+              <p className="text-xs text-gray-500 mb-3">
+                {total} total sales — showing page {page} of {totalPages} ({LIMIT} per page)
+              </p>
+            )}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
               <div>
                 <Label className="text-xs font-medium text-gray-600">Search</Label>
@@ -723,6 +741,17 @@ const SalesTable = () => {
                 </motion.div>
               </AnimatePresence>
             )}
+            <PaginationControls
+              page={page}
+              totalPages={totalPages}
+              total={total}
+              limit={LIMIT}
+              loading={loading}
+              onPageChange={(p) => {
+                setPage(p);
+                void loadSales(p);
+              }}
+            />
           </CardContent>
         </Card>
 

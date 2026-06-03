@@ -10,6 +10,7 @@ import { Search, PlusCircle, FileText, Calendar, Building2 } from "lucide-react"
 import Loading from "@/components/shared/Loading";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { PaginationControls } from "@/components/shared/PaginationControls";
 import {
     Dialog,
     DialogContent,
@@ -41,36 +42,46 @@ export default function PurchaseInvoicesPage() {
     const [invoices, setInvoices] = useState<Invoice[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+    const [page, setPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+    const [total, setTotal] = useState(0);
+    const LIMIT = 20;
+
+    const fetchInvoices = async (targetPage = page) => {
+        setLoading(true);
+        try {
+            const response = await fetch(
+                `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/purchase-invoices?page=${targetPage}&limit=${LIMIT}`
+            );
+            if (!response.ok) throw new Error("Failed to fetch invoices");
+
+            const result = await response.json();
+            const items = result.data ?? result;
+            const mappedData = items.map((item: any) => ({
+                id: item.id,
+                invoiceNumber: item.invoiceNumber,
+                supplierLabel:
+                    item.vendor?.name ||
+                    item.manufacturer?.companyName ||
+                    "Unknown",
+                totalAmount: item.totalAmount,
+                date: new Date(item.date).toLocaleDateString(),
+                status: item.status,
+                items: item.items || [],
+            }));
+            setInvoices(mappedData);
+            if (result.meta) {
+                setTotalPages(result.meta.totalPages);
+                setTotal(result.meta.total);
+            }
+        } catch (error) {
+            console.error("Error:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     useEffect(() => {
-        const fetchInvoices = async () => {
-            setLoading(true);
-            try {
-                const response = await fetch(
-                    `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/purchase-invoices`
-                );
-                if (!response.ok) throw new Error("Failed to fetch invoices");
-
-                const data = await response.json();
-                const mappedData = data.map((item: any) => ({
-                    id: item.id,
-                    invoiceNumber: item.invoiceNumber,
-                    supplierLabel:
-                        item.vendor?.name ||
-                        item.manufacturer?.companyName ||
-                        "Unknown",
-                    totalAmount: item.totalAmount,
-                    date: new Date(item.date).toLocaleDateString(),
-                    status: item.status,
-                    items: item.items || [],
-                }));
-                setInvoices(mappedData);
-            } catch (error) {
-                console.error("Error:", error);
-            } finally {
-                setLoading(false);
-            }
-        };
         fetchInvoices();
     }, []);
 
@@ -201,6 +212,17 @@ export default function PurchaseInvoicesPage() {
                             </motion.div>
                         )}
                     </AnimatePresence>
+                    <PaginationControls
+                        page={page}
+                        totalPages={totalPages}
+                        total={total}
+                        limit={LIMIT}
+                        loading={loading}
+                        onPageChange={(p) => {
+                            setPage(p);
+                            fetchInvoices(p);
+                        }}
+                    />
                     </CardContent>
                 </Card>
 

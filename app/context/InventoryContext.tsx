@@ -131,7 +131,7 @@ export const InventoryProvider = ({
         },
       }
     );
-    dispatch({ type: "SET_ITEMS", payload: response.data });
+    dispatch({ type: "SET_ITEMS", payload: response.data.data ?? response.data });
   }, [accessToken]);
 
   const addItem = async (

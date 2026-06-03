@@ -9,6 +9,7 @@ import { Search, PlusCircle, User, Phone, Eye, Pencil, Wallet } from "lucide-rea
 import Loading from "@/components/shared/Loading";
 import { Button } from "@/components/ui/button";
 import CustomerModal from "./Modal";
+import { PaginationControls } from "@/components/shared/PaginationControls";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/providers/AuthProvider";
 
@@ -30,12 +31,16 @@ const CustomersPage = () => {
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
+    const [page, setPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+    const [total, setTotal] = useState(0);
+    const LIMIT = 20;
 
-    const fetchCustomers = async () => {
+    const fetchCustomers = async (targetPage = 1) => {
         setLoading(true);
         try {
             const response = await fetch(
-                `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/customer`,
+                `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/customer?page=${targetPage}&limit=${LIMIT}`,
                 {
                     headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
                 }
@@ -43,9 +48,13 @@ const CustomersPage = () => {
             if (!response.ok) {
                 throw new Error("Failed to fetch customers");
             }
-            const data = await response.json();
-            const customersArray = Array.isArray(data) ? data : [data];
-            setCustomers(customersArray);
+            const result = await response.json();
+            const list = Array.isArray(result) ? result : (result.data ?? []);
+            setCustomers(list);
+            if (result.meta) {
+                setTotalPages(result.meta.totalPages);
+                setTotal(result.meta.total);
+            }
         } catch (error) {
             console.error("Error fetching customers:", error);
         } finally {
@@ -54,7 +63,7 @@ const CustomersPage = () => {
     };
 
     useEffect(() => {
-        if (accessToken) fetchCustomers();
+        if (accessToken) fetchCustomers(1);
     }, [accessToken]);
 
     const columns = [
@@ -204,6 +213,17 @@ const CustomersPage = () => {
                             </motion.div>
                         )}
                     </AnimatePresence>
+                    <PaginationControls
+                        page={page}
+                        totalPages={totalPages}
+                        total={total}
+                        limit={LIMIT}
+                        loading={loading}
+                        onPageChange={(p) => {
+                            setPage(p);
+                            fetchCustomers(p);
+                        }}
+                    />
                     </CardContent>
                 </Card>
 

@@ -60,9 +60,10 @@ export default function CreatePurchaseInvoicePage() {
 
         fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist`)
             .then((res) => res.json())
-            .then((data) =>
-                setInventoryItems(sortByLocaleKey(Array.isArray(data) ? data : [data], (i) => i.name)),
-            )
+            .then((data) => {
+                const items = Array.isArray(data) ? data : (data?.data ?? []);
+                setInventoryItems(sortByLocaleKey(items, (i) => i.name));
+            })
             .catch((err) => console.error(err));
     }, []);
 
