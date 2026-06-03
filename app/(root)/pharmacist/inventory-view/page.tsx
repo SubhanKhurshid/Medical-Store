@@ -21,7 +21,7 @@ import { PaginationControls } from "@/components/shared/PaginationControls";
 import { useAuth } from "@/app/providers/AuthProvider";
 import axios from "axios";
 
-const LIMIT = 50;
+const LIMIT = 20;
 
 const Inventory = () => {
   const { user } = useAuth();
@@ -156,9 +156,7 @@ const Inventory = () => {
                     ))}
                   </SelectContent>
                 </Select>
-                <div className="sm:col-span-2 flex items-center justify-end text-sm text-muted-foreground font-medium">
-                  Showing {filteredItems.length} item{filteredItems.length !== 1 ? "s" : ""}
-                </div>
+                <div className="sm:col-span-2" />
               </div>
 
               {loading ? (
@@ -179,7 +177,7 @@ const Inventory = () => {
                 </motion.div>
               ) : (
                 <div className="rounded-lg border border-gray-100 overflow-hidden">
-                  <DataTable columns={inventoryColumns} data={filteredItems} />
+                  <DataTable columns={inventoryColumns} data={filteredItems} disablePagination />
                 </div>
               )}
 
