@@ -14,23 +14,23 @@ const EXPIRING_TOAST_KEY = "expiring-soon-toast-last-shown";
 
 export function ExpiringSoonBanner() {
   const { user } = useAuth();
-  const { getExpiringItems } = useInventory();
+  const { getExpiringCount } = useInventory();
   const [expiringCount, setExpiringCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchExpiring = useCallback(async () => {
     if (user?.role !== "pharmacist") return;
     try {
-      const result = await getExpiringItems();
-      setExpiringCount(result.meta.total);
-      return result.meta.total;
+      const count = await getExpiringCount();
+      setExpiringCount(count);
+      return count;
     } catch {
       setExpiringCount(0);
       return 0;
     } finally {
       setIsLoading(false);
     }
-  }, [user?.role, getExpiringItems]);
+  }, [user?.role, getExpiringCount]);
 
   useEffect(() => {
     if (user?.role !== "pharmacist") return;

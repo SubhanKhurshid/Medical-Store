@@ -85,6 +85,8 @@ const InventoryContext = createContext<{
   deleteItem: (id: string) => Promise<void>;
   getLowStockItems: (page?: number, limit?: number) => Promise<PaginatedResult<InventoryItem>>;
   getExpiringItems: (page?: number, limit?: number) => Promise<PaginatedResult<InventoryItem>>;
+  getLowStockCount: () => Promise<number>;
+  getExpiringCount: () => Promise<number>;
   /** Refetch inventory from API (e.g. after sale or refund) so quantities stay in sync */
   refetchInventory: () => Promise<void>;
 } | null>(null);
@@ -194,6 +196,22 @@ export const InventoryProvider = ({
     }
   };
 
+  const getLowStockCount = useCallback(async (): Promise<number> => {
+    const response = await axios.get(
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/low-stock?countOnly=true`,
+      { headers: { Authorization: `Bearer ${accessToken}` } }
+    );
+    return response.data?.total ?? 0;
+  }, [accessToken]);
+
+  const getExpiringCount = useCallback(async (): Promise<number> => {
+    const response = await axios.get(
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/expiring?countOnly=true`,
+      { headers: { Authorization: `Bearer ${accessToken}` } }
+    );
+    return response.data?.total ?? 0;
+  }, [accessToken]);
+
   const getLowStockItems = useCallback(async (page = 1, limit = 20): Promise<PaginatedResult<InventoryItem>> => {
     const response = await axios.get(
       `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/low-stock?page=${page}&limit=${limit}`,
@@ -224,6 +242,8 @@ export const InventoryProvider = ({
         deleteItem,
         getLowStockItems,
         getExpiringItems,
+        getLowStockCount,
+        getExpiringCount,
         refetchInventory,
       }}
     >
