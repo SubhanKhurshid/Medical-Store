@@ -34,6 +34,7 @@ interface DataTableProps<TData, TValue> {
   data: TData[];
   onRowClick?: (row: TData) => void;
   disableRowClick?: boolean;
+  disablePagination?: boolean;
   /** Default sort when the table loads. Column `id` must match sorting id (often same as accessorKey). */
   initialSorting?: SortingState;
 }
@@ -43,6 +44,7 @@ export function DataTable<TData extends Record<string, any>, TValue>({
   data,
   onRowClick,
   disableRowClick,
+  disablePagination = false,
   initialSorting = [{ id: "name", desc: false }],
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>(initialSorting);
@@ -151,30 +153,32 @@ export function DataTable<TData extends Record<string, any>, TValue>({
             )}
           </TableBody>
         </Table>
-      <div className="flex flex-col sm:flex-row items-center justify-between space-y-2 sm:space-y-0 py-4">
-        <div className="text-sm text-muted-foreground">
-          Page {table.getState().pagination.pageIndex + 1} of{" "}
-          {table.getPageCount()}
+      {!disablePagination && (
+        <div className="flex flex-col sm:flex-row items-center justify-between space-y-2 sm:space-y-0 py-4">
+          <div className="text-sm text-muted-foreground">
+            Page {table.getState().pagination.pageIndex + 1} of{" "}
+            {table.getPageCount()}
+          </div>
+          <div className="space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => table.previousPage()}
+              disabled={!table.getCanPreviousPage()}
+            >
+              Previous
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => table.nextPage()}
+              disabled={!table.getCanNextPage()}
+            >
+              Next
+            </Button>
+          </div>
         </div>
-        <div className="space-x-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => table.previousPage()}
-            disabled={!table.getCanPreviousPage()}
-          >
-            Previous
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => table.nextPage()}
-            disabled={!table.getCanNextPage()}
-          >
-            Next
-          </Button>
-        </div>
-      </div>
+      )}
 
       <Dialog open={!!selectedRow} onOpenChange={closeModal}>
         <DialogContent className="sm:max-w-[900px] p-0 overflow-hidden">
