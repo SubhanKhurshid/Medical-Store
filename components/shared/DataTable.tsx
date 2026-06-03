@@ -56,10 +56,9 @@ export function DataTable<TData extends Record<string, any>, TValue>({
     getPaginationRowModel: getPaginationRowModel(),
     onSortingChange: setSorting,
     state: { sorting },
-    // Limit rows per page to 4
     initialState: {
       pagination: {
-        pageSize: 4,
+        pageSize: 20,
       },
     },
   });
