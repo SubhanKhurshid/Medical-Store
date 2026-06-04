@@ -32,7 +32,7 @@ import {
 import { Upload, X, Save } from "lucide-react";
 import { toast } from "sonner";
 import { Calendar } from "lucide-react";
-import { parseApiList } from "@/lib/api";
+import { fetchAllPaginatedList } from "@/lib/api";
 import { isValidExpiryDateString } from "@/lib/expiry-date";
 
 // Coerce empty string to number; used for optional numeric fields
@@ -128,12 +128,10 @@ export default function EditInventoryModal({
     if (!open) return;
     const fetchManufacturers = async () => {
       try {
-        const res = await fetch(
-          `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/manufacturer?limit=100`,
-        );
-        const json = await res.json();
         setManufacturers(
-          parseApiList<{ id: string; companyName: string }>(json),
+          await fetchAllPaginatedList<{ id: string; companyName: string }>(
+            `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/manufacturer`,
+          ),
         );
       } catch {
         // ignore, form will still render with current manufacturer if available

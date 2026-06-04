@@ -42,7 +42,7 @@ import {
 import type { ColumnDef } from "@tanstack/react-table";
 import axios from "axios";
 import { useAuth } from "@/app/providers/AuthProvider";
-import { API_LIST_MAX_LIMIT, parseApiList } from "@/lib/api";
+import { API_LIST_MAX_LIMIT, fetchAllPaginatedListAxios, parseApiList } from "@/lib/api";
 import { dispatchLowStockInvalidated } from "@/lib/low-stock-events";
 import { isLowStock } from "@/lib/low-stock";
 import { dispatchExpiringInvalidated } from "@/lib/expiring-events";
@@ -285,15 +285,13 @@ export default function CreatePurchaseOrdersPage() {
   const fetchVendors = useCallback(async () => {
     const headers = getAuthHeaders(user?.access_token);
     try {
-      const res = await axios.get(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/vendor?limit=100`,
-        { headers }
-      );
-      const rows = parseApiList<{
+      const rows = await fetchAllPaginatedListAxios<{
         id: string;
         name: string;
         manufacturerLinks?: { manufacturerId: string }[];
-      }>(res.data);
+      }>(`${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/vendor`, {
+        headers: headers as Record<string, string>,
+      });
       setVendors(
         rows.map((v: { id: string; name: string; manufacturerLinks?: { manufacturerId: string }[] }) => ({
           id: v.id,

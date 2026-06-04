@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { API_LIST_MAX_LIMIT, parseApiList } from "@/lib/api";
+import { API_LIST_MAX_LIMIT, fetchAllPaginatedList, parseApiList } from "@/lib/api";
 import { sortByLocaleKey } from "@/lib/sort-alphabetical";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -50,12 +50,11 @@ export default function CreatePurchaseInvoicePage() {
     ]);
 
     useEffect(() => {
-        fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/vendor?limit=100`)
-            .then((res) => res.json())
+        fetchAllPaginatedList<VendorOption>(
+            `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/vendor`,
+        )
             .then((data) =>
-                setVendors(
-                    sortByLocaleKey(parseApiList<VendorOption>(data), (v) => v.name),
-                ),
+                setVendors(sortByLocaleKey(data, (v) => v.name)),
             )
             .catch((err) => console.error(err));
 
