@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertCircle, Loader2, MoreHorizontal, ShoppingCart, XCircle, CalendarClock, Search } from "lucide-react";
 import Loading from "@/components/shared/Loading";
@@ -249,6 +249,7 @@ export default function CreatePurchaseOrdersPage() {
   const [allInventory, setAllInventory] = useState<ReorderItem[]>([]);
   const [inventorySearch, setInventorySearch] = useState("");
   const [loadingInventory, setLoadingInventory] = useState(false);
+  const inventorySearchDebounceRef = useRef<ReturnType<typeof setTimeout>>();
 
   const fetchItems = useCallback(async () => {
     const headers = getAuthHeaders(user?.access_token);
@@ -304,12 +305,14 @@ export default function CreatePurchaseOrdersPage() {
     }
   }, [user?.access_token]);
 
-  const fetchAllInventory = useCallback(async () => {
+  const fetchAllInventory = useCallback(async (search = "") => {
+    if (!search.trim()) { setAllInventory([]); return; }
     const headers = getAuthHeaders(user?.access_token);
     try {
       setLoadingInventory(true);
+      const params = new URLSearchParams({ limit: "20", search: search.trim() });
       const res = await axios.get(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist?limit=${API_LIST_MAX_LIMIT}`,
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist?${params}`,
         { headers },
       );
       const rows = parseApiList<{
@@ -355,21 +358,23 @@ export default function CreatePurchaseOrdersPage() {
 
   useEffect(() => {
     fetchItems();
-    fetchAllInventory();
     fetchVendors();
-  }, [fetchItems, fetchAllInventory, fetchVendors]);
+  }, [fetchItems, fetchVendors]);
+
+  useEffect(() => {
+    clearTimeout(inventorySearchDebounceRef.current);
+    inventorySearchDebounceRef.current = setTimeout(() => {
+      void fetchAllInventory(inventorySearch);
+    }, 300);
+    return () => clearTimeout(inventorySearchDebounceRef.current);
+  }, [inventorySearch, fetchAllInventory]);
 
   const searchMatches = useMemo(() => {
-    const q = inventorySearch.trim().toLowerCase();
-    if (q.length < 1) return [];
+    if (!inventorySearch.trim()) return [];
     return sortByLocaleKey(
-      allInventory.filter(
-        (i) =>
-          i.name.toLowerCase().includes(q) ||
-          (i.manufacturer && i.manufacturer.toLowerCase().includes(q)),
-      ),
+      allInventory,
       (i) => i.name,
-    ).slice(0, 20);
+    );
   }, [allInventory, inventorySearch]);
 
   const fillOrderFieldsFromItem = (item: ReorderItem) => {
