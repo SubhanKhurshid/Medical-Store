@@ -28,7 +28,7 @@ import { Calendar } from "lucide-react";
 import { toast } from "sonner";
 import axios from "axios"; 
 import Link from "next/link";
-import { parseApiList } from "@/lib/api";
+import { fetchAllPaginatedList } from "@/lib/api";
 import { sortByLocaleKey } from "@/lib/sort-alphabetical";
 import { isValidExpiryDateString } from "@/lib/expiry-date";
 
@@ -229,16 +229,10 @@ export default function InventoryManagement() {
   useEffect(() => {
     const fetchManufacturers = async () => {
       try {
-        const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/manufacturer?limit=100`,
-        );
-        if (!response.ok) throw new Error("Failed to fetch manufacturers");
-
-        const json = await response.json();
-        const manufacturersArray = parseApiList<{
+        const manufacturersArray = await fetchAllPaginatedList<{
           id: string;
           companyName: string;
-        }>(json);
+        }>(`${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/manufacturer`);
 
         setManufacturers(
           sortByLocaleKey(manufacturersArray, (m) => m.companyName),

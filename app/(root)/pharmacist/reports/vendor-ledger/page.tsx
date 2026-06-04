@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/table";
 import Loading from "@/components/shared/Loading";
 import { Suspense } from "react";
-import { parseApiList } from "@/lib/api";
+import { fetchAllPaginatedList } from "@/lib/api";
 import { sortByLocaleKey } from "@/lib/sort-alphabetical";
 
 const PAYMENT_METHOD_FILTERS = [
@@ -87,14 +87,10 @@ function LedgerContent() {
     if (!user?.access_token) return;
     const fetchVendors = async () => {
       try {
-        const res = await fetch(
-          `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/vendor?limit=100`,
-          {
-            headers: { Authorization: `Bearer ${user.access_token}` },
-          },
+        const list = await fetchAllPaginatedList<{ id: string; name: string }>(
+          `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/vendor`,
+          { headers: { Authorization: `Bearer ${user.access_token}` } },
         );
-        const json = await res.json();
-        const list = parseApiList<{ id: string; name: string }>(json);
         setVendors(
           sortByLocaleKey(
             list.map((v: { id: string; name: string }) => ({ id: v.id, name: v.name })),
