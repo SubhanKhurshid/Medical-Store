@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAuth } from "@/app/providers/AuthProvider";
+import { API_LIST_MAX_LIMIT, parseApiList } from "@/lib/api";
 import { sortByLocaleKey } from "@/lib/sort-alphabetical";
 
 const VENDOR_TYPES = ["DISTRIBUTOR", "MARKET", "SUPPLIER"] as const;
@@ -66,10 +67,10 @@ export default function VendorModal({ isOpen, onClose, onSave, editVendor }: Ven
   useEffect(() => {
     if (!isOpen) return;
 
-    fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/manufacturer`)
+    fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/manufacturer?limit=${API_LIST_MAX_LIMIT}`)
       .then((res) => res.json())
       .then((data) => {
-        const list = Array.isArray(data) ? data : [data];
+        const list = parseApiList<{ id: string; companyName: string }>(data);
         setManufacturers(
           sortByLocaleKey(
             list.map((m: { id: string; companyName: string }) => ({

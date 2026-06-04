@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { parseApiList } from "@/lib/api";
 import { sortByLocaleKey } from "@/lib/sort-alphabetical";
 import { DataTable } from "@/components/shared/DataTable";
 import { Input } from "@/components/ui/input";
@@ -56,7 +57,7 @@ export default function PurchaseInvoicesPage() {
             if (!response.ok) throw new Error("Failed to fetch invoices");
 
             const result = await response.json();
-            const items = result.data ?? result;
+            const items = parseApiList(result);
             const mappedData = items.map((item: any) => ({
                 id: item.id,
                 invoiceNumber: item.invoiceNumber,

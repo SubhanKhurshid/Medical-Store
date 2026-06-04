@@ -20,6 +20,7 @@ import { sortByLocaleKey } from "@/lib/sort-alphabetical";
 import { PaginationControls } from "@/components/shared/PaginationControls";
 import { useAuth } from "@/app/providers/AuthProvider";
 import axios from "axios";
+import { parseApiList } from "@/lib/api";
 
 const LIMIT = 20;
 
@@ -52,7 +53,7 @@ const Inventory = () => {
         { headers: { Authorization: `Bearer ${accessToken}` } }
       );
 
-      const raw = result.data ?? result;
+      const raw = parseApiList<InventoryItem>(result);
       setItems(sortByLocaleKey(raw, (i: InventoryItem) => i.name));
       if (result.meta) {
         setPage(result.meta.page);

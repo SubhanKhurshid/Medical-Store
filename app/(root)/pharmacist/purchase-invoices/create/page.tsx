@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import { API_LIST_MAX_LIMIT, parseApiList } from "@/lib/api";
 import { sortByLocaleKey } from "@/lib/sort-alphabetical";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -49,20 +50,21 @@ export default function CreatePurchaseInvoicePage() {
     ]);
 
     useEffect(() => {
-        fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/vendor`)
+        fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/vendor?limit=100`)
             .then((res) => res.json())
             .then((data) =>
                 setVendors(
-                    sortByLocaleKey(Array.isArray(data) ? data : [data], (v: VendorOption) => v.name),
+                    sortByLocaleKey(parseApiList<VendorOption>(data), (v) => v.name),
                 ),
             )
             .catch((err) => console.error(err));
 
-        fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist`)
+        fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist?limit=${API_LIST_MAX_LIMIT}`)
             .then((res) => res.json())
             .then((data) => {
-                const items = Array.isArray(data) ? data : (data?.data ?? []);
-                setInventoryItems(sortByLocaleKey(items, (i) => i.name));
+                setInventoryItems(
+                    sortByLocaleKey(parseApiList<{ name: string }>(data), (i) => i.name),
+                );
             })
             .catch((err) => console.error(err));
     }, []);

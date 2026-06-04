@@ -2,6 +2,7 @@ import axios from "axios";
 import React, { createContext, useContext, useReducer, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { useAuth } from "../providers/AuthProvider";
+import { API_LIST_MAX_LIMIT, parseApiList } from "@/lib/api";
 import { sortByLocaleKey } from "@/lib/sort-alphabetical";
 
 export enum ItemType {
@@ -138,14 +139,17 @@ export const InventoryProvider = ({
   const refetchInventory = useCallback(async () => {
     if (!accessToken) return;
     const response = await axios.get(
-      `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist`,
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist?limit=${API_LIST_MAX_LIMIT}`,
       {
         headers: {
           Authorization: `Bearer ${accessToken}`,
         },
       }
     );
-    dispatch({ type: "SET_ITEMS", payload: response.data.data ?? response.data });
+    dispatch({
+      type: "SET_ITEMS",
+      payload: parseApiList<InventoryItem>(response.data),
+    });
   }, [accessToken]);
 
   const addItem = async (
@@ -218,7 +222,10 @@ export const InventoryProvider = ({
       { headers: { Authorization: `Bearer ${accessToken}` } }
     );
     const result = response.data;
-    const data = sortByLocaleKey(result.data ?? result, (i: InventoryItem) => i.name);
+    const data = sortByLocaleKey(
+      parseApiList<InventoryItem>(result),
+      (i: InventoryItem) => i.name,
+    );
     return { data, meta: result.meta ?? { total: data.length, page, limit, totalPages: 1 } };
   }, [accessToken]);
 
@@ -228,7 +235,10 @@ export const InventoryProvider = ({
       { headers: { Authorization: `Bearer ${accessToken}` } }
     );
     const result = response.data;
-    const data = sortByLocaleKey(result.data ?? result, (i: InventoryItem) => i.name);
+    const data = sortByLocaleKey(
+      parseApiList<InventoryItem>(result),
+      (i: InventoryItem) => i.name,
+    );
     return { data, meta: result.meta ?? { total: data.length, page, limit, totalPages: 1 } };
   }, [accessToken]);
 

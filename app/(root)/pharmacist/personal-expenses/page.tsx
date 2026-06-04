@@ -33,6 +33,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import axios from "axios";
+import { parseApiList } from "@/lib/api";
 
 const OTHER_EXPENSE_NAME = "Other expenses";
 
@@ -120,7 +121,7 @@ export default function PersonalExpensesPage() {
       );
       if (!res.ok) throw new Error("Failed to load expenses");
       const data = await res.json();
-      setRows(Array.isArray(data) ? data : []);
+      setRows(parseApiList<PersonalExpenseRow>(data));
     } catch {
       toast.error("Could not load personal expenses");
     } finally {

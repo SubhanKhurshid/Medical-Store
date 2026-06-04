@@ -42,6 +42,7 @@ import {
 } from "@tanstack/react-table";
 import type { ColumnDef } from "@tanstack/react-table";
 import axios from "axios";
+import { parseApiList } from "@/lib/api";
 import { dispatchLowStockInvalidated } from "@/lib/low-stock-events";
 import { TableEmptyState } from "@/components/shared/TableEmptyState";
 import { FileText } from "lucide-react";
@@ -268,7 +269,7 @@ export default function ViewPurchaseOrdersPage() {
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/purchase-orders?page=${targetPage}&limit=${SERVER_LIMIT}`
       );
 
-      const orders = response.data ?? response;
+      const orders = parseApiList(response);
       const transformedData = orders.map((order: any) => ({
         ...order,
         itemName: order.inventoryItem?.name || "N/A",

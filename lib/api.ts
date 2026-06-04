@@ -19,3 +19,19 @@ export function getApiBaseUrl(): string {
   }
   return url.replace(/\/$/, ""); // strip trailing slash
 }
+
+/** Max page size allowed by pharmacist list endpoints (vendor, manufacturer, inventory, etc.). */
+export const API_LIST_MAX_LIMIT = 100;
+
+/** Unwrap list from API body: either `T[]` or paginated `{ data: T[] }`. */
+export function parseApiList<T>(json: unknown): T[] {
+  if (Array.isArray(json)) return json as T[];
+  if (
+    json &&
+    typeof json === "object" &&
+    Array.isArray((json as { data?: unknown }).data)
+  ) {
+    return (json as { data: T[] }).data;
+  }
+  return [];
+}

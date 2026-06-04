@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/table";
 import Loading from "@/components/shared/Loading";
 import { Suspense } from "react";
+import { API_LIST_MAX_LIMIT, parseApiList } from "@/lib/api";
 import { sortByLocaleKey } from "@/lib/sort-alphabetical";
 
 const PAYMENT_METHOD_FILTERS = [
@@ -86,11 +87,19 @@ function LedgerContent() {
     if (!user?.access_token) return;
     const fetchManufacturers = async () => {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/manufacturer`, {
-          headers: { Authorization: `Bearer ${user.access_token}` },
-        });
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/manufacturer?limit=${API_LIST_MAX_LIMIT}`,
+          {
+            headers: { Authorization: `Bearer ${user.access_token}` },
+          },
+        );
         const json = await res.json();
-        setManufacturers(sortByLocaleKey(Array.isArray(json) ? json : [], (m) => m.companyName));
+        setManufacturers(
+          sortByLocaleKey(
+            parseApiList<{ id: string; companyName: string }>(json),
+            (m) => m.companyName,
+          ),
+        );
       } catch (e) {
         console.error(e);
       } finally {

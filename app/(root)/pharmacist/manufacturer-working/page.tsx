@@ -28,6 +28,7 @@ import Link from "next/link";
 import Loading from "@/components/shared/Loading";
 import { toast } from "sonner";
 import axios from "axios";
+import { parseApiList } from "@/lib/api";
 import { useAuth } from "@/app/providers/AuthProvider";
 import { Button } from "@/components/ui/button";
 import {
@@ -93,7 +94,7 @@ const Manufacturer = () => {
       }
 
       const result = await response.json();
-      const manufacturersArray = Array.isArray(result) ? result : (result.data ?? []);
+      const manufacturersArray = parseApiList<ManufacturerRaw>(result);
 
       const mappedData = manufacturersArray.map((item: any) => ({
         id: item.id,

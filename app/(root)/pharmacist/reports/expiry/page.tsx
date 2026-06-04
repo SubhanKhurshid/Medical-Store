@@ -7,6 +7,7 @@ import { Calendar, ArrowLeft } from "lucide-react";
 import Loading from "@/components/shared/Loading";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { parseApiList } from "@/lib/api";
 import { sortByLocaleKey } from "@/lib/sort-alphabetical";
 import { Button } from "@/components/ui/button";
 import {
@@ -45,7 +46,7 @@ export default function ExpiryReportPage() {
           { headers: { Authorization: `Bearer ${user.access_token}` } }
         );
         const json = await res.json();
-        setItems(Array.isArray(json) ? json : []);
+        setItems(parseApiList<ExpiryItem>(json));
       } catch (e) {
         console.error(e);
       } finally {

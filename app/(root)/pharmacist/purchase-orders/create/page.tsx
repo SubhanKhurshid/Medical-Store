@@ -42,6 +42,7 @@ import {
 import type { ColumnDef } from "@tanstack/react-table";
 import axios from "axios";
 import { useAuth } from "@/app/providers/AuthProvider";
+import { API_LIST_MAX_LIMIT, parseApiList } from "@/lib/api";
 import { dispatchLowStockInvalidated } from "@/lib/low-stock-events";
 import { isLowStock } from "@/lib/low-stock";
 import { dispatchExpiringInvalidated } from "@/lib/expiring-events";
@@ -254,11 +255,17 @@ export default function CreatePurchaseOrdersPage() {
     try {
       setLoading(true);
       const [lowRes, expiringRes] = await Promise.all([
-        axios.get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/low-stock`, { headers }),
-        axios.get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/expiring`, { headers }),
+        axios.get(
+          `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/low-stock?limit=${API_LIST_MAX_LIMIT}`,
+          { headers },
+        ),
+        axios.get(
+          `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/expiring?limit=${API_LIST_MAX_LIMIT}`,
+          { headers },
+        ),
       ]);
-      const lowStock = lowRes.data?.data ?? lowRes.data ?? [];
-      const expiring = expiringRes.data?.data ?? expiringRes.data ?? [];
+      const lowStock = parseApiList<ReorderItem>(lowRes.data);
+      const expiring = parseApiList<ReorderItem>(expiringRes.data);
       const merged = mergeLowStockAndExpiring(lowStock, expiring);
       setItems(merged);
       setError(null);
@@ -279,10 +286,14 @@ export default function CreatePurchaseOrdersPage() {
     const headers = getAuthHeaders(user?.access_token);
     try {
       const res = await axios.get(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/vendor`,
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/vendor?limit=100`,
         { headers }
       );
-      const rows = Array.isArray(res.data) ? res.data : [];
+      const rows = parseApiList<{
+        id: string;
+        name: string;
+        manufacturerLinks?: { manufacturerId: string }[];
+      }>(res.data);
       setVendors(
         rows.map((v: { id: string; name: string; manufacturerLinks?: { manufacturerId: string }[] }) => ({
           id: v.id,
@@ -300,26 +311,26 @@ export default function CreatePurchaseOrdersPage() {
     try {
       setLoadingInventory(true);
       const res = await axios.get(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist`,
-        { headers }
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist?limit=${API_LIST_MAX_LIMIT}`,
+        { headers },
       );
-      const rows = Array.isArray(res.data) ? res.data : (res.data?.data ?? []);
+      const rows = parseApiList<{
+        id: string;
+        name: string;
+        quantity: number;
+        minimumStock?: number;
+        manufacturer?: string;
+        manufacturerId?: string | null;
+        purchasePrice?: number;
+        sellingPrice?: number;
+        price?: number;
+        manufacturerDiscount?: number;
+        specialCompanyDiscount?: number;
+        customerDiscount?: number;
+        batchNumber?: string;
+      }>(res.data);
       setAllInventory(
-        rows.map((r: {
-          id: string;
-          name: string;
-          quantity: number;
-          minimumStock?: number;
-          manufacturer?: string;
-          manufacturerId?: string | null;
-          purchasePrice?: number;
-          sellingPrice?: number;
-          price?: number;
-          manufacturerDiscount?: number;
-          specialCompanyDiscount?: number;
-          customerDiscount?: number;
-          batchNumber?: string;
-        }) =>
+        rows.map((r) =>
           toReorderItemFromInventory({
             id: r.id,
             name: r.name,

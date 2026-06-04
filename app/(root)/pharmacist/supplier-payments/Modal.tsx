@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, FileText, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { parseApiList } from "@/lib/api";
 import { sortByLocaleKey } from "@/lib/sort-alphabetical";
 
 export interface SupplierPaymentEdit {
@@ -47,10 +48,10 @@ const PaymentModal = ({ isOpen, onClose, onSave, editPayment, accessToken }: Pay
             (headers as Record<string, string>).Authorization = `Bearer ${accessToken}`;
         }
 
-        fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/vendor`, { headers })
+        fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/vendor?limit=100`, { headers })
             .then((res) => res.json())
             .then((data) => {
-                const list = Array.isArray(data) ? data : [data];
+                const list = parseApiList<{ id: string; name: string }>(data);
                 setVendors(
                     sortByLocaleKey(
                         list.map((v: { id: string; name: string }) => ({ id: v.id, name: v.name })),

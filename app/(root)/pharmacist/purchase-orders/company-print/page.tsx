@@ -28,6 +28,7 @@ import Loading from "@/components/shared/Loading";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle, Printer } from "lucide-react";
 import { useAuth } from "@/app/providers/AuthProvider";
+import { parseApiList } from "@/lib/api";
 
 const ALL_VENDORS = "__all__";
 const ALL_STATUSES = "__all__";
@@ -120,10 +121,10 @@ export default function CompanyPurchaseOrderPrintPage() {
       try {
         setLoading(true);
         const { data } = await axios.get(
-          `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/vendor`,
+          `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/vendor?limit=100`,
           { headers },
         );
-        const list = Array.isArray(data) ? data : [];
+        const list = parseApiList<{ id: string; name: string }>(data);
         setVendors(
           list.map((v: { id: string; name: string }) => ({
             id: v.id,

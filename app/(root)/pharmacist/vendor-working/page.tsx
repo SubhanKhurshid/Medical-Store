@@ -18,6 +18,7 @@ import Link from "next/link";
 import Loading from "@/components/shared/Loading";
 import { toast } from "sonner";
 import axios from "axios";
+import { parseApiList } from "@/lib/api";
 import { useAuth } from "@/app/providers/AuthProvider";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -61,7 +62,7 @@ export default function VendorsPage() {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/vendor?page=${targetPage}&limit=${LIMIT}`, { headers });
       if (!res.ok) throw new Error("Failed to fetch vendors");
       const result = await res.json();
-      const list: VendorRaw[] = Array.isArray(result) ? result : (result.data ?? []);
+      const list = parseApiList<VendorRaw>(result);
       setVendorsRaw(list);
       if (result.meta) {
         setTotalPages(result.meta.totalPages);
