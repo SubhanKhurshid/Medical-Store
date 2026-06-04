@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { parseApiList } from "@/lib/api";
 import { sortByLocaleKey } from "@/lib/sort-alphabetical";
 import { DataTable } from "@/components/shared/DataTable";
@@ -40,6 +40,7 @@ interface Invoice {
 
 export default function PurchaseInvoicesPage() {
     const [search, setSearch] = useState("");
+    const searchDebounceRef = useRef<ReturnType<typeof setTimeout>>();
     const [invoices, setInvoices] = useState<Invoice[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
@@ -48,11 +49,16 @@ export default function PurchaseInvoicesPage() {
     const [total, setTotal] = useState(0);
     const LIMIT = 20;
 
-    const fetchInvoices = async (targetPage = page) => {
+    const fetchInvoices = async (targetPage = page, searchOverride?: string) => {
         setLoading(true);
         try {
+            const activeSearch = searchOverride !== undefined ? searchOverride : search;
+            const params = new URLSearchParams();
+            params.append("page", String(targetPage));
+            params.append("limit", String(LIMIT));
+            if (activeSearch.trim()) params.append("search", activeSearch.trim());
             const response = await fetch(
-                `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/purchase-invoices?page=${targetPage}&limit=${LIMIT}`
+                `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/purchase-invoices?${params.toString()}`
             );
             if (!response.ok) throw new Error("Failed to fetch invoices");
 
@@ -84,7 +90,18 @@ export default function PurchaseInvoicesPage() {
 
     useEffect(() => {
         fetchInvoices();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
+
+    useEffect(() => {
+        clearTimeout(searchDebounceRef.current);
+        searchDebounceRef.current = setTimeout(() => {
+            setPage(1);
+            void fetchInvoices(1, search);
+        }, 300);
+        return () => clearTimeout(searchDebounceRef.current);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [search]);
 
     const columns = [
         {
@@ -202,11 +219,7 @@ export default function PurchaseInvoicesPage() {
                             >
                                 <DataTable
                                     columns={columns}
-                                    data={invoices.filter(
-                                        (i) =>
-                                            i.invoiceNumber.toLowerCase().includes(search.toLowerCase()) ||
-                                            i.supplierLabel.toLowerCase().includes(search.toLowerCase())
-                                    )}
+                                    data={invoices}
                                     onRowClick={(inv) => setSelectedInvoice(inv)}
                                     initialSorting={[{ id: "supplierLabel", desc: false }]}
                                 />

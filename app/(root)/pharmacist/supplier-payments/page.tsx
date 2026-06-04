@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { DataTable } from "@/components/shared/DataTable";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -35,6 +35,7 @@ interface Payment {
 
 const SupplierPayments = () => {
     const [search, setSearch] = useState("");
+    const searchDebounceRef = useRef<ReturnType<typeof setTimeout>>();
     const [payments, setPayments] = useState<Payment[]>([]);
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -49,16 +50,20 @@ const SupplierPayments = () => {
     const { user } = useAuth();
     const accessToken = user?.access_token;
 
-    const fetchPayments = useCallback(async (targetPage = 1) => {
+    const fetchPayments = useCallback(async (targetPage = 1, searchOverride?: string) => {
         setLoading(true);
         try {
             const headers: HeadersInit = {};
             if (accessToken) {
                 (headers as Record<string, string>).Authorization = `Bearer ${accessToken}`;
             }
-
+            const activeSearch = searchOverride !== undefined ? searchOverride : search;
+            const params = new URLSearchParams();
+            params.append("page", String(targetPage));
+            params.append("limit", String(LIMIT));
+            if (activeSearch.trim()) params.append("search", activeSearch.trim());
             const response = await fetch(
-                `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/supplier-payments?page=${targetPage}&limit=${LIMIT}`,
+                `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/supplier-payments?${params.toString()}`,
                 { headers },
             );
             if (!response.ok) {
@@ -100,11 +105,21 @@ const SupplierPayments = () => {
         } finally {
             setLoading(false);
         }
-    }, [accessToken, LIMIT]);
+    }, [accessToken, LIMIT, search]);
 
     useEffect(() => {
         fetchPayments(1);
     }, [fetchPayments]);
+
+    useEffect(() => {
+        clearTimeout(searchDebounceRef.current);
+        searchDebounceRef.current = setTimeout(() => {
+            setPage(1);
+            void fetchPayments(1, search);
+        }, 300);
+        return () => clearTimeout(searchDebounceRef.current);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [search]);
 
     const openCreateModal = () => {
         setEditPayment(null);
@@ -291,11 +306,7 @@ const SupplierPayments = () => {
                                 >
                                     <DataTable
                                         columns={columns}
-                                        data={payments.filter(
-                                            (p) =>
-                                                p.payeeLabel?.toLowerCase().includes(search?.toLowerCase()) ||
-                                                p.reference?.toLowerCase().includes(search?.toLowerCase()),
-                                        )}
+                                        data={payments}
                                         onRowClick={(p) => setSelectedPayment(p)}
                                         initialSorting={[{ id: "payeeLabel", desc: false }]}
                                     />

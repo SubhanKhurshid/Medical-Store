@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { DataTable } from "@/components/shared/DataTable";
 import { Input } from "@/components/ui/input";
@@ -151,11 +151,12 @@ const SalesTable = () => {
   const [saleToDelete, setSaleToDelete] = useState<Sale | null>(null);
   const [deleteSubmitting, setDeleteSubmitting] = useState(false);
   const [exportingPdf, setExportingPdf] = useState(false);
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout>>();
   const { user } = useAuth();
   const accessToken = user?.access_token;
   const { refetchInventory } = useInventory();
 
-  const loadSales = useCallback(async (targetPage = page) => {
+  const loadSales = useCallback(async (targetPage = page, searchOverride?: string) => {
     if (!accessToken) return;
     const range = apiRange(dateRangeMode, customFrom, customTo);
     if (range === null) {
@@ -172,6 +173,9 @@ const SalesTable = () => {
       if (range.end) queryParams.append("endDate", range.end);
       queryParams.append("page", String(targetPage));
       queryParams.append("limit", String(LIMIT));
+      const activeSearch = searchOverride !== undefined ? searchOverride : search;
+      if (activeSearch.trim()) queryParams.append("search", activeSearch.trim());
+      if (paymentFilter !== "ALL") queryParams.append("paymentMethod", paymentFilter);
 
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/sales?${queryParams}`,
@@ -206,7 +210,7 @@ const SalesTable = () => {
     } finally {
       setLoading(false);
     }
-  }, [accessToken, dateRangeMode, customFrom, customTo, page, LIMIT]);
+  }, [accessToken, dateRangeMode, customFrom, customTo, page, LIMIT, search, paymentFilter]);
 
   useEffect(() => {
     setPage(1);
@@ -216,22 +220,25 @@ const SalesTable = () => {
     void loadSales();
   }, [loadSales]);
 
-  const displaySales = useMemo(() => {
-    let rows = sales;
-    if (paymentFilter !== "ALL") {
-      rows = rows.filter((s) => s.paymentMethod === paymentFilter);
-    }
-    if (search.trim()) {
-      const s = search.toLowerCase();
-      rows = rows.filter(
-        (sale) =>
-          (sale.invoiceNumber ?? "").toLowerCase().includes(s) ||
-          (sale.customerName ?? "").toLowerCase().includes(s) ||
-          (sale.customerPhone ?? "").toLowerCase().includes(s),
-      );
-    }
-    return sortSalesNewestFirst(rows);
-  }, [sales, paymentFilter, search]);
+  // Debounced search effect
+  useEffect(() => {
+    clearTimeout(searchDebounceRef.current);
+    searchDebounceRef.current = setTimeout(() => {
+      setPage(1);
+      void loadSales(1, search);
+    }, 300);
+    return () => clearTimeout(searchDebounceRef.current);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search]);
+
+  // Debounced paymentFilter effect
+  useEffect(() => {
+    setPage(1);
+    void loadSales(1);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [paymentFilter]);
+
+  const displaySales = useMemo(() => sortSalesNewestFirst(sales), [sales]);
 
   const formatCurrency = useCallback(
     (n: number) =>
