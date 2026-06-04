@@ -20,6 +20,7 @@ import {
 import { useAuth } from "@/app/providers/AuthProvider";
 import { toast } from "sonner";
 import axios from "axios";
+import { parseApiList } from "@/lib/api";
 import { PaginationControls } from "@/components/shared/PaginationControls";
 
 interface Payment {
@@ -65,8 +66,7 @@ const SupplierPayments = () => {
             }
 
             const result = await response.json();
-            const items = result.data ?? result;
-            const mappedData = items.map((item: {
+            const items = parseApiList<{
                 id: string;
                 vendorId?: string;
                 vendor?: { id: string; name: string };
@@ -75,7 +75,8 @@ const SupplierPayments = () => {
                 paymentDate: string;
                 reference?: string;
                 paymentMethod?: string;
-            }) => ({
+            }>(result);
+            const mappedData = items.map((item) => ({
                 id: item.id,
                 vendorId: item.vendorId || item.vendor?.id || "",
                 payeeLabel:

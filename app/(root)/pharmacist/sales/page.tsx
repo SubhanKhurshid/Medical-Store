@@ -32,6 +32,7 @@ import { toast } from "sonner";
 import axios from "axios";
 import { useAuth } from "@/app/providers/AuthProvider";
 import { useInventory } from "@/app/context/InventoryContext";
+import { parseApiList } from "@/lib/api";
 import { sortByLocaleKey } from "@/lib/sort-alphabetical";
 import { motion, AnimatePresence } from "framer-motion";
 import { Receipt } from "@/components/Receipt";
@@ -105,7 +106,7 @@ const SalesPage = () => {
       );
 
       const result = response.data;
-      const items: Product[] = (result.data ?? result).map((p: any) => ({
+      const items: Product[] = parseApiList<any>(result).map((p: any) => ({
         ...p,
         quantity: p.quantity || 0,
         imageUrl: p.image ?? p.imageUrl ?? "",

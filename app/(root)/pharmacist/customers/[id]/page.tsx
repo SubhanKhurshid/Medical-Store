@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { useAuth } from "@/app/providers/AuthProvider";
 import axios from "axios";
+import { parseApiList } from "@/lib/api";
 import { toast } from "sonner";
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL;
@@ -66,7 +67,7 @@ export default function CustomerDetailPage() {
             const { data } = await axios.get(`${API}/pharmacist/customer/${params.id}/transactions`, {
                 headers: { Authorization: `Bearer ${accessToken}` },
             });
-            setTransactions(Array.isArray(data) ? data : []);
+            setTransactions(parseApiList(data));
         } catch (e) {
             setTransactions([]);
         }
@@ -78,7 +79,7 @@ export default function CustomerDetailPage() {
             const { data } = await axios.get(`${API}/pharmacist/customer/${params.id}/reminders`, {
                 headers: { Authorization: `Bearer ${accessToken}` },
             });
-            setReminders(Array.isArray(data) ? data : []);
+            setReminders(parseApiList(data));
         } catch (e) {
             setReminders([]);
         }

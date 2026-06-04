@@ -12,6 +12,7 @@ import CustomerModal from "./Modal";
 import { PaginationControls } from "@/components/shared/PaginationControls";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/providers/AuthProvider";
+import { parseApiList } from "@/lib/api";
 
 interface Customer {
     id: string;
@@ -49,8 +50,7 @@ const CustomersPage = () => {
                 throw new Error("Failed to fetch customers");
             }
             const result = await response.json();
-            const list = Array.isArray(result) ? result : (result.data ?? []);
-            setCustomers(list);
+            setCustomers(parseApiList<Customer>(result));
             if (result.meta) {
                 setTotalPages(result.meta.totalPages);
                 setTotal(result.meta.total);
