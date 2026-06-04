@@ -294,14 +294,6 @@ export default function ViewPurchaseOrdersPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dateFrom, dateTo]);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50/80">
-        <Loading />
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-gray-50/80">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
@@ -414,7 +406,11 @@ export default function ViewPurchaseOrdersPage() {
           </div>
           <CardContent className="p-4 sm:p-5">
           <div className="space-y-4">
-            {error ? (
+            {loading ? (
+              <div className="min-h-[280px] flex items-center justify-center">
+                <Loading />
+              </div>
+            ) : error ? (
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
                 <AlertTitle>Error</AlertTitle>
