@@ -8,7 +8,7 @@ import { DialogContent } from "@/components/ui/dialog";
 
 import { Dialog } from "@/components/ui/dialog";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertCircle, CheckCircle, Search, XCircle } from "lucide-react";
 import Loading from "@/components/shared/Loading";
@@ -60,22 +60,6 @@ interface PurchaseOrder {
   orderDate: string;
 }
 
-function startOfDayLocal(dateStr: string): Date {
-  const [y, m, d] = dateStr.split("-").map(Number);
-  return new Date(y, m - 1, d, 0, 0, 0, 0);
-}
-
-function endOfDayLocal(dateStr: string): Date {
-  const [y, m, d] = dateStr.split("-").map(Number);
-  return new Date(y, m - 1, d, 23, 59, 59, 999);
-}
-
-function isWithinDateRange(isoDate: string, from: string, to: string): boolean {
-  const d = new Date(isoDate);
-  if (from && d < startOfDayLocal(from)) return false;
-  if (to && d > endOfDayLocal(to)) return false;
-  return true;
-}
 
 export default function ViewPurchaseOrdersPage() {
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
@@ -89,6 +73,8 @@ export default function ViewPurchaseOrdersPage() {
   const [search, setSearch] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout>>();
+  const dateDebounceRef = useRef<ReturnType<typeof setTimeout>>();
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-US", {
@@ -98,31 +84,7 @@ export default function ViewPurchaseOrdersPage() {
     });
   };
 
-  const dateRangeInvalid = Boolean(dateFrom && dateTo && dateFrom > dateTo);
-
-  const filteredOrders = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (dateRangeInvalid) return [];
-    return purchaseOrders.filter((order) => {
-      if (dateFrom || dateTo) {
-        if (!isWithinDateRange(order.createdAt, dateFrom, dateTo)) return false;
-      }
-      if (!q) return true;
-      return (
-        order.orderNumber.toLowerCase().includes(q) ||
-        order.itemName.toLowerCase().includes(q)
-      );
-    });
-  }, [purchaseOrders, search, dateFrom, dateTo, dateRangeInvalid]);
-
-  const filterSummary = useMemo(() => {
-    const units = filteredOrders.reduce((s, o) => s + o.quantityOrdered, 0);
-    return { count: filteredOrders.length, units };
-  }, [filteredOrders]);
-
-  const hasActiveFilters = Boolean(
-    search.trim() || dateFrom || dateTo
-  );
+  const hasActiveFilters = Boolean(search.trim() || dateFrom || dateTo);
 
   // Handle row click
   const handleRowClick = (order: PurchaseOrder) => {
@@ -251,7 +213,7 @@ export default function ViewPurchaseOrdersPage() {
   ];
 
   const table = useReactTable({
-    data: filteredOrders,
+    data: purchaseOrders,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
@@ -262,11 +224,20 @@ export default function ViewPurchaseOrdersPage() {
     },
   });
 
-  const fetchPurchaseOrders = async (targetPage = serverPage) => {
+  const fetchPurchaseOrders = async (targetPage = serverPage, searchOverride?: string, dateFromOverride?: string, dateToOverride?: string) => {
     try {
       setLoading(true);
+      const activeSearch = searchOverride !== undefined ? searchOverride : search;
+      const activeDateFrom = dateFromOverride !== undefined ? dateFromOverride : dateFrom;
+      const activeDateTo = dateToOverride !== undefined ? dateToOverride : dateTo;
+      const params = new URLSearchParams();
+      params.append("page", String(targetPage));
+      params.append("limit", String(SERVER_LIMIT));
+      if (activeSearch.trim()) params.append("search", activeSearch.trim());
+      if (activeDateFrom) params.append("dateFrom", activeDateFrom);
+      if (activeDateTo) params.append("dateTo", activeDateTo);
       const { data: response } = await axios.get(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/purchase-orders?page=${targetPage}&limit=${SERVER_LIMIT}`
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/purchase-orders?${params.toString()}`
       );
 
       const orders = parseApiList(response);
@@ -298,7 +269,30 @@ export default function ViewPurchaseOrdersPage() {
 
   useEffect(() => {
     fetchPurchaseOrders();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Debounced search
+  useEffect(() => {
+    clearTimeout(searchDebounceRef.current);
+    searchDebounceRef.current = setTimeout(() => {
+      setServerPage(1);
+      void fetchPurchaseOrders(1, search, dateFrom, dateTo);
+    }, 300);
+    return () => clearTimeout(searchDebounceRef.current);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search]);
+
+  // Debounced date filters
+  useEffect(() => {
+    clearTimeout(dateDebounceRef.current);
+    dateDebounceRef.current = setTimeout(() => {
+      setServerPage(1);
+      void fetchPurchaseOrders(1, search, dateFrom, dateTo);
+    }, 300);
+    return () => clearTimeout(dateDebounceRef.current);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dateFrom, dateTo]);
 
   if (loading) {
     return (
@@ -395,7 +389,7 @@ export default function ViewPurchaseOrdersPage() {
                 </Button>
               )}
             </div>
-            {dateRangeInvalid && (
+            {dateFrom && dateTo && dateFrom > dateTo && (
               <p className="text-sm text-amber-800 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
                 <strong>From</strong> must be on or before <strong>To</strong>.
               </p>
@@ -403,20 +397,9 @@ export default function ViewPurchaseOrdersPage() {
             {purchaseOrders.length > 0 && (
               <p className="text-sm text-gray-600">
                 Showing{" "}
-                <span className="font-semibold text-red-800">{filterSummary.count}</span>{" "}
-                order{filterSummary.count !== 1 ? "s" : ""}
-                {hasActiveFilters ? " (filtered)" : ""} ·{" "}
-                <span className="font-semibold">{filterSummary.units}</span> units ordered
-                {(dateFrom || dateTo) && !dateRangeInvalid && (
-                  <>
-                    {" "}
-                    {dateFrom && dateTo
-                      ? `from ${formatDate(startOfDayLocal(dateFrom).toISOString())} to ${formatDate(endOfDayLocal(dateTo).toISOString())}`
-                      : dateFrom
-                        ? `from ${formatDate(startOfDayLocal(dateFrom).toISOString())}`
-                        : `until ${formatDate(endOfDayLocal(dateTo).toISOString())}`}
-                  </>
-                )}
+                <span className="font-semibold text-red-800">{purchaseOrders.length}</span>{" "}
+                order{purchaseOrders.length !== 1 ? "s" : ""}
+                {hasActiveFilters ? " (filtered)" : ""}
               </p>
             )}
           </CardContent>
@@ -451,23 +434,9 @@ export default function ViewPurchaseOrdersPage() {
                   There are no purchase orders yet. Create one from the low stock page.
                 </p>
               </motion.div>
-            ) : filteredOrders.length === 0 ? (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="flex flex-col items-center justify-center py-12 px-4 rounded-lg bg-gray-50/80"
-              >
-                <div className="h-14 w-14 rounded-full bg-gray-100 flex items-center justify-center mb-3">
-                  <Search className="h-7 w-7 text-gray-400" />
-                </div>
-                <p className="text-sm font-medium text-gray-600">No matching orders</p>
-                <p className="text-xs text-gray-500 mt-0.5 text-center max-w-sm">
-                  Change search or date range, or clear filters to see all orders.
-                </p>
-              </motion.div>
             ) : (
               <div className="rounded-lg border border-gray-100 overflow-hidden">
-                <Table wrapperClassName={filteredOrders.length > 0 ? "min-h-[260px]" : undefined}>
+                <Table wrapperClassName={purchaseOrders.length > 0 ? "min-h-[260px]" : undefined}>
                   <TableHeader>
                     {table.getHeaderGroups().map((headerGroup) => (
                       <TableRow key={headerGroup.id}>

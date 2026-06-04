@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { DataTable } from "@/components/shared/DataTable";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,6 +28,7 @@ const CustomersPage = () => {
     const { user } = useAuth();
     const accessToken = user?.access_token;
     const [search, setSearch] = useState("");
+    const searchDebounceRef = useRef<ReturnType<typeof setTimeout>>();
     const [customers, setCustomers] = useState<Customer[]>([]);
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -37,11 +38,16 @@ const CustomersPage = () => {
     const [total, setTotal] = useState(0);
     const LIMIT = 20;
 
-    const fetchCustomers = async (targetPage = 1) => {
+    const fetchCustomers = async (targetPage = 1, searchOverride?: string) => {
         setLoading(true);
         try {
+            const activeSearch = searchOverride !== undefined ? searchOverride : search;
+            const params = new URLSearchParams();
+            params.append("page", String(targetPage));
+            params.append("limit", String(LIMIT));
+            if (activeSearch.trim()) params.append("search", activeSearch.trim());
             const response = await fetch(
-                `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/customer?page=${targetPage}&limit=${LIMIT}`,
+                `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/customer?${params.toString()}`,
                 {
                     headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
                 }
@@ -64,7 +70,19 @@ const CustomersPage = () => {
 
     useEffect(() => {
         if (accessToken) fetchCustomers(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [accessToken]);
+
+    useEffect(() => {
+        if (!accessToken) return;
+        clearTimeout(searchDebounceRef.current);
+        searchDebounceRef.current = setTimeout(() => {
+            setPage(1);
+            void fetchCustomers(1, search);
+        }, 300);
+        return () => clearTimeout(searchDebounceRef.current);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [search]);
 
     const columns = [
         {
@@ -203,11 +221,7 @@ const CustomersPage = () => {
                             >
                                 <DataTable
                                     columns={columns}
-                                    data={customers.filter(
-                                        (c) =>
-                                            c.name?.toLowerCase().includes(search.toLowerCase()) ||
-                                            c.phone?.includes(search)
-                                    )}
+                                    data={customers}
                                     disableRowClick={true}
                                 />
                             </motion.div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { DataTable } from "@/components/shared/DataTable";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -68,6 +68,7 @@ interface ManufacturerRaw {
 
 const Manufacturer = () => {
   const [search, setSearch] = useState("");
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout>>();
   const [manufacturers, setManufacturers] = useState<ManufacturerRow[]>([]);
   const [manufacturersRaw, setManufacturersRaw] = useState<ManufacturerRaw[]>([]);
   const [loading, setLoading] = useState(true);
@@ -83,11 +84,16 @@ const Manufacturer = () => {
   const { user } = useAuth();
   const accessToken = user?.access_token;
 
-  const fetchManufacturers = async (targetPage = 1) => {
+  const fetchManufacturers = async (targetPage = 1, searchOverride?: string) => {
     setLoading(true);
     try {
+      const activeSearch = searchOverride !== undefined ? searchOverride : search;
+      const params = new URLSearchParams();
+      params.append("page", String(targetPage));
+      params.append("limit", String(LIMIT));
+      if (activeSearch.trim()) params.append("search", activeSearch.trim());
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/manufacturer?page=${targetPage}&limit=${LIMIT}`
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/manufacturer?${params.toString()}`
       );
       if (!response.ok) {
         throw new Error("Failed to fetch manufacturers");
@@ -126,7 +132,18 @@ const Manufacturer = () => {
 
   useEffect(() => {
     fetchManufacturers();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    clearTimeout(searchDebounceRef.current);
+    searchDebounceRef.current = setTimeout(() => {
+      setPage(1);
+      void fetchManufacturers(1, search);
+    }, 300);
+    return () => clearTimeout(searchDebounceRef.current);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search]);
 
   const handleDelete = async () => {
     if (!itemToDelete) return;
@@ -317,12 +334,7 @@ const Manufacturer = () => {
               >
                 <DataTable
                   columns={columns}
-                  data={manufacturers.filter(
-                    (m) =>
-                      m.name?.toLowerCase().includes(search?.toLowerCase()) ||
-                      m.city?.toLowerCase().includes(search?.toLowerCase()) ||
-                      m.country?.toLowerCase().includes(search?.toLowerCase())
-                  )}
+                  data={manufacturers}
                   onRowClick={(m) => setSelectedManufacturer(m)}
                 />
               </motion.div>

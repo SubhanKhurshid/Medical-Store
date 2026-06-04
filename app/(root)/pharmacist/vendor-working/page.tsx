@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { DataTable } from "@/components/shared/DataTable";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -38,6 +38,7 @@ interface VendorRow {
 
 export default function VendorsPage() {
   const [search, setSearch] = useState("");
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout>>();
   const [vendorsRaw, setVendorsRaw] = useState<VendorRaw[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -52,14 +53,19 @@ export default function VendorsPage() {
   const { user } = useAuth();
   const accessToken = user?.access_token;
 
-  const fetchVendors = async (targetPage = 1) => {
+  const fetchVendors = async (targetPage = 1, searchOverride?: string) => {
     setLoading(true);
     try {
       const headers: HeadersInit = {};
       if (accessToken) {
         (headers as Record<string, string>).Authorization = `Bearer ${accessToken}`;
       }
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/vendor?page=${targetPage}&limit=${LIMIT}`, { headers });
+      const activeSearch = searchOverride !== undefined ? searchOverride : search;
+      const params = new URLSearchParams();
+      params.append("page", String(targetPage));
+      params.append("limit", String(LIMIT));
+      if (activeSearch.trim()) params.append("search", activeSearch.trim());
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/vendor?${params.toString()}`, { headers });
       if (!res.ok) throw new Error("Failed to fetch vendors");
       const result = await res.json();
       const list = parseApiList<VendorRaw>(result);
@@ -78,7 +84,18 @@ export default function VendorsPage() {
 
   useEffect(() => {
     fetchVendors();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accessToken]);
+
+  useEffect(() => {
+    clearTimeout(searchDebounceRef.current);
+    searchDebounceRef.current = setTimeout(() => {
+      setPage(1);
+      void fetchVendors(1, search);
+    }, 300);
+    return () => clearTimeout(searchDebounceRef.current);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search]);
 
   const vendorRows = useMemo(
     () =>
@@ -209,13 +226,6 @@ export default function VendorsPage() {
     },
   ];
 
-  const filtered = vendorRows.filter(
-    (v) =>
-      v.name.toLowerCase().includes(search.toLowerCase()) ||
-      v.vendorType.toLowerCase().includes(search.toLowerCase()) ||
-      v.manufacturerNames.toLowerCase().includes(search.toLowerCase()),
-  );
-
   return (
     <div className="min-h-screen bg-gray-50/80">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
@@ -267,7 +277,7 @@ export default function VendorsPage() {
                 </motion.div>
               ) : (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="rounded-lg border border-gray-100 overflow-hidden">
-                  <DataTable columns={columns} data={filtered} onRowClick={(v) => setSelected(v)} />
+                  <DataTable columns={columns} data={vendorRows} onRowClick={(v) => setSelected(v)} />
                 </motion.div>
               )}
             </AnimatePresence>
