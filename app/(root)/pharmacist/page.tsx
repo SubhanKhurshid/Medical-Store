@@ -44,7 +44,7 @@ function getMonthRange(monthOffset: number) {
 
 const PharmacistPage = () => {
   const {
-    state: { items },
+    state: { items, inventoryTotal },
     getLowStockItems,
     getExpiringItems,
   } = useInventory();
@@ -255,7 +255,7 @@ const PharmacistPage = () => {
         </header>
 
         <PharmacyStats
-          items={items}
+          totalItems={inventoryTotal || items.length}
           lowStockCount={lowStockCount}
           expiringCount={expiringCount}
           earnedThisMonth={earnedThisMonth}

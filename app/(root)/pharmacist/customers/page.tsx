@@ -13,6 +13,7 @@ import { PaginationControls } from "@/components/shared/PaginationControls";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/providers/AuthProvider";
 import { parseApiList } from "@/lib/api";
+import { ShoppingCart } from "lucide-react";
 
 interface Customer {
     id: string;
@@ -109,6 +110,29 @@ const CustomersPage = () => {
             accessorKey: "email",
             header: "Email Address",
             cell: ({ row }: any) => <span>{row.original.email || "-"}</span>,
+        },
+        {
+            id: "startSale",
+            header: "Sale",
+            enableSorting: false,
+            cell: ({ row }: any) => (
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-red-700 hover:text-red-900 hover:bg-red-50"
+                    onClick={() => {
+                        const c = row.original;
+                        const params = new URLSearchParams();
+                        if (c.id) params.set("customerId", c.id);
+                        if (c.name) params.set("name", c.name);
+                        if (c.phone) params.set("phone", c.phone);
+                        router.push(`/pharmacist/sales?${params.toString()}`);
+                    }}
+                >
+                    <ShoppingCart className="h-4 w-4 mr-1" />
+                    Sale
+                </Button>
+            ),
         },
         {
             accessorKey: "creditBalance",
