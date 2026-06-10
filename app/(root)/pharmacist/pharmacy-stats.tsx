@@ -142,13 +142,13 @@ function formatCurrency(amount: number) {
 }
 
 export default function PharmacyStats({
-  items,
+  totalItems,
   lowStockCount,
   expiringCount,
   earnedThisMonth = 0,
   earnedLastMonth = 0,
 }: {
-  items: any[];
+  totalItems: number;
   lowStockCount: number;
   expiringCount: number;
   earnedThisMonth?: number;
@@ -164,7 +164,7 @@ export default function PharmacyStats({
     {
       index: 0,
       title: "Total Items",
-      value: items.length,
+      value: totalItems,
       change: { value: 4.63, trend: "up" },
       icon: Package,
       accent: "red",

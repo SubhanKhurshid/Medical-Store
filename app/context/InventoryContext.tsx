@@ -49,16 +49,19 @@ export interface InventoryItem {
 
 interface InventoryState {
   items: InventoryItem[];
+  inventoryTotal: number;
 }
 
 type InventoryAction =
   | { type: "ADD_ITEM"; payload: InventoryItem }
   | { type: "UPDATE_ITEM"; payload: InventoryItem }
   | { type: "DELETE_ITEM"; payload: string }
-  | { type: "SET_ITEMS"; payload: InventoryItem[] };
+  | { type: "SET_ITEMS"; payload: InventoryItem[] }
+  | { type: "SET_INVENTORY_TOTAL"; payload: number };
 
 const initialState: InventoryState = {
   items: [],
+  inventoryTotal: 0,
 };
 
 export interface PaginationMeta {
@@ -122,6 +125,8 @@ const inventoryReducer = (
         ...state,
         items: sortByLocaleKey(action.payload, (i) => i.name),
       };
+    case "SET_INVENTORY_TOTAL":
+      return { ...state, inventoryTotal: action.payload };
     default:
       return state;
   }
@@ -146,10 +151,10 @@ export const InventoryProvider = ({
         },
       }
     );
-    dispatch({
-      type: "SET_ITEMS",
-      payload: parseApiList<InventoryItem>(response.data),
-    });
+    dispatch({ type: "SET_ITEMS", payload: parseApiList<InventoryItem>(response.data) });
+    if (response.data?.meta?.total != null) {
+      dispatch({ type: "SET_INVENTORY_TOTAL", payload: response.data.meta.total });
+    }
   }, [accessToken]);
 
   const addItem = async (
