@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -13,14 +13,26 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { motion } from "framer-motion";
-import { ArrowLeft, User, Phone, Mail, MapPin, Calendar, Receipt, Wallet, Banknote, Bell, MessageSquare } from "lucide-react";
+import { ArrowLeft, User, Phone, Mail, MapPin, Calendar, Receipt, Wallet, Banknote, Bell, MessageSquare, Printer, Download } from "lucide-react";
 import Loading from "@/components/shared/Loading";
 import { Button } from "@/components/ui/button";
-import { format } from "date-fns";
+import { format, startOfDay, endOfDay } from "date-fns";
 import { useAuth } from "@/app/providers/AuthProvider";
 import axios from "axios";
 import { parseApiList } from "@/lib/api";
 import { toast } from "sonner";
+import { SaleInvoiceDialog } from "@/components/sales/SaleInvoiceDialog";
+import type { SaleForReceipt } from "@/lib/sale-receipt";
+
+const PAYMENT_LABELS: Record<string, string> = {
+    CASH: "Cash",
+    CARD: "Card",
+    ONLINE: "Online",
+    DONATION: "Donation",
+    CREDIT: "Credit",
+};
+
+type HistoryDateMode = "all" | "today" | "custom";
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL;
 
@@ -41,6 +53,11 @@ export default function CustomerDetailPage() {
     const [reminderChannel, setReminderChannel] = useState("SMS");
     const [reminderNote, setReminderNote] = useState("");
     const [reminderSubmitting, setReminderSubmitting] = useState(false);
+    const [historyDateMode, setHistoryDateMode] = useState<HistoryDateMode>("all");
+    const [historyFrom, setHistoryFrom] = useState("");
+    const [historyTo, setHistoryTo] = useState("");
+    const [viewSale, setViewSale] = useState<SaleForReceipt | null>(null);
+    const [exportingPdf, setExportingPdf] = useState(false);
 
     const fetchCustomer = useCallback(async () => {
         if (!params.id) return;
@@ -96,6 +113,127 @@ export default function CustomerDetailPage() {
             fetchReminders();
         }
     }, [params.id, accessToken, fetchTransactions, fetchReminders]);
+
+    const historyRange = useMemo<{ start?: Date; end?: Date } | null>(() => {
+        if (historyDateMode === "all") return {};
+        if (historyDateMode === "today") {
+            const now = new Date();
+            return { start: startOfDay(now), end: endOfDay(now) };
+        }
+        if (!historyFrom || !historyTo) return null;
+        return { start: startOfDay(new Date(historyFrom)), end: endOfDay(new Date(historyTo)) };
+    }, [historyDateMode, historyFrom, historyTo]);
+
+    const filteredSales = useMemo(() => {
+        const sales: any[] = customer?.sales ?? [];
+        if (historyRange === null) return [];
+        if (!historyRange.start && !historyRange.end) return sales;
+        return sales.filter((sale) => {
+            const soldAt = new Date(sale.soldAt).getTime();
+            if (historyRange.start && soldAt < historyRange.start.getTime()) return false;
+            if (historyRange.end && soldAt > historyRange.end.getTime()) return false;
+            return true;
+        });
+    }, [customer, historyRange]);
+
+    const filteredTotal = useMemo(
+        () => filteredSales.reduce((sum, sale) => sum + (Number(sale.totalPrice) || 0), 0),
+        [filteredSales],
+    );
+
+    const historyRangeLabel = useMemo(() => {
+        if (historyDateMode === "all") return "All time";
+        if (historyDateMode === "today") return format(new Date(), "PPP");
+        if (!historyFrom || !historyTo) return "Select both dates";
+        return `${historyFrom} → ${historyTo}`;
+    }, [historyDateMode, historyFrom, historyTo]);
+
+    const buildReceiptSale = useCallback(
+        (sale: any): SaleForReceipt => ({
+            id: sale.id,
+            invoiceNumber: sale.invoiceNumber,
+            soldAt: sale.soldAt,
+            customerName: customer?.name ?? null,
+            customerPhone: customer?.phone ?? null,
+            paymentMethod: sale.paymentMethod,
+            totalPrice: sale.totalPrice,
+            discount: sale.discount,
+            discountPercent: sale.discountPercent,
+            refundedAmount: sale.refundedAmount,
+            cashReceived: sale.cashReceived,
+            saleItems: sale.saleItems,
+        }),
+        [customer],
+    );
+
+    const exportHistoryPdf = useCallback(async () => {
+        if (!filteredSales.length) {
+            toast.error("No purchases in the selected range.");
+            return;
+        }
+        setExportingPdf(true);
+        try {
+            const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
+                import("jspdf"),
+                import("jspdf-autotable"),
+            ]);
+            const doc = new jsPDF({ orientation: "portrait", unit: "pt", format: "a4" });
+            const margin = 40;
+            let y = margin;
+            doc.setFontSize(15);
+            doc.setTextColor(127, 29, 29);
+            doc.text("Purchase history", margin, y);
+            y += 20;
+            doc.setFontSize(10);
+            doc.setTextColor(60, 60, 60);
+            doc.text(`Customer: ${customer?.name ?? "—"}`, margin, y);
+            y += 14;
+            if (customer?.phone) {
+                doc.text(`Phone: ${customer.phone}`, margin, y);
+                y += 14;
+            }
+            doc.text(`Range: ${historyRangeLabel}`, margin, y);
+            y += 14;
+            doc.text(`Generated: ${new Date().toLocaleString("en-GB")}`, margin, y);
+            y += 20;
+
+            const body = filteredSales.map((s) => [
+                s.invoiceNumber ?? "—",
+                new Date(s.soldAt).toLocaleString("en-GB"),
+                String(s.saleItems?.length ?? 0),
+                PAYMENT_LABELS[s.paymentMethod as string] ?? s.paymentMethod ?? "—",
+                `Rs ${(Number(s.totalPrice) || 0).toLocaleString()}`,
+            ]);
+
+            autoTable(doc, {
+                head: [["Invoice #", "Date", "Items", "Payment", "Total"]],
+                body,
+                foot: [
+                    [
+                        "Total",
+                        "—",
+                        `${filteredSales.length} sale(s)`,
+                        "—",
+                        `Rs ${filteredTotal.toLocaleString()}`,
+                    ],
+                ],
+                startY: y,
+                styles: { fontSize: 9, cellPadding: 5 },
+                headStyles: { fillColor: [185, 28, 28], textColor: 255 },
+                footStyles: { fillColor: [243, 244, 246], textColor: 17, fontStyle: "bold" },
+                margin: { left: margin, right: margin },
+            });
+
+            doc.save(
+                `purchase-history-${(customer?.name ?? "customer").replace(/\s+/g, "-")}-${format(new Date(), "yyyy-MM-dd")}.pdf`,
+            );
+        } catch (e) {
+            console.error(e);
+            toast.error("Could not create PDF.");
+        } finally {
+            setExportingPdf(false);
+        }
+    }, [filteredSales, filteredTotal, customer, historyRangeLabel]);
 
     if (loading) {
         return (
@@ -252,22 +390,95 @@ export default function CustomerDetailPage() {
                 {/* Purchase History */}
                 <Card className="col-span-1 md:col-span-2 shadow-lg border-0">
                     <CardHeader className="border-b bg-gray-50/50">
-                        <CardTitle className="text-xl font-bold text-gray-800 flex items-center gap-2">
-                            <Receipt className="h-5 w-5 text-red-700" />
-                            Purchase History
-                        </CardTitle>
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                            <CardTitle className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                                <Receipt className="h-5 w-5 text-red-700" />
+                                Purchase History
+                            </CardTitle>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="border-red-200 text-red-800 hover:bg-red-50 shrink-0"
+                                disabled={!filteredSales.length || exportingPdf}
+                                onClick={() => void exportHistoryPdf()}
+                            >
+                                <Download className="h-4 w-4 mr-2" />
+                                {exportingPdf ? "PDF…" : "Print / Export PDF"}
+                            </Button>
+                        </div>
+                        <div className="mt-3 flex flex-wrap items-center gap-2">
+                            {(
+                                [
+                                    ["all", "All time"],
+                                    ["today", "Today"],
+                                    ["custom", "Custom"],
+                                ] as const
+                            ).map(([key, label]) => (
+                                <Button
+                                    key={key}
+                                    type="button"
+                                    size="sm"
+                                    variant={historyDateMode === key ? "default" : "outline"}
+                                    className={
+                                        historyDateMode === key
+                                            ? "bg-red-800 hover:bg-red-700 text-white h-8"
+                                            : "border-gray-200 h-8"
+                                    }
+                                    onClick={() => setHistoryDateMode(key)}
+                                >
+                                    {label}
+                                </Button>
+                            ))}
+                            <span className="text-xs text-gray-500 ml-1">
+                                {filteredSales.length} sale(s) · Rs {filteredTotal.toLocaleString()}
+                            </span>
+                        </div>
+                        {historyDateMode === "custom" && (
+                            <div className="mt-3 flex flex-wrap items-end gap-3">
+                                <div>
+                                    <Label className="text-xs text-gray-600">From</Label>
+                                    <Input
+                                        type="date"
+                                        value={historyFrom}
+                                        onChange={(e) => setHistoryFrom(e.target.value)}
+                                        className="mt-1 w-[150px] border border-gray-300 bg-white shadow-sm"
+                                    />
+                                </div>
+                                <div>
+                                    <Label className="text-xs text-gray-600">To</Label>
+                                    <Input
+                                        type="date"
+                                        value={historyTo}
+                                        onChange={(e) => setHistoryTo(e.target.value)}
+                                        className="mt-1 w-[150px] border border-gray-300 bg-white shadow-sm"
+                                    />
+                                </div>
+                            </div>
+                        )}
                     </CardHeader>
                     <CardContent className="p-0">
-                        {customer.sales?.length === 0 ? (
+                        {!customer.sales?.length ? (
                             <div className="p-10 text-center text-gray-500">
                                 <p className="text-lg">No purchases recorded yet.</p>
                             </div>
+                        ) : historyDateMode === "custom" && (!historyFrom || !historyTo) ? (
+                            <div className="p-10 text-center text-gray-500">
+                                <p className="text-lg">Select both dates to view purchases.</p>
+                            </div>
+                        ) : filteredSales.length === 0 ? (
+                            <div className="p-10 text-center text-gray-500">
+                                <p className="text-lg">No purchases in the selected range.</p>
+                            </div>
                         ) : (
                             <div className="divide-y divide-gray-100 max-h-[600px] overflow-y-auto">
-                                {customer.sales?.map((sale: any) => (
+                                {filteredSales.map((sale: any) => (
                                     <div key={sale.id} className="p-6 hover:bg-gray-50 transition-colors">
                                         <div className="flex justify-between items-start mb-4">
                                             <div>
+                                                <p className="text-xs font-mono font-semibold text-red-700">
+                                                    Invoice #{sale.invoiceNumber || "—"}
+                                                </p>
                                                 <p className="font-semibold text-gray-900 text-lg">
                                                     {format(new Date(sale.soldAt), "PPP 'at' p")}
                                                 </p>
@@ -275,10 +486,20 @@ export default function CustomerDetailPage() {
                                                     {sale.saleItems.length} item(s)
                                                 </p>
                                             </div>
-                                            <div className="text-right">
+                                            <div className="text-right flex flex-col items-end gap-2">
                                                 <p className="font-bold text-red-700 text-xl">
                                                     Rs {sale.totalPrice.toLocaleString()}
                                                 </p>
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="text-red-700 border-red-200 hover:bg-red-50 h-8 text-xs"
+                                                    onClick={() => setViewSale(buildReceiptSale(sale))}
+                                                >
+                                                    <Printer className="h-3.5 w-3.5 mr-1" />
+                                                    Invoice
+                                                </Button>
                                             </div>
                                         </div>
 
@@ -368,6 +589,14 @@ export default function CustomerDetailPage() {
                     </CardContent>
                 </Card>
             </div>
+
+            <SaleInvoiceDialog
+                sale={viewSale}
+                open={!!viewSale}
+                onOpenChange={(open) => {
+                    if (!open) setViewSale(null);
+                }}
+            />
 
             <Dialog open={reminderOpen} onOpenChange={setReminderOpen}>
                 <DialogContent className="max-w-sm">
