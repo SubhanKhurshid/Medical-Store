@@ -3,11 +3,13 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { DataTable } from "@/components/shared/DataTable";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, PlusCircle, Building2, Calendar, Receipt, Pencil, Trash2, Loader2 } from "lucide-react";
+import { Search, PlusCircle, Building2, Calendar, Receipt, Pencil, Trash2, Loader2, Download } from "lucide-react";
 import Loading from "@/components/shared/Loading";
 import { Button } from "@/components/ui/button";
+import { format } from "date-fns";
 import PaymentModal, { type SupplierPaymentEdit } from "./Modal";
 import {
     Dialog,
@@ -33,6 +35,39 @@ interface Payment {
     paymentMethod: string;
 }
 
+type DateRangeMode = "all" | "today" | "custom";
+
+function apiRange(
+    mode: DateRangeMode,
+    customFrom: string,
+    customTo: string,
+): { start?: string; end?: string } | null {
+    switch (mode) {
+        case "all":
+            return {};
+        case "today": {
+            const today = format(new Date(), "yyyy-MM-dd");
+            return { start: today, end: today };
+        }
+        case "custom":
+            if (!customFrom || !customTo) return null;
+            return { start: customFrom, end: customTo };
+        default:
+            return {};
+    }
+}
+
+function rangeDescription(
+    mode: DateRangeMode,
+    customFrom: string,
+    customTo: string,
+): string {
+    const r = apiRange(mode, customFrom, customTo);
+    if (r === null) return "Select both dates";
+    if (!r.start && !r.end) return "All time";
+    return `${r.start} → ${r.end}`;
+}
+
 const SupplierPayments = () => {
     const [search, setSearch] = useState("");
     const searchDebounceRef = useRef<ReturnType<typeof setTimeout>>();
@@ -43,6 +78,10 @@ const SupplierPayments = () => {
     const [totalPages, setTotalPages] = useState(1);
     const [total, setTotal] = useState(0);
     const LIMIT = 20;
+    const [dateRangeMode, setDateRangeMode] = useState<DateRangeMode>("all");
+    const [customFrom, setCustomFrom] = useState("");
+    const [customTo, setCustomTo] = useState("");
+    const [exportingPdf, setExportingPdf] = useState(false);
     const [editPayment, setEditPayment] = useState<SupplierPaymentEdit | null>(null);
     const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
     const [paymentToDelete, setPaymentToDelete] = useState<Payment | null>(null);
@@ -51,6 +90,14 @@ const SupplierPayments = () => {
     const accessToken = user?.access_token;
 
     const fetchPayments = useCallback(async (targetPage = 1, searchOverride?: string) => {
+        const range = apiRange(dateRangeMode, customFrom, customTo);
+        if (range === null) {
+            setPayments([]);
+            setTotal(0);
+            setTotalPages(1);
+            setLoading(false);
+            return;
+        }
         setLoading(true);
         try {
             const headers: HeadersInit = {};
@@ -62,6 +109,8 @@ const SupplierPayments = () => {
             params.append("page", String(targetPage));
             params.append("limit", String(LIMIT));
             if (activeSearch.trim()) params.append("search", activeSearch.trim());
+            if (range.start) params.append("startDate", range.start);
+            if (range.end) params.append("endDate", range.end);
             const response = await fetch(
                 `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/supplier-payments?${params.toString()}`,
                 { headers },
@@ -105,7 +154,7 @@ const SupplierPayments = () => {
         } finally {
             setLoading(false);
         }
-    }, [accessToken, LIMIT, search]);
+    }, [accessToken, LIMIT, search, dateRangeMode, customFrom, customTo]);
 
     useEffect(() => {
         fetchPayments(1);
@@ -120,6 +169,125 @@ const SupplierPayments = () => {
         return () => clearTimeout(searchDebounceRef.current);
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [search]);
+
+    const exportPdf = useCallback(async () => {
+        const range = apiRange(dateRangeMode, customFrom, customTo);
+        if (range === null) {
+            toast.error("Select both dates first.");
+            return;
+        }
+        setExportingPdf(true);
+        try {
+            const headers: HeadersInit = {};
+            if (accessToken) {
+                (headers as Record<string, string>).Authorization = `Bearer ${accessToken}`;
+            }
+            // Fetch every page in the selected range so the PDF is complete.
+            const EXPORT_LIMIT = 100;
+            const rows: Payment[] = [];
+            let targetPage = 1;
+            let pages = 1;
+            do {
+                const params = new URLSearchParams();
+                params.append("page", String(targetPage));
+                params.append("limit", String(EXPORT_LIMIT));
+                if (search.trim()) params.append("search", search.trim());
+                if (range.start) params.append("startDate", range.start);
+                if (range.end) params.append("endDate", range.end);
+                const res = await fetch(
+                    `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/supplier-payments?${params.toString()}`,
+                    { headers },
+                );
+                if (!res.ok) throw new Error("Failed to fetch payments");
+                const result = await res.json();
+                const items = parseApiList<{
+                    id: string;
+                    vendorId?: string;
+                    vendor?: { id: string; name: string };
+                    manufacturer?: { companyName: string };
+                    amount: number;
+                    paymentDate: string;
+                    reference?: string;
+                    paymentMethod?: string;
+                }>(result);
+                items.forEach((item) =>
+                    rows.push({
+                        id: item.id,
+                        vendorId: item.vendorId || item.vendor?.id || "",
+                        payeeLabel:
+                            item.vendor?.name || item.manufacturer?.companyName || "Unknown",
+                        amount: item.amount,
+                        date: new Date(item.paymentDate).toLocaleDateString("en-GB"),
+                        reference: item.reference || "-",
+                        paymentMethod: item.paymentMethod || "CASH",
+                    }),
+                );
+                pages = result.meta?.totalPages ?? 1;
+                targetPage += 1;
+            } while (targetPage <= pages);
+
+            if (!rows.length) {
+                toast.error("No payments to print in this range.");
+                return;
+            }
+
+            const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
+                import("jspdf"),
+                import("jspdf-autotable"),
+            ]);
+            const doc = new jsPDF({ orientation: "portrait", unit: "pt", format: "a4" });
+            const margin = 40;
+            let y = margin;
+            doc.setFontSize(15);
+            doc.setTextColor(127, 29, 29);
+            doc.text("Supplier payments", margin, y);
+            y += 20;
+            doc.setFontSize(10);
+            doc.setTextColor(60, 60, 60);
+            doc.text(`Range: ${rangeDescription(dateRangeMode, customFrom, customTo)}`, margin, y);
+            y += 14;
+            if (search.trim()) {
+                doc.text(`Search: ${search.trim()}`, margin, y);
+                y += 14;
+            }
+            doc.text(`Generated: ${new Date().toLocaleString("en-GB")}`, margin, y);
+            y += 20;
+
+            const totalAmount = rows.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+
+            autoTable(doc, {
+                head: [["Vendor", "Date", "Method", "Reference", "Amount"]],
+                body: rows.map((p) => [
+                    p.payeeLabel,
+                    p.date,
+                    String(p.paymentMethod || "CASH").toLowerCase(),
+                    p.reference,
+                    `Rs ${(Number(p.amount) || 0).toLocaleString()}`,
+                ]),
+                foot: [
+                    [
+                        "Total",
+                        "—",
+                        "—",
+                        `${rows.length} payment(s)`,
+                        `Rs ${totalAmount.toLocaleString()}`,
+                    ],
+                ],
+                startY: y,
+                styles: { fontSize: 9, cellPadding: 5 },
+                headStyles: { fillColor: [185, 28, 28], textColor: 255 },
+                footStyles: { fillColor: [243, 244, 246], textColor: 17, fontStyle: "bold" },
+                margin: { left: margin, right: margin },
+            });
+
+            doc.save(`supplier-payments-${format(new Date(), "yyyy-MM-dd")}.pdf`);
+        } catch (e) {
+            console.error(e);
+            toast.error("Could not create PDF.");
+        } finally {
+            setExportingPdf(false);
+        }
+    }, [accessToken, dateRangeMode, customFrom, customTo, search]);
 
     const openCreateModal = () => {
         setEditPayment(null);
@@ -261,6 +429,90 @@ const SupplierPayments = () => {
                     </motion.p>
                     <div className="mt-4 h-px bg-gradient-to-r from-red-200/80 via-red-100/50 to-transparent rounded-full" />
                 </header>
+
+                <Card className="overflow-hidden bg-white border border-gray-100 rounded-xl shadow-sm mb-6">
+                    <div className="border-l-4 border-l-red-500 bg-red-50/30 px-5 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                        <div>
+                            <h2 className="text-base font-semibold text-red-800">Print payments</h2>
+                            <p className="text-xs text-gray-500 mt-0.5">
+                                {rangeDescription(dateRangeMode, customFrom, customTo)}
+                            </p>
+                        </div>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="border-red-200 text-red-800 hover:bg-red-50 shrink-0"
+                            disabled={exportingPdf || (dateRangeMode === "custom" && (!customFrom || !customTo))}
+                            onClick={() => void exportPdf()}
+                        >
+                            <Download className="h-4 w-4 mr-2" />
+                            {exportingPdf ? "Preparing…" : "Print / Export PDF"}
+                        </Button>
+                    </div>
+                    <CardContent className="p-4 sm:p-5 space-y-4">
+                        <div className="flex flex-wrap gap-2">
+                            {(
+                                [
+                                    ["today", "Today"],
+                                    ["all", "All time"],
+                                    ["custom", "Custom"],
+                                ] as const
+                            ).map(([key, label]) => (
+                                <Button
+                                    key={key}
+                                    type="button"
+                                    size="sm"
+                                    variant={dateRangeMode === key ? "default" : "outline"}
+                                    className={
+                                        dateRangeMode === key
+                                            ? "bg-red-800 hover:bg-red-700 text-white"
+                                            : "border-gray-200"
+                                    }
+                                    onClick={() => {
+                                        setDateRangeMode(key);
+                                        setPage(1);
+                                    }}
+                                >
+                                    {label}
+                                </Button>
+                            ))}
+                        </div>
+                        {dateRangeMode === "custom" && (
+                            <div className="flex flex-wrap items-end gap-4">
+                                <div>
+                                    <Label className="text-xs text-gray-600">From</Label>
+                                    <Input
+                                        type="date"
+                                        value={customFrom}
+                                        onChange={(e) => {
+                                            setCustomFrom(e.target.value);
+                                            setPage(1);
+                                        }}
+                                        className="mt-1 w-[160px] border border-gray-300 bg-white shadow-sm"
+                                    />
+                                </div>
+                                <div>
+                                    <Label className="text-xs text-gray-600">To</Label>
+                                    <Input
+                                        type="date"
+                                        value={customTo}
+                                        onChange={(e) => {
+                                            setCustomTo(e.target.value);
+                                            setPage(1);
+                                        }}
+                                        className="mt-1 w-[160px] border border-gray-300 bg-white shadow-sm"
+                                    />
+                                </div>
+                            </div>
+                        )}
+                        {dateRangeMode === "custom" && (!customFrom || !customTo) && (
+                            <p className="text-sm text-amber-800 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
+                                Select both <strong>From</strong> and <strong>To</strong> dates.
+                            </p>
+                        )}
+                    </CardContent>
+                </Card>
 
                 <Card className="overflow-hidden bg-white border border-gray-100 rounded-xl shadow-sm hover:shadow-md transition-shadow">
                     <div className="border-l-4 border-l-red-500 bg-red-50/30 px-5 py-3">
