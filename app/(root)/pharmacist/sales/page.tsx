@@ -73,6 +73,15 @@ const SalesPageInner = () => {
   const [customerName, setCustomerName] = useState(() => searchParams.get("name") ?? "");
   const [customerPhone, setCustomerPhone] = useState(() => searchParams.get("phone") ?? "");
   const [customerId, setCustomerId] = useState<string | undefined>(() => searchParams.get("customerId") ?? undefined);
+  const [customerCreditBalance, setCustomerCreditBalance] = useState<number | null>(null);
+  const [previousCreditBalance, setPreviousCreditBalance] = useState(0);
+  const [creditPaymentInput, setCreditPaymentInput] = useState("0");
+  const [accountSummary, setAccountSummary] = useState<{
+    previousBalance: number;
+    totalBalance: number;
+    creditPaymentReceived: number;
+    totalReceivable: number;
+  } | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<"CASH" | "CARD" | "ONLINE" | "DONATION" | "CREDIT">("CASH");
   const [completedSale, setCompletedSale] = useState<{ invoiceNumber: string; paymentMethod: string } | null>(null);
   const [isStockErrorOpen, setIsStockErrorOpen] = useState(false);
@@ -93,6 +102,24 @@ const SalesPageInner = () => {
   useEffect(() => {
     focusBarcodeInput();
   }, [focusBarcodeInput]);
+
+  useEffect(() => {
+    if (!customerId || !accessToken) return;
+    axios
+      .get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/customer/${customerId}`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      })
+      .then(({ data }) => {
+        setCustomerCreditBalance(Number(data?.creditBalance) || 0);
+      })
+      .catch(() => setCustomerCreditBalance(null));
+  }, [customerId, accessToken]);
+
+  useEffect(() => {
+    if (isReceiptModalOpen && !completedSale && customerCreditBalance != null) {
+      setPreviousCreditBalance(Number(customerCreditBalance) || 0);
+    }
+  }, [isReceiptModalOpen, completedSale, customerCreditBalance]);
 
   const fetchProducts = useCallback(async (targetPage: number, search: string) => {
     if (!accessToken) return;
@@ -275,16 +302,37 @@ const SalesPageInner = () => {
   const discountAmount = totalBill * (discountPercent / 100);
   const discountedTotal = totalBill - discountAmount;
 
+  const creditPaymentAmount = parseFloat(creditPaymentInput) || 0;
+  const saleAddsToBalance = paymentMethod === "CREDIT" ? discountedTotal : 0;
+  const previewTotalBalance = previousCreditBalance + saleAddsToBalance;
+  const previewTotalReceivable = Math.max(0, previewTotalBalance - creditPaymentAmount);
+  const showCreditAccountSection = Boolean(
+    customerId && !completedSale && previousCreditBalance > 0,
+  );
+  const creditPaymentTooHigh =
+    showCreditAccountSection && creditPaymentAmount > previewTotalBalance;
+
   const handleCheckout = () => {
     if (cart.length === 0) {
       toast.error("Your cart is empty.");
       return;
     }
+    setPreviousCreditBalance(Number(customerCreditBalance) || 0);
+    setCreditPaymentInput("0");
+    setAccountSummary(null);
     setCompletedSale(null);
     setIsReceiptModalOpen(true);
   };
 
   const handleCreateSale = async () => {
+    if (paymentMethod === "CREDIT" && !customerId) {
+      toast.error("Select a customer by phone for credit sales.");
+      return;
+    }
+    if (creditPaymentTooHigh) {
+      toast.error("Payment against balance exceeds outstanding amount.");
+      return;
+    }
     setIsProcessing(true);
     try {
       const saleData = {
@@ -301,6 +349,9 @@ const SalesPageInner = () => {
         ...(paymentMethod === "CASH" && cashReceivedInput.trim() !== ""
           ? { cashReceived: parseFloat(cashReceivedInput) }
           : {}),
+        ...(showCreditAccountSection
+          ? { creditPaymentAmount }
+          : {}),
       };
 
       const response = await axios.post(
@@ -315,6 +366,25 @@ const SalesPageInner = () => {
           invoiceNumber: created.invoiceNumber ?? "",
           paymentMethod: created.paymentMethod ?? paymentMethod,
         });
+        if (customerId && created.previousCreditBalance != null) {
+          const prevBal = Number(created.previousCreditBalance) || 0;
+          const paid = Number(created.creditPaymentApplied) || 0;
+          if (prevBal > 0 || paid > 0) {
+            const summary = {
+              previousBalance: prevBal,
+              totalBalance:
+                Number(created.totalBalanceBeforePayment) ||
+                prevBal + (paymentMethod === "CREDIT" ? discountedTotal : 0),
+              creditPaymentReceived: paid,
+              totalReceivable: Number(created.customerCreditBalance) || 0,
+            };
+            setAccountSummary(summary);
+            setCustomerCreditBalance(summary.totalReceivable);
+          } else if (created.customerCreditBalance != null) {
+            setAccountSummary(null);
+            setCustomerCreditBalance(Number(created.customerCreditBalance) || 0);
+          }
+        }
         toast.success("Sale recorded! Invoice #" + (created.invoiceNumber ?? ""));
         refetchInventory();
         fetchProducts(productPage, searchTerm);
@@ -335,6 +405,10 @@ const SalesPageInner = () => {
     setCustomerId(undefined);
     setCustomerName("");
     setCustomerPhone("");
+    setCustomerCreditBalance(null);
+    setPreviousCreditBalance(0);
+    setCreditPaymentInput("0");
+    setAccountSummary(null);
     setCashReceivedInput("");
     setCompletedSale(null);
     setIsReceiptModalOpen(false);
@@ -579,6 +653,7 @@ const SalesPageInner = () => {
                             const val = e.target.value;
                             setCustomerPhone(val);
                             setCustomerId(undefined);
+                            setCustomerCreditBalance(null);
                             if (val.length >= 7) {
                               try {
                                 const { data } = await axios.get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/customer?phone=${val}`, { headers: { Authorization: `Bearer ${accessToken}` } });
@@ -587,6 +662,7 @@ const SalesPageInner = () => {
                                   if (customer) {
                                     setCustomerId(customer.id);
                                     setCustomerName(customer.name);
+                                    setCustomerCreditBalance(Number(customer.creditBalance) || 0);
                                     toast.success(`Customer ${customer.name} selected`);
                                   }
                                 }
@@ -702,6 +778,10 @@ const SalesPageInner = () => {
               setCustomerId(undefined);
               setCustomerName("");
               setCustomerPhone("");
+              setCustomerCreditBalance(null);
+              setPreviousCreditBalance(0);
+              setCreditPaymentInput("0");
+              setAccountSummary(null);
               setCashReceivedInput("");
               setCompletedSale(null);
               focusBarcodeInput();
@@ -796,7 +876,7 @@ const SalesPageInner = () => {
               {/* Cash Handling — CASH payment only */}
               {paymentMethod === "CASH" && (
                 <div className="rounded-lg border border-gray-200 bg-gray-50/60 p-4 space-y-3">
-                  <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Cash Handling</p>
+                  <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Cash for this bill</p>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label className="text-xs text-gray-500">Cash Received Rs.</Label>
@@ -808,6 +888,7 @@ const SalesPageInner = () => {
                         onChange={(e) => setCashReceivedInput(e.target.value)}
                         placeholder="0.00"
                         className="mt-1 h-9"
+                        disabled={!!completedSale}
                       />
                     </div>
                     <div>
@@ -821,6 +902,60 @@ const SalesPageInner = () => {
                   </div>
                 </div>
               )}
+
+              {/* Credit account — existing balance or new credit sale */}
+              {showCreditAccountSection && (
+                <div className="rounded-lg border border-amber-200 bg-amber-50/70 p-4 space-y-3">
+                  <p className="text-xs font-semibold text-amber-900 uppercase tracking-wide">
+                    Customer credit account
+                  </p>
+                  {previousCreditBalance > 0 && (
+                    <p className="text-sm text-amber-800">
+                      Previous balance: <strong>Rs {previousCreditBalance.toLocaleString()}</strong>
+                    </p>
+                  )}
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <p className="text-xs text-gray-600">Total balance</p>
+                      <p className="font-semibold text-gray-900">Rs {previewTotalBalance.toLocaleString()}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-600">Total receivable</p>
+                      <p className="font-semibold text-red-800">Rs {previewTotalReceivable.toLocaleString()}</p>
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-gray-600">
+                      Cash received against balance (enter 0 if none)
+                    </Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={creditPaymentInput}
+                      onChange={(e) => setCreditPaymentInput(e.target.value)}
+                      placeholder="0"
+                      className="mt-1 h-9"
+                      disabled={!!completedSale}
+                    />
+                  </div>
+                  {creditPaymentTooHigh && (
+                    <p className="text-xs text-red-700">
+                      Cannot exceed total balance of Rs {previewTotalBalance.toLocaleString()}.
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {completedSale && accountSummary && (
+                <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm space-y-1">
+                  <p className="text-xs font-semibold text-gray-600 uppercase">Receipt summary</p>
+                  <div className="flex justify-between"><span>Previous balance</span><span>Rs {accountSummary.previousBalance.toLocaleString()}</span></div>
+                  <div className="flex justify-between"><span>Total balance</span><span>Rs {accountSummary.totalBalance.toLocaleString()}</span></div>
+                  <div className="flex justify-between"><span>Cash received</span><span>Rs {accountSummary.creditPaymentReceived.toLocaleString()}</span></div>
+                  <div className="flex justify-between font-bold text-red-800"><span>Total receivable</span><span>Rs {accountSummary.totalReceivable.toLocaleString()}</span></div>
+                </div>
+              )}
             </div>
 
             <DialogFooter className="gap-2">
@@ -831,7 +966,12 @@ const SalesPageInner = () => {
                 <Button
                   onClick={handleCreateSale}
                   className="bg-red-800 hover:bg-red-800/80"
-                  disabled={isProcessing || (paymentMethod === "CASH" && cashReceivedInput.trim() === "")}
+                  disabled={
+                    isProcessing ||
+                    creditPaymentTooHigh ||
+                    (paymentMethod === "CASH" && cashReceivedInput.trim() === "") ||
+                    (paymentMethod === "CREDIT" && !customerId)
+                  }
                 >
                   {isProcessing ? "Processing..." : "Proceed to Checkout"}
                 </Button>
@@ -884,6 +1024,7 @@ const SalesPageInner = () => {
           paymentMethod={completedSale?.paymentMethod ?? paymentMethod}
           customerName={customerName || undefined}
           customerPhone={customerPhone || undefined}
+          accountSummary={accountSummary}
           cashReceived={
             paymentMethod === "CASH" && cashReceivedInput.trim() !== ""
               ? parseFloat(cashReceivedInput)
