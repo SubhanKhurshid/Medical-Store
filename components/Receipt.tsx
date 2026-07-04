@@ -26,6 +26,13 @@ export interface ReceiptProps {
   cashReceived?: number | null;
   customerName?: string;
   customerPhone?: string;
+  /** Credit account summary shown for linked customers (matches POS ledger block). */
+  accountSummary?: {
+    previousBalance: number;
+    totalBalance: number;
+    creditPaymentReceived: number;
+    totalReceivable: number;
+  } | null;
   soldAt?: string | Date;
   refundedAmount?: number;
 }
@@ -60,6 +67,7 @@ export function Receipt({
   cashReceived,
   customerName,
   customerPhone,
+  accountSummary,
   soldAt,
   refundedAmount,
 }: ReceiptProps) {
@@ -81,6 +89,9 @@ export function Receipt({
     cashIn != null && String(paymentMethod) === "CASH"
       ? Math.max(0, cashIn - discountedTotal)
       : 0;
+  const showAccountSummary = Boolean(accountSummary);
+  const fmt = (n: number) =>
+    n.toLocaleString("en-PK", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   return (
     <div
@@ -247,6 +258,30 @@ export function Receipt({
           </>
         )}
       </div>
+
+      {showAccountSummary && accountSummary && (
+        <>
+          <div style={divider} />
+          <div style={{ fontSize: "9px", marginBottom: "3px", width: "100%", textAlign: "left" }}>
+            <div style={row}>
+              <span>Previous Balance :-</span>
+              <span>{fmt(accountSummary.previousBalance)}</span>
+            </div>
+            <div style={row}>
+              <span>Total Balance :-</span>
+              <span>{fmt(accountSummary.totalBalance)}</span>
+            </div>
+            <div style={row}>
+              <span>Cash Received :-</span>
+              <span>{fmt(accountSummary.creditPaymentReceived)}</span>
+            </div>
+            <div style={{ ...row, fontWeight: "bold", fontSize: "10px" }}>
+              <span>Total Receivable :</span>
+              <span>{fmt(accountSummary.totalReceivable)}</span>
+            </div>
+          </div>
+        </>
+      )}
 
       {refunded > 0 && (
         <div style={{ fontSize: "9px", textAlign: "center", fontWeight: "bold" }}>

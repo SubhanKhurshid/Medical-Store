@@ -56,6 +56,7 @@ type DateRangeMode = "all" | "day" | "month" | "year" | "custom";
 interface Sale extends SaleForReceipt {
   quantity: number;
   salePrice: number;
+  profit?: number;
   customerName?: string | null;
   customerPhone?: string | null;
   saleItems: {
@@ -240,6 +241,23 @@ const SalesTable = () => {
 
   const displaySales = useMemo(() => sortSalesNewestFirst(sales), [sales]);
 
+  const pageTotals = useMemo(
+    () =>
+      displaySales.reduce(
+        (acc, sale) => {
+          const total = Number(sale.totalPrice) || 0;
+          const refunded = Number(sale.refundedAmount) || 0;
+          acc.total += total;
+          acc.refunded += refunded;
+          acc.net += total - refunded;
+          acc.profit += Number(sale.profit) || 0;
+          return acc;
+        },
+        { total: 0, refunded: 0, net: 0, profit: 0 },
+      ),
+    [displaySales],
+  );
+
   const formatCurrency = useCallback(
     (n: number) =>
       new Intl.NumberFormat("en-PK", {
@@ -284,9 +302,10 @@ const SalesTable = () => {
           acc.total += total;
           acc.refunded += refunded;
           acc.net += total - refunded;
+          acc.profit += Number(sale.profit) || 0;
           return acc;
         },
-        { total: 0, refunded: 0, net: 0 },
+        { total: 0, refunded: 0, net: 0, profit: 0 },
       );
 
       const paymentSummary = PAYMENT_METHOD_ORDER.map((method) => {
@@ -322,11 +341,12 @@ const SalesTable = () => {
           formatCurrency(s.totalPrice),
           refunded > 0 ? formatCurrency(refunded) : "—",
           formatCurrency(net),
+          formatCurrency(Number(s.profit) || 0),
         ];
       });
 
       autoTable(doc, {
-        head: [["Invoice #", "Date", "Customer", "Phone", "Payment", "Total", "Refunded", "Net"]],
+        head: [["Invoice #", "Date", "Customer", "Phone", "Payment", "Total", "Refunded", "Net", "Profit"]],
         body,
         foot: [
           [
@@ -338,6 +358,7 @@ const SalesTable = () => {
             formatCurrency(totals.total),
             formatCurrency(totals.refunded),
             formatCurrency(totals.net),
+            formatCurrency(totals.profit),
           ],
         ],
         startY: y,
@@ -520,6 +541,22 @@ const SalesTable = () => {
                 (refunded: Rs {refunded})
               </span>
             )}
+          </span>
+        );
+      },
+    },
+    {
+      accessorKey: "profit",
+      header: "Profit",
+      cell: ({ row }) => {
+        const profit = Number(row.original.profit) || 0;
+        return (
+          <span
+            className={`font-medium tabular-nums ${
+              profit >= 0 ? "text-emerald-700" : "text-red-700"
+            }`}
+          >
+            Rs {profit.toLocaleString()}
           </span>
         );
       },
@@ -745,6 +782,17 @@ const SalesTable = () => {
                     disableRowClick={true}
                     initialSorting={[{ id: "soldAt", desc: true }]}
                   />
+                  {displaySales.length > 0 && (
+                    <div className="border-t border-gray-200 bg-gray-50/90 px-4 py-3 flex flex-wrap items-center justify-end gap-x-6 gap-y-1 text-sm">
+                      <span className="text-gray-500 font-medium">Page totals</span>
+                      <span className="text-gray-700">
+                        Net: <strong>Rs {pageTotals.net.toLocaleString()}</strong>
+                      </span>
+                      <span className="text-emerald-800">
+                        Profit: <strong>Rs {pageTotals.profit.toLocaleString()}</strong>
+                      </span>
+                    </div>
+                  )}
                 </motion.div>
               </AnimatePresence>
             )}

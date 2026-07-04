@@ -16,6 +16,7 @@ import { motion } from "framer-motion";
 import { ArrowLeft, User, Phone, Mail, MapPin, Calendar, Receipt, Wallet, Banknote, Bell, MessageSquare, Printer, Download } from "lucide-react";
 import Loading from "@/components/shared/Loading";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { format, startOfDay, endOfDay } from "date-fns";
 import { useAuth } from "@/app/providers/AuthProvider";
 import axios from "axios";
@@ -33,6 +34,27 @@ const PAYMENT_LABELS: Record<string, string> = {
 };
 
 type HistoryDateMode = "all" | "today" | "custom";
+
+type HistoryEntry =
+    | { kind: "sale"; id: string; at: Date; sale: any }
+    | { kind: "payment"; id: string; at: Date; tx: any };
+
+function inHistoryRange(at: Date, range: { start?: Date; end?: Date } | null): boolean {
+    if (range === null) return false;
+    if (!range.start && !range.end) return true;
+    const t = at.getTime();
+    if (range.start && t < range.start.getTime()) return false;
+    if (range.end && t > range.end.getTime()) return false;
+    return true;
+}
+
+function saleRefundLabel(sale: any): string | null {
+    const refunded = Number(sale.refundedAmount) || 0;
+    if (refunded <= 0) return null;
+    const total = Number(sale.totalPrice) || 0;
+    if (refunded >= total) return "Fully refunded";
+    return `Refunded: Rs ${refunded.toLocaleString()}`;
+}
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL;
 
@@ -126,20 +148,50 @@ export default function CustomerDetailPage() {
 
     const filteredSales = useMemo(() => {
         const sales: any[] = customer?.sales ?? [];
-        if (historyRange === null) return [];
-        if (!historyRange.start && !historyRange.end) return sales;
-        return sales.filter((sale) => {
-            const soldAt = new Date(sale.soldAt).getTime();
-            if (historyRange.start && soldAt < historyRange.start.getTime()) return false;
-            if (historyRange.end && soldAt > historyRange.end.getTime()) return false;
-            return true;
-        });
+        return sales.filter((sale) => inHistoryRange(new Date(sale.soldAt), historyRange));
     }, [customer, historyRange]);
 
-    const filteredTotal = useMemo(
-        () => filteredSales.reduce((sum, sale) => sum + (Number(sale.totalPrice) || 0), 0),
-        [filteredSales],
-    );
+    /** Cash / credit repayments recorded against the customer account (negative ledger entries). */
+    const filteredPayments = useMemo(() => {
+        return transactions
+            .filter((tx) => Number(tx.amount) < 0)
+            .filter((tx) => inHistoryRange(new Date(tx.createdAt), historyRange));
+    }, [transactions, historyRange]);
+
+    const historyEntries = useMemo((): HistoryEntry[] => {
+        const entries: HistoryEntry[] = [
+            ...filteredSales.map((sale) => ({
+                kind: "sale" as const,
+                id: sale.id,
+                at: new Date(sale.soldAt),
+                sale,
+            })),
+            ...filteredPayments.map((tx) => ({
+                kind: "payment" as const,
+                id: tx.id,
+                at: new Date(tx.createdAt),
+                tx,
+            })),
+        ];
+        return entries.sort((a, b) => b.at.getTime() - a.at.getTime());
+    }, [filteredSales, filteredPayments]);
+
+    const historySummary = useMemo(() => {
+        const grossPurchases = filteredSales.reduce(
+            (sum, sale) => sum + (Number(sale.totalPrice) || 0),
+            0,
+        );
+        const totalRefunded = filteredSales.reduce(
+            (sum, sale) => sum + (Number(sale.refundedAmount) || 0),
+            0,
+        );
+        const paymentsReceived = filteredPayments.reduce(
+            (sum, tx) => sum + Math.abs(Number(tx.amount) || 0),
+            0,
+        );
+        const netPurchases = grossPurchases - totalRefunded;
+        return { grossPurchases, totalRefunded, paymentsReceived, netPurchases };
+    }, [filteredSales, filteredPayments]);
 
     const historyRangeLabel = useMemo(() => {
         if (historyDateMode === "all") return "All time";
@@ -167,8 +219,8 @@ export default function CustomerDetailPage() {
     );
 
     const exportHistoryPdf = useCallback(async () => {
-        if (!filteredSales.length) {
-            toast.error("No purchases in the selected range.");
+        if (!historyEntries.length) {
+            toast.error("No records in the selected range.");
             return;
         }
         setExportingPdf(true);
@@ -182,7 +234,7 @@ export default function CustomerDetailPage() {
             let y = margin;
             doc.setFontSize(15);
             doc.setTextColor(127, 29, 29);
-            doc.text("Purchase history", margin, y);
+            doc.text("Customer account history", margin, y);
             y += 20;
             doc.setFontSize(10);
             doc.setTextColor(60, 60, 60);
@@ -194,38 +246,70 @@ export default function CustomerDetailPage() {
             }
             doc.text(`Range: ${historyRangeLabel}`, margin, y);
             y += 14;
+            doc.text(`Credit balance: Rs ${(Number(customer?.creditBalance) || 0).toLocaleString()}`, margin, y);
+            y += 14;
             doc.text(`Generated: ${new Date().toLocaleString("en-GB")}`, margin, y);
             y += 20;
 
-            const body = filteredSales.map((s) => [
-                s.invoiceNumber ?? "—",
-                new Date(s.soldAt).toLocaleString("en-GB"),
-                String(s.saleItems?.length ?? 0),
-                PAYMENT_LABELS[s.paymentMethod as string] ?? s.paymentMethod ?? "—",
-                `Rs ${(Number(s.totalPrice) || 0).toLocaleString()}`,
-            ]);
+            const body = historyEntries.map((entry) => {
+                if (entry.kind === "sale") {
+                    const s = entry.sale;
+                    const refunded = Number(s.refundedAmount) || 0;
+                    const total = Number(s.totalPrice) || 0;
+                    const net = total - refunded;
+                    const refundNote =
+                        refunded <= 0
+                            ? "—"
+                            : refunded >= total
+                              ? "Fully refunded"
+                              : `Refunded Rs ${refunded.toLocaleString()}`;
+                    return [
+                        entry.at.toLocaleString("en-GB"),
+                        "Purchase",
+                        s.invoiceNumber ?? "—",
+                        PAYMENT_LABELS[s.paymentMethod as string] ?? s.paymentMethod ?? "—",
+                        `Rs ${total.toLocaleString()}`,
+                        refundNote,
+                        `Rs ${net.toLocaleString()}`,
+                    ];
+                }
+                const paid = Math.abs(Number(entry.tx.amount) || 0);
+                return [
+                    entry.at.toLocaleString("en-GB"),
+                    "Payment received",
+                    entry.tx.reference || "Payment",
+                    "Cash / credit settlement",
+                    "—",
+                    "—",
+                    `Rs ${paid.toLocaleString()}`,
+                ];
+            });
 
             autoTable(doc, {
-                head: [["Invoice #", "Date", "Items", "Payment", "Total"]],
+                head: [["Date", "Type", "Invoice / Reference", "Payment", "Gross", "Refund", "Net / Received"]],
                 body,
                 foot: [
                     [
-                        "Total",
+                        "Summary",
+                        `${filteredSales.length} purchase(s)`,
+                        `${filteredPayments.length} payment(s)`,
                         "—",
-                        `${filteredSales.length} sale(s)`,
-                        "—",
-                        `Rs ${filteredTotal.toLocaleString()}`,
+                        `Rs ${historySummary.grossPurchases.toLocaleString()}`,
+                        historySummary.totalRefunded > 0
+                            ? `Rs ${historySummary.totalRefunded.toLocaleString()}`
+                            : "—",
+                        `Net Rs ${historySummary.netPurchases.toLocaleString()} · Paid Rs ${historySummary.paymentsReceived.toLocaleString()}`,
                     ],
                 ],
                 startY: y,
-                styles: { fontSize: 9, cellPadding: 5 },
+                styles: { fontSize: 8, cellPadding: 5 },
                 headStyles: { fillColor: [185, 28, 28], textColor: 255 },
                 footStyles: { fillColor: [243, 244, 246], textColor: 17, fontStyle: "bold" },
                 margin: { left: margin, right: margin },
             });
 
             doc.save(
-                `purchase-history-${(customer?.name ?? "customer").replace(/\s+/g, "-")}-${format(new Date(), "yyyy-MM-dd")}.pdf`,
+                `customer-history-${(customer?.name ?? "customer").replace(/\s+/g, "-")}-${format(new Date(), "yyyy-MM-dd")}.pdf`,
             );
         } catch (e) {
             console.error(e);
@@ -233,7 +317,7 @@ export default function CustomerDetailPage() {
         } finally {
             setExportingPdf(false);
         }
-    }, [filteredSales, filteredTotal, customer, historyRangeLabel]);
+    }, [historyEntries, filteredSales.length, filteredPayments.length, historySummary, customer, historyRangeLabel]);
 
     if (loading) {
         return (
@@ -390,17 +474,22 @@ export default function CustomerDetailPage() {
                 {/* Purchase History */}
                 <Card className="col-span-1 md:col-span-2 shadow-lg border-0">
                     <CardHeader className="border-b bg-gray-50/50">
-                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                            <CardTitle className="text-xl font-bold text-gray-800 flex items-center gap-2">
-                                <Receipt className="h-5 w-5 text-red-700" />
-                                Purchase History
-                            </CardTitle>
+                        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                            <div>
+                                <CardTitle className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                                    <Receipt className="h-5 w-5 text-red-700" />
+                                    Purchase History
+                                </CardTitle>
+                                <p className="text-xs text-gray-500 mt-1">
+                                    Invoices, refunds, and credit payments in one timeline.
+                                </p>
+                            </div>
                             <Button
                                 type="button"
                                 variant="outline"
                                 size="sm"
                                 className="border-red-200 text-red-800 hover:bg-red-50 shrink-0"
-                                disabled={!filteredSales.length || exportingPdf}
+                                disabled={!historyEntries.length || exportingPdf || historyRange === null}
                                 onClick={() => void exportHistoryPdf()}
                             >
                                 <Download className="h-4 w-4 mr-2" />
@@ -431,7 +520,11 @@ export default function CustomerDetailPage() {
                                 </Button>
                             ))}
                             <span className="text-xs text-gray-500 ml-1">
-                                {filteredSales.length} sale(s) · Rs {filteredTotal.toLocaleString()}
+                                {filteredSales.length} purchase(s)
+                                {filteredPayments.length > 0 && ` · ${filteredPayments.length} payment(s)`}
+                                {" · "}Net Rs {historySummary.netPurchases.toLocaleString()}
+                                {historySummary.paymentsReceived > 0 &&
+                                    ` · Paid Rs ${historySummary.paymentsReceived.toLocaleString()}`}
                             </span>
                         </div>
                         {historyDateMode === "custom" && (
@@ -458,66 +551,129 @@ export default function CustomerDetailPage() {
                         )}
                     </CardHeader>
                     <CardContent className="p-0">
-                        {!customer.sales?.length ? (
+                        {!customer.sales?.length && transactions.filter((tx) => Number(tx.amount) < 0).length === 0 ? (
                             <div className="p-10 text-center text-gray-500">
-                                <p className="text-lg">No purchases recorded yet.</p>
+                                <p className="text-lg">No purchases or payments recorded yet.</p>
                             </div>
                         ) : historyDateMode === "custom" && (!historyFrom || !historyTo) ? (
                             <div className="p-10 text-center text-gray-500">
-                                <p className="text-lg">Select both dates to view purchases.</p>
+                                <p className="text-lg">Select both dates to view history.</p>
                             </div>
-                        ) : filteredSales.length === 0 ? (
+                        ) : historyEntries.length === 0 ? (
                             <div className="p-10 text-center text-gray-500">
-                                <p className="text-lg">No purchases in the selected range.</p>
+                                <p className="text-lg">No records in the selected range.</p>
                             </div>
                         ) : (
                             <div className="divide-y divide-gray-100 max-h-[600px] overflow-y-auto">
-                                {filteredSales.map((sale: any) => (
-                                    <div key={sale.id} className="p-6 hover:bg-gray-50 transition-colors">
-                                        <div className="flex justify-between items-start mb-4">
-                                            <div>
-                                                <p className="text-xs font-mono font-semibold text-red-700">
-                                                    Invoice #{sale.invoiceNumber || "—"}
-                                                </p>
-                                                <p className="font-semibold text-gray-900 text-lg">
-                                                    {format(new Date(sale.soldAt), "PPP 'at' p")}
-                                                </p>
-                                                <p className="text-sm text-gray-500">
-                                                    {sale.saleItems.length} item(s)
-                                                </p>
-                                            </div>
-                                            <div className="text-right flex flex-col items-end gap-2">
-                                                <p className="font-bold text-red-700 text-xl">
-                                                    Rs {sale.totalPrice.toLocaleString()}
-                                                </p>
-                                                <Button
-                                                    type="button"
-                                                    variant="outline"
-                                                    size="sm"
-                                                    className="text-red-700 border-red-200 hover:bg-red-50 h-8 text-xs"
-                                                    onClick={() => setViewSale(buildReceiptSale(sale))}
-                                                >
-                                                    <Printer className="h-3.5 w-3.5 mr-1" />
-                                                    Invoice
-                                                </Button>
-                                            </div>
-                                        </div>
-
-                                        <div className="bg-white rounded-lg border p-4 space-y-3">
-                                            {sale.saleItems.map((item: any) => (
-                                                <div key={item.id} className="flex justify-between items-center text-sm md:text-base">
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="font-medium text-gray-800 bg-gray-100 px-2 py-1 rounded">
-                                                            {item.quantity}x
-                                                        </span>
-                                                        <span className="text-gray-700">{item.inventoryItem?.name || "Unknown Item"}</span>
+                                {historyEntries.map((entry) => {
+                                    if (entry.kind === "payment") {
+                                        const paid = Math.abs(Number(entry.tx.amount) || 0);
+                                        return (
+                                            <div
+                                                key={`payment-${entry.id}`}
+                                                className="p-6 bg-green-50/40 hover:bg-green-50/70 transition-colors"
+                                            >
+                                                <div className="flex justify-between items-start gap-4">
+                                                    <div>
+                                                        <div className="flex flex-wrap items-center gap-2 mb-1">
+                                                            <Badge className="bg-green-700 hover:bg-green-700 text-white border-0">
+                                                                Payment received
+                                                            </Badge>
+                                                            <Badge variant="secondary">Credit settlement</Badge>
+                                                        </div>
+                                                        <p className="font-semibold text-gray-900 text-lg">
+                                                            {format(entry.at, "PPP 'at' p")}
+                                                        </p>
+                                                        <p className="text-sm text-gray-600 mt-0.5">
+                                                            {entry.tx.reference || "Payment against credit balance"}
+                                                        </p>
                                                     </div>
-                                                    <span className="text-gray-600">Rs {(item.salePrice * item.quantity).toLocaleString()}</span>
+                                                    <p className="font-bold text-green-700 text-xl shrink-0">
+                                                        Rs {paid.toLocaleString()}
+                                                    </p>
                                                 </div>
-                                            ))}
+                                            </div>
+                                        );
+                                    }
+
+                                    const sale = entry.sale;
+                                    const refunded = Number(sale.refundedAmount) || 0;
+                                    const total = Number(sale.totalPrice) || 0;
+                                    const net = total - refunded;
+                                    const refundLabel = saleRefundLabel(sale);
+
+                                    return (
+                                        <div key={sale.id} className="p-6 hover:bg-gray-50 transition-colors">
+                                            <div className="flex justify-between items-start mb-4 gap-4">
+                                                <div>
+                                                    <div className="flex flex-wrap items-center gap-2 mb-1">
+                                                        <p className="text-xs font-mono font-semibold text-red-700">
+                                                            Invoice #{sale.invoiceNumber || "—"}
+                                                        </p>
+                                                        {sale.paymentMethod === "CREDIT" && (
+                                                            <Badge variant="secondary" className="text-amber-800 bg-amber-100 border-amber-200">
+                                                                Credit
+                                                            </Badge>
+                                                        )}
+                                                        {refundLabel && (
+                                                            <Badge variant="destructive" className="bg-amber-600 hover:bg-amber-600 border-0">
+                                                                {refundLabel}
+                                                            </Badge>
+                                                        )}
+                                                    </div>
+                                                    <p className="font-semibold text-gray-900 text-lg">
+                                                        {format(entry.at, "PPP 'at' p")}
+                                                    </p>
+                                                    <p className="text-sm text-gray-500">
+                                                        {sale.saleItems.length} item(s)
+                                                        {" · "}
+                                                        {PAYMENT_LABELS[sale.paymentMethod as string] ?? sale.paymentMethod ?? "—"}
+                                                    </p>
+                                                </div>
+                                                <div className="text-right flex flex-col items-end gap-2 shrink-0">
+                                                    {refunded > 0 ? (
+                                                        <>
+                                                            <p className="text-sm text-gray-400 line-through">
+                                                                Rs {total.toLocaleString()}
+                                                            </p>
+                                                            <p className="font-bold text-red-700 text-xl">
+                                                                Rs {net.toLocaleString()}
+                                                            </p>
+                                                        </>
+                                                    ) : (
+                                                        <p className="font-bold text-red-700 text-xl">
+                                                            Rs {total.toLocaleString()}
+                                                        </p>
+                                                    )}
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className="text-red-700 border-red-200 hover:bg-red-50 h-8 text-xs"
+                                                        onClick={() => setViewSale(buildReceiptSale(sale))}
+                                                    >
+                                                        <Printer className="h-3.5 w-3.5 mr-1" />
+                                                        Invoice
+                                                    </Button>
+                                                </div>
+                                            </div>
+
+                                            <div className="bg-white rounded-lg border p-4 space-y-3">
+                                                {sale.saleItems.map((item: any) => (
+                                                    <div key={item.id} className="flex justify-between items-center text-sm md:text-base">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="font-medium text-gray-800 bg-gray-100 px-2 py-1 rounded">
+                                                                {item.quantity}x
+                                                            </span>
+                                                            <span className="text-gray-700">{item.inventoryItem?.name || "Unknown Item"}</span>
+                                                        </div>
+                                                        <span className="text-gray-600">Rs {(item.salePrice * item.quantity).toLocaleString()}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
                                         </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         )}
                     </CardContent>
