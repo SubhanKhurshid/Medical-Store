@@ -30,6 +30,7 @@ import { AlertCircle, Download } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/app/providers/AuthProvider";
 import { fetchAllPaginatedListAxios } from "@/lib/api";
+import type { Styles } from "jspdf-autotable";
 
 const ALL_VENDORS = "__all__";
 const ALL_STATUSES = "__all__";
@@ -242,20 +243,20 @@ export default function CompanyPurchaseOrderPrintPage() {
           : row;
       });
 
-      const columnStyles = includeVendor
+      const columnStyles: Record<string, Partial<Styles>> = includeVendor
         ? {
             0: { cellWidth: 90 },
             1: { cellWidth: 130 },
             2: { cellWidth: 120 },
             3: { cellWidth: 72 },
-            4: { cellWidth: 56, halign: "right" as const },
+            4: { cellWidth: 56, halign: "right" },
             5: { cellWidth: 80 },
           }
         : {
             0: { cellWidth: 150 },
             1: { cellWidth: 130 },
             2: { cellWidth: 72 },
-            3: { cellWidth: 56, halign: "right" as const },
+            3: { cellWidth: 56, halign: "right" },
             4: { cellWidth: 80 },
           };
 
