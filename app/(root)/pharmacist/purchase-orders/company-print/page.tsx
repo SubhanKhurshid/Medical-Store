@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import axios from "axios";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
+import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -23,12 +24,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
 import Loading from "@/components/shared/Loading";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertCircle, Printer } from "lucide-react";
+import { AlertCircle, Download } from "lucide-react";
+import { toast } from "sonner";
 import { useAuth } from "@/app/providers/AuthProvider";
 import { fetchAllPaginatedListAxios } from "@/lib/api";
+import type { Styles } from "jspdf-autotable";
 
 const ALL_VENDORS = "__all__";
 const ALL_STATUSES = "__all__";
@@ -65,36 +67,15 @@ interface CompanyPurchaseOrder {
   } | null;
 }
 
-function statusBadge(status: CompanyPurchaseOrder["status"]) {
-  switch (status) {
-    case "PENDING":
-      return (
-        <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100 text-[10px]">
-          Pending
-        </Badge>
-      );
-    case "DELIVERED":
-      return (
-        <Badge className="bg-green-100 text-green-800 hover:bg-green-100 text-[10px]">
-          Delivered
-        </Badge>
-      );
-    case "CANCELLED":
-      return (
-        <Badge className="bg-red-100 text-red-800 hover:bg-red-100 text-[10px]">
-          Cancelled
-        </Badge>
-      );
-    default:
-      return <Badge variant="secondary">{status}</Badge>;
-  }
-}
-
 function dateRangeLabel(from: string, to: string): string {
-  if (!from && !to) return "All dates (full history)";
+  if (!from && !to) return "All time";
   if (from && to) return `${from} → ${to}`;
   if (from) return `From ${from}`;
   return `Until ${to}`;
+}
+
+function formatStatus(status: CompanyPurchaseOrder["status"]) {
+  return status.charAt(0) + status.slice(1).toLowerCase();
 }
 
 export default function CompanyPurchaseOrderPrintPage() {
@@ -108,6 +89,7 @@ export default function CompanyPurchaseOrderPrintPage() {
   const [orders, setOrders] = useState<CompanyPurchaseOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingOrders, setLoadingOrders] = useState(false);
+  const [exportingPdf, setExportingPdf] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const headers = user?.access_token
@@ -195,16 +177,8 @@ export default function CompanyPurchaseOrderPrintPage() {
     }
   }, [loading, fetchOrders]);
 
-  const handlePrint = () => {
-    window.print();
-  };
-
   const formatDate = (iso: string) =>
-    new Date(iso).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
+    new Date(iso).toLocaleDateString("en-GB");
 
   const selectedVendor = vendors.find((v) => v.id === selectedVendorId);
   const vendorLabel =
@@ -216,6 +190,114 @@ export default function CompanyPurchaseOrderPrintPage() {
     STATUS_OPTIONS.find((s) => s.value === selectedStatus)?.label ??
     "All statuses";
 
+  const exportPdf = useCallback(async () => {
+    if (dateRangeInvalid) {
+      toast.error("From date must be on or before To date.");
+      return;
+    }
+    if (!orders.length) {
+      toast.error("No purchase orders to export.");
+      return;
+    }
+    setExportingPdf(true);
+    try {
+      const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
+        import("jspdf"),
+        import("jspdf-autotable"),
+      ]);
+      const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
+      const margin = 40;
+      let y = margin;
+      const includeVendor = selectedVendorId === ALL_VENDORS;
+
+      doc.setFontSize(15);
+      doc.setTextColor(127, 29, 29);
+      doc.text("Purchase orders", margin, y);
+      y += 20;
+      doc.setFontSize(10);
+      doc.setTextColor(60, 60, 60);
+      doc.text(`Vendor: ${vendorLabel}`, margin, y);
+      y += 14;
+      doc.text(`Status: ${statusLabel}`, margin, y);
+      y += 14;
+      doc.text(`Range: ${dateRangeLabel(dateFrom, dateTo)}`, margin, y);
+      y += 14;
+      doc.text(`Generated: ${new Date().toLocaleString("en-GB")}`, margin, y);
+      y += 20;
+
+      const totalQty = orders.reduce((sum, o) => sum + (o.quantityOrdered || 0), 0);
+      const qtyColIndex = includeVendor ? 4 : 3;
+      const head = includeVendor
+        ? [["Vendor", "Item", "Manufacturer", "Status", "Qty", "Order date"]]
+        : [["Item", "Manufacturer", "Status", "Qty", "Order date"]];
+      const body = orders.map((order) => {
+        const row = [
+          order.inventoryItem?.name ?? "N/A",
+          order.manufacturer?.companyName ?? "—",
+          formatStatus(order.status),
+          String(order.quantityOrdered),
+          formatDate(order.orderDate),
+        ];
+        return includeVendor
+          ? [order.vendor?.name ?? "—", ...row]
+          : row;
+      });
+
+      const columnStyles: Record<string, Partial<Styles>> = includeVendor
+        ? {
+            0: { cellWidth: 90 },
+            1: { cellWidth: 130 },
+            2: { cellWidth: 120 },
+            3: { cellWidth: 72 },
+            4: { cellWidth: 56, halign: "right" },
+            5: { cellWidth: 80 },
+          }
+        : {
+            0: { cellWidth: 150 },
+            1: { cellWidth: 130 },
+            2: { cellWidth: 72 },
+            3: { cellWidth: 56, halign: "right" },
+            4: { cellWidth: 80 },
+          };
+
+      autoTable(doc, {
+        head,
+        body,
+        foot: [
+          includeVendor
+            ? ["Total", "—", "—", "—", String(totalQty), `${orders.length} order(s)`]
+            : ["Total", "—", "—", String(totalQty), `${orders.length} order(s)`],
+        ],
+        startY: y,
+        styles: { fontSize: 9, cellPadding: 6, overflow: "linebreak" },
+        headStyles: { fillColor: [185, 28, 28], textColor: 255, fontStyle: "bold" },
+        footStyles: { fillColor: [243, 244, 246], textColor: 17, fontStyle: "bold" },
+        margin: { left: margin, right: margin },
+        columnStyles,
+        didParseCell: (hookData) => {
+          if (hookData.column.index === qtyColIndex) {
+            hookData.cell.styles.halign = "right";
+          }
+        },
+      });
+
+      doc.save(`purchase-orders-${format(new Date(), "yyyy-MM-dd")}.pdf`);
+    } catch (e) {
+      console.error(e);
+      toast.error("Could not create PDF.");
+    } finally {
+      setExportingPdf(false);
+    }
+  }, [
+    orders,
+    dateRangeInvalid,
+    selectedVendorId,
+    vendorLabel,
+    statusLabel,
+    dateFrom,
+    dateTo,
+  ]);
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50/80">
@@ -225,9 +307,9 @@ export default function CompanyPurchaseOrderPrintPage() {
   }
 
   return (
-    <div id="company-po-print-root" className="min-h-screen bg-gray-50/80 print:bg-white">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 print:px-0 print:py-0">
-        <header className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 print:hidden">
+    <div className="min-h-screen bg-gray-50/80">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+        <header className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <motion.h1
               className="text-2xl sm:text-3xl font-bold text-red-800 tracking-tight"
@@ -243,7 +325,7 @@ export default function CompanyPurchaseOrderPrintPage() {
               animate={{ opacity: 1 }}
               transition={{ delay: 0.1 }}
             >
-              All statuses (pending, delivered, cancelled). Filter by vendor and order date.
+              Filter by vendor, status, and date. Export matches other report PDFs.
             </motion.p>
           </div>
           <div className="flex gap-2">
@@ -251,17 +333,18 @@ export default function CompanyPurchaseOrderPrintPage() {
               Back
             </Button>
             <Button
-              className="bg-red-800 hover:bg-red-700 text-white"
-              onClick={handlePrint}
-              disabled={!orders.length || dateRangeInvalid}
+              variant="outline"
+              className="border-red-200 text-red-800 hover:bg-red-50"
+              onClick={() => void exportPdf()}
+              disabled={!orders.length || dateRangeInvalid || exportingPdf}
             >
-              <Printer className="mr-2 h-4 w-4" />
-              Print
+              <Download className="mr-2 h-4 w-4" />
+              {exportingPdf ? "Preparing…" : "Export PDF"}
             </Button>
           </div>
         </header>
 
-        <Card className="mb-6 print:hidden border border-gray-100">
+        <Card className="mb-6 border border-gray-100">
           <CardContent className="p-4 sm:p-5">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div>
@@ -331,43 +414,17 @@ export default function CompanyPurchaseOrderPrintPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-white border border-gray-100 rounded-xl shadow-sm print:shadow-none print:border print:border-black/40">
-          <CardContent className="p-4 sm:p-5 print:p-4">
-            <div className="mb-4 border-b border-gray-200 pb-3 text-center">
-              <h1 className="text-xl font-bold tracking-wide text-gray-900 print:text-lg">
-                NS Ibrahim Medical Store
-              </h1>
-              <p className="text-xs text-gray-600">Purchase Orders Report</p>
-              <p className="mt-1 text-[11px] text-gray-500">
-                Printed on{" "}
-                {new Date().toLocaleDateString("en-US", {
-                  year: "numeric",
-                  month: "short",
-                  day: "numeric",
-                })}
-              </p>
-            </div>
-
-            <div className="mb-4 text-sm">
-              <p>
-                <span className="font-semibold text-gray-700">Vendor: </span>
-                {vendorLabel}
-              </p>
-              <p>
-                <span className="font-semibold text-gray-700">Status: </span>
-                {statusLabel}
-              </p>
-              <p>
-                <span className="font-semibold text-gray-700">Period: </span>
-                {dateRangeLabel(dateFrom, dateTo)}
-              </p>
-              <p className="text-xs text-gray-500 mt-1">
-                {orders.length} order{orders.length !== 1 ? "s" : ""} in this report
-              </p>
-            </div>
-
+        <Card className="overflow-hidden bg-white border border-gray-100 rounded-xl shadow-sm">
+          <div className="border-l-4 border-l-red-500 bg-red-50/30 px-5 py-3">
+            <h2 className="text-base font-semibold text-red-800">Purchase orders</h2>
+            <p className="text-xs text-gray-500 mt-0.5">
+              {vendorLabel} · {statusLabel} · {dateRangeLabel(dateFrom, dateTo)} ·{" "}
+              {orders.length} order{orders.length !== 1 ? "s" : ""}
+            </p>
+          </div>
+          <CardContent className="p-4 sm:p-5">
             {error && (
-              <Alert variant="destructive" className="mb-4 print:hidden">
+              <Alert variant="destructive" className="mb-4">
                 <AlertCircle className="h-4 w-4" />
                 <AlertTitle>Error</AlertTitle>
                 <AlertDescription>{error}</AlertDescription>
@@ -385,7 +442,7 @@ export default function CompanyPurchaseOrderPrintPage() {
             ) : (
               <div className="border border-gray-200 rounded-md overflow-hidden">
                 <Table>
-                  <TableHeader className="bg-gray-50 print:bg-gray-100">
+                  <TableHeader className="bg-gray-50">
                     <TableRow>
                       {selectedVendorId === ALL_VENDORS && (
                         <TableHead className="text-xs font-semibold text-gray-700">
@@ -423,11 +480,8 @@ export default function CompanyPurchaseOrderPrintPage() {
                         <TableCell className="text-xs">
                           {order.manufacturer?.companyName ?? "—"}
                         </TableCell>
-                        <TableCell className="text-xs print:[&_*]:border-0">
-                          <span className="print:hidden">{statusBadge(order.status)}</span>
-                          <span className="hidden print:inline capitalize text-[10px]">
-                            {order.status.toLowerCase()}
-                          </span>
+                        <TableCell className="text-xs capitalize">
+                          {formatStatus(order.status)}
                         </TableCell>
                         <TableCell className="text-xs">
                           {order.quantityOrdered}
@@ -444,33 +498,6 @@ export default function CompanyPurchaseOrderPrintPage() {
           </CardContent>
         </Card>
       </div>
-
-      <style jsx global>{`
-        @media print {
-          @page {
-            size: A4 portrait;
-            margin: 12mm;
-          }
-
-          body {
-            background: white !important;
-          }
-
-          body * {
-            visibility: hidden;
-          }
-
-          #company-po-print-root,
-          #company-po-print-root * {
-            visibility: visible;
-          }
-
-          #company-po-print-root {
-            margin: 0 !important;
-            padding: 0 !important;
-          }
-        }
-      `}</style>
     </div>
   );
 }

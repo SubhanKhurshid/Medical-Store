@@ -27,10 +27,11 @@ import {
   PlusCircle,
   Pencil,
   Trash2,
-  Printer,
+  Download,
   Receipt,
   Loader2,
 } from "lucide-react";
+import { format } from "date-fns";
 import { toast } from "sonner";
 import axios from "axios";
 import { parseApiList } from "@/lib/api";
@@ -79,8 +80,24 @@ function formatCurrency(n: number) {
   }).format(n);
 }
 
+/** Compact amount for PDF columns — avoids Intl overflow in narrow cells. */
+function pdfAmount(n: number, opts?: { showZero?: boolean }) {
+  const val = Number(n) || 0;
+  if (val === 0 && !opts?.showZero) return "—";
+  return `Rs ${Math.round(val).toLocaleString("en-PK")}`;
+}
+
+const PDF_NUMERIC_COLS = [4, 5, 6] as const;
+
 function toDateInput(d: Date) {
   return d.toISOString().slice(0, 10);
+}
+
+function dateRangeLabel(from: string, to: string): string {
+  if (!from && !to) return "All time";
+  if (from && to) return `${from} → ${to}`;
+  if (from) return `From ${from}`;
+  return `Until ${to}`;
 }
 
 export default function PersonalExpensesPage() {
@@ -97,6 +114,7 @@ export default function PersonalExpensesPage() {
   const [editId, setEditId] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [exportingPdf, setExportingPdf] = useState(false);
 
   const [name, setName] = useState("");
   const [otherExpenseDetail, setOtherExpenseDetail] = useState("");
@@ -246,24 +264,111 @@ export default function PersonalExpensesPage() {
     }
   };
 
-  const handlePrint = () => {
-    window.print();
-  };
+  const exportPdf = useCallback(async () => {
+    if (!rows.length) {
+      toast.error("No expenses to export.");
+      return;
+    }
+    setExportingPdf(true);
+    try {
+      const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
+        import("jspdf"),
+        import("jspdf-autotable"),
+      ]);
+      const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
+      const margin = 40;
+      let y = margin;
+      doc.setFontSize(15);
+      doc.setTextColor(127, 29, 29);
+      doc.text("Personal expenses", margin, y);
+      y += 20;
+      doc.setFontSize(10);
+      doc.setTextColor(60, 60, 60);
+      doc.text(`Range: ${dateRangeLabel(from, to)}`, margin, y);
+      y += 14;
+      doc.text(`Generated: ${new Date().toLocaleString("en-GB")}`, margin, y);
+      y += 14;
+      doc.text(`Total debit (out): ${pdfAmount(summary.totalDebit, { showZero: true })}`, margin, y);
+      y += 14;
+      doc.text(`Total credit (in): ${pdfAmount(summary.totalCredit, { showZero: true })}`, margin, y);
+      y += 14;
+      doc.setFont("helvetica", "bold");
+      doc.text(`Net expenses: ${pdfAmount(summary.net, { showZero: true })}`, margin, y);
+      doc.setFont("helvetica", "normal");
+      y += 20;
+
+      const lastRunningBalance = rows[rows.length - 1]?.runningBalance ?? 0;
+
+      autoTable(doc, {
+        head: [["Name", "About", "Date", "Account no", "Debit (out)", "Credit (in)", "Running balance"]],
+        body: rows.map((row) => [
+          row.name,
+          row.otherExpenseDetail || "—",
+          new Date(row.expenseDate).toLocaleDateString("en-GB"),
+          row.accountNumber || "—",
+          pdfAmount(Number(row.debit)),
+          pdfAmount(Number(row.credit)),
+          pdfAmount(Number(row.runningBalance), { showZero: true }),
+        ]),
+        foot: [
+          [
+            "Totals",
+            "—",
+            "—",
+            "—",
+            pdfAmount(summary.totalDebit, { showZero: true }),
+            pdfAmount(summary.totalCredit, { showZero: true }),
+            pdfAmount(lastRunningBalance, { showZero: true }),
+          ],
+          [
+            {
+              content: "Net expenses (debit − credit)",
+              colSpan: 6,
+              styles: { halign: "right", fontStyle: "bold", textColor: [127, 29, 29] },
+            },
+            {
+              content: pdfAmount(summary.net, { showZero: true }),
+              styles: { halign: "right", fontStyle: "bold", textColor: [127, 29, 29] },
+            },
+          ],
+        ],
+        startY: y,
+        styles: { fontSize: 8, cellPadding: 6, overflow: "linebreak" },
+        headStyles: { fillColor: [185, 28, 28], textColor: 255, fontStyle: "bold" },
+        footStyles: { fillColor: [243, 244, 246], textColor: 17, fontStyle: "bold" },
+        margin: { left: margin, right: margin },
+        columnStyles: {
+          0: { cellWidth: 120 },
+          1: { cellWidth: 100 },
+          2: { cellWidth: 72 },
+          3: { cellWidth: 80 },
+          4: { cellWidth: 88, halign: "right" },
+          5: { cellWidth: 88, halign: "right" },
+          6: { cellWidth: 96, halign: "right" },
+        },
+        didParseCell: (hookData) => {
+          if (PDF_NUMERIC_COLS.includes(hookData.column.index as 4 | 5 | 6)) {
+            hookData.cell.styles.halign = "right";
+          }
+          if (hookData.section === "head" && PDF_NUMERIC_COLS.includes(hookData.column.index as 4 | 5 | 6)) {
+            hookData.cell.styles.halign = "right";
+          }
+        },
+      });
+
+      doc.save(`personal-expenses-${format(new Date(), "yyyy-MM-dd")}.pdf`);
+    } catch (e) {
+      console.error(e);
+      toast.error("Could not create PDF.");
+    } finally {
+      setExportingPdf(false);
+    }
+  }, [rows, from, to, summary]);
 
   return (
-    <div className="min-h-screen bg-gray-50/80 print:bg-white">
-      <style jsx global>{`
-        @media print {
-          .no-print {
-            display: none !important;
-          }
-          body {
-            background: white;
-          }
-        }
-      `}</style>
+    <div className="min-h-screen bg-gray-50/80">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-        <header className="mb-6 no-print">
+        <header className="mb-6">
           <motion.h1
             className="text-2xl sm:text-3xl font-bold text-red-800 tracking-tight"
             initial={{ opacity: 0, y: -8 }}
@@ -281,7 +386,7 @@ export default function PersonalExpensesPage() {
           </motion.p>
         </header>
 
-        <Card className="mb-6 border border-gray-200 shadow-sm no-print">
+        <Card className="mb-6 border border-gray-200 shadow-sm">
           <CardContent className="p-5 flex flex-col sm:flex-row gap-4 sm:items-end">
             <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
@@ -326,9 +431,14 @@ export default function PersonalExpensesPage() {
                 <PlusCircle className="h-4 w-4 mr-2" />
                 Add expense
               </Button>
-              <Button variant="outline" onClick={handlePrint}>
-                <Printer className="h-4 w-4 mr-2" />
-                Print
+              <Button
+                variant="outline"
+                className="border-red-200 text-red-800 hover:bg-red-50"
+                disabled={!rows.length || exportingPdf}
+                onClick={() => void exportPdf()}
+              >
+                <Download className="h-4 w-4 mr-2" />
+                {exportingPdf ? "Preparing…" : "Export PDF"}
               </Button>
             </div>
           </CardContent>
@@ -363,25 +473,17 @@ export default function PersonalExpensesPage() {
               <p className="text-2xl font-bold text-red-700">
                 {formatCurrency(summary.net)}
               </p>
-              <p className="text-xs text-gray-500 mt-1 hidden print:block">
+              <p className="text-xs text-gray-500 mt-1">
                 Deducted from P&amp;L net profit in same date range
               </p>
             </CardContent>
           </Card>
         </div>
 
-        <Card className="overflow-hidden border border-gray-200 print:border-black">
-          <div className="hidden print:block p-4 border-b text-center">
-            <h2 className="text-lg font-bold">Personal Expenses</h2>
-            <p className="text-sm text-gray-600">
-              {from || to
-                ? `${from || "…"} — ${to || "…"}`
-                : "All dates"}
-            </p>
-          </div>
+        <Card className="overflow-hidden border border-gray-200">
           <CardContent className="p-0">
             {loading ? (
-              <div className="py-16 flex justify-center no-print">
+              <div className="py-16 flex justify-center">
                 <Loading />
               </div>
             ) : (
@@ -396,7 +498,7 @@ export default function PersonalExpensesPage() {
                       <th className="p-3 font-semibold text-right">Debit</th>
                       <th className="p-3 font-semibold text-right">Credit</th>
                       <th className="p-3 font-semibold text-right">Balance</th>
-                      <th className="p-3 font-semibold no-print w-28">
+                      <th className="p-3 font-semibold w-28">
                         Actions
                       </th>
                     </tr>
@@ -438,7 +540,7 @@ export default function PersonalExpensesPage() {
                           <td className="p-3 text-right font-medium tabular-nums">
                             {formatCurrency(row.runningBalance)}
                           </td>
-                          <td className="p-3 no-print">
+                          <td className="p-3">
                             <div className="flex gap-1">
                               <Button
                                 variant="ghost"
@@ -476,7 +578,7 @@ export default function PersonalExpensesPage() {
                         <td className="p-3 text-right text-red-800">
                           {formatCurrency(summary.net)}
                         </td>
-                        <td className="no-print" />
+                        <td />
                       </tr>
                     </tfoot>
                   )}
@@ -484,7 +586,7 @@ export default function PersonalExpensesPage() {
               </div>
             )}
           </CardContent>
-          <p className="p-4 text-xs text-gray-500 border-t print:text-center">
+          <p className="p-4 text-xs text-gray-500 border-t">
             <Receipt className="inline h-3 w-3 mr-1" />
             Net expenses (debit − credit) reduce net profit on Profit &amp; Loss
             report and dashboard for the same period.
