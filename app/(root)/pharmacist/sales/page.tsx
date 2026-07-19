@@ -432,6 +432,15 @@ const SalesPageInner = () => {
       discountPercent > 0 ? `Discount: ${discountPercent}%` : null,
       `Net Bill: Rs ${discountedTotal.toFixed(0)}`,
       `Payment: ${completedSale.paymentMethod}`,
+      accountSummary && accountSummary.totalReceivable > 0
+        ? [
+            ``,
+            `Customer Credit Account`,
+            `Previous balance: Rs ${accountSummary.previousBalance.toLocaleString()}`,
+            `Cash received: Rs ${accountSummary.creditPaymentReceived.toLocaleString()}`,
+            `Total receivable: Rs ${accountSummary.totalReceivable.toLocaleString()}`,
+          ].join("\n")
+        : null,
       ``,
       `Thank you for visiting NS Ibrahim Medical!`,
     ].filter(Boolean).join("\n");
@@ -788,12 +797,12 @@ const SalesPageInner = () => {
             }
           }}
         >
-          <DialogContent className="sm:max-w-[560px] max-w-[95vw]">
-            <DialogHeader>
+          <DialogContent className="sm:max-w-[560px] max-w-[95vw] max-h-[90vh] flex flex-col gap-0 p-0">
+            <DialogHeader className="shrink-0 px-6 pt-6 pb-2">
               <DialogTitle className="text-red-800 text-lg font-bold">Invoice Detail</DialogTitle>
             </DialogHeader>
 
-            <div className="space-y-4 py-2">
+            <div className="space-y-3 py-2 px-6 overflow-y-auto min-h-0">
               {/* Date + Invoice # */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -875,7 +884,7 @@ const SalesPageInner = () => {
 
               {/* Cash Handling — CASH payment only */}
               {paymentMethod === "CASH" && (
-                <div className="rounded-lg border border-gray-200 bg-gray-50/60 p-4 space-y-3">
+                <div className="rounded-lg border border-gray-200 bg-gray-50/60 p-3 space-y-2">
                   <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Cash for this bill</p>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
@@ -905,7 +914,7 @@ const SalesPageInner = () => {
 
               {/* Credit account — existing balance or new credit sale */}
               {showCreditAccountSection && (
-                <div className="rounded-lg border border-amber-200 bg-amber-50/70 p-4 space-y-3">
+                <div className="rounded-lg border border-amber-200 bg-amber-50/70 p-3 space-y-2">
                   <p className="text-xs font-semibold text-amber-900 uppercase tracking-wide">
                     Customer credit account
                   </p>
@@ -958,7 +967,7 @@ const SalesPageInner = () => {
               )}
             </div>
 
-            <DialogFooter className="gap-2">
+            <DialogFooter className="gap-2 shrink-0 border-t border-gray-100 px-6 py-4">
               <Button onClick={() => { setIsReceiptModalOpen(false); setCashReceivedInput(""); }} variant="outline">
                 Close
               </Button>

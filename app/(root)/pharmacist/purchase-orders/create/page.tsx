@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { AlertCircle, Loader2, MoreHorizontal, ShoppingCart, XCircle, CalendarClock, Search } from "lucide-react";
+import { AlertCircle, Loader2, MoreHorizontal, ShoppingCart, XCircle, CalendarClock, Search, Pencil, Lock } from "lucide-react";
 import Loading from "@/components/shared/Loading";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { motion } from "framer-motion";
@@ -82,6 +82,10 @@ const PO_FIELD_INPUT_CLASS =
 
 const PO_TEXT_FIELD_CLASS =
   "h-10 border border-gray-300 bg-white text-sm shadow-sm focus-visible:ring-2 focus-visible:ring-red-500/25 focus-visible:border-red-500";
+
+/** Locked-state override: fields greyed out and inert until "Edit" is clicked. */
+const PO_FIELD_LOCKED_CLASS =
+  "bg-gray-50 border-gray-200 text-gray-500 shadow-none cursor-not-allowed";
 
 function toReorderItemFromInventory(row: {
   id: string;
@@ -239,6 +243,8 @@ export default function CreatePurchaseOrdersPage() {
   const [orderSpecialDiscount, setOrderSpecialDiscount] = useState("");
   const [orderCustomerDiscount, setOrderCustomerDiscount] = useState("");
   const [orderBatchNumber, setOrderBatchNumber] = useState("");
+  /** Batch & pricing fields start locked (read-only) until pharmacist clicks Edit. */
+  const [fieldsUnlocked, setFieldsUnlocked] = useState(false);
   const [creatingOrder, setCreatingOrder] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [removeLowStockDialogOpen, setRemoveLowStockDialogOpen] = useState(false);
@@ -404,6 +410,7 @@ export default function CreatePurchaseOrdersPage() {
       if (exact.length === 1) defaultVid = exact[0].id;
     }
     setSelectedVendorId(defaultVid);
+    setFieldsUnlocked(false);
     setDialogOpen(true);
   };
 
@@ -912,11 +919,12 @@ export default function CreatePurchaseOrdersPage() {
             setOrderCustomerDiscount("");
             setOrderBatchNumber("");
             setSelectedVendorId("");
+            setFieldsUnlocked(false);
             setCreatingOrder(false);
           }
         }}
       >
-        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-red-800">
               <ShoppingCart className="h-5 w-5 shrink-0" aria-hidden />
@@ -935,67 +943,69 @@ export default function CreatePurchaseOrdersPage() {
           </DialogHeader>
 
           <form
-            className="flex flex-col gap-4"
+            className="flex flex-col gap-3"
             onSubmit={(e) => {
               e.preventDefault();
               void handleCreateOrder();
             }}
           >
           {selectedItem && (
-            <div className="space-y-4">
-              <div className="rounded-lg border border-gray-100 overflow-hidden">
-                <Table>
-                  <TableBody>
-                    <TableRow className="hover:bg-transparent">
-                      <TableCell className="w-[38%] py-2.5 text-sm text-gray-500 font-medium">
-                        Manufacturer
-                      </TableCell>
-                      <TableCell className="py-2.5 text-sm">
-                        {selectedItem.manufacturer?.trim() || "—"}
-                      </TableCell>
-                    </TableRow>
-                    <TableRow className="hover:bg-transparent">
-                      <TableCell className="py-2.5 text-sm text-gray-500 font-medium">
-                        Current stock
-                      </TableCell>
-                      <TableCell
-                        className={`py-2.5 text-sm tabular-nums ${
-                          isLowStock(selectedItem.quantity, selectedItem.minimumStock)
-                            ? "text-red-600 font-semibold"
-                            : ""
-                        }`}
-                      >
-                        {selectedItem.quantity}
-                      </TableCell>
-                    </TableRow>
-                    <TableRow className="hover:bg-transparent">
-                      <TableCell className="py-2.5 text-sm text-gray-500 font-medium">
-                        Minimum stock
-                      </TableCell>
-                      <TableCell className="py-2.5 text-sm tabular-nums">
-                        {selectedItem.minimumStock}
-                      </TableCell>
-                    </TableRow>
-                    {(selectedItem.isLowStock || selectedItem.isExpiringSoon) && (
-                      <TableRow className="hover:bg-transparent bg-amber-50/50">
-                        <TableCell className="py-2.5 text-sm text-gray-500 font-medium">
-                          Alert
-                        </TableCell>
-                        <TableCell className="py-2.5 text-sm text-amber-900">
-                          {selectedItem.isLowStock && selectedItem.isExpiringSoon
-                            ? "Low stock and expiring soon"
-                            : selectedItem.isLowStock
-                              ? "Low stock"
-                              : "Expiring soon"}
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
+            <div className="space-y-3">
+              <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 rounded-lg border border-gray-100 bg-gray-50/60 px-4 py-2.5">
+                <span className="text-sm">
+                  <span className="text-gray-500">Manufacturer </span>
+                  <span className="font-medium">{selectedItem.manufacturer?.trim() || "—"}</span>
+                </span>
+                <span className="text-sm">
+                  <span className="text-gray-500">Stock </span>
+                  <span
+                    className={`font-medium tabular-nums ${
+                      isLowStock(selectedItem.quantity, selectedItem.minimumStock)
+                        ? "text-red-600 font-semibold"
+                        : ""
+                    }`}
+                  >
+                    {selectedItem.quantity}
+                  </span>
+                  <span className="text-gray-400"> / {selectedItem.minimumStock} min</span>
+                </span>
+                {(selectedItem.isLowStock || selectedItem.isExpiringSoon) && (
+                  <Badge variant="outline" className="border-amber-300 bg-amber-50 text-amber-900 font-normal">
+                    {selectedItem.isLowStock && selectedItem.isExpiringSoon
+                      ? "Low stock & expiring soon"
+                      : selectedItem.isLowStock
+                        ? "Low stock"
+                        : "Expiring soon"}
+                  </Badge>
+                )}
               </div>
 
-              <div className="rounded-lg border border-gray-200 bg-white p-4 space-y-3">
-                <p className="text-sm font-medium text-gray-800">Batch & pricing for this order</p>
+              <div className="rounded-lg border border-gray-200 bg-white p-3 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-medium text-gray-800">Batch & pricing for this order</p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-7 gap-1.5 px-2.5 text-xs"
+                    onClick={() => setFieldsUnlocked((v) => !v)}
+                  >
+                    {fieldsUnlocked ? (
+                      <>
+                        <Lock className="h-3.5 w-3.5" /> Lock
+                      </>
+                    ) : (
+                      <>
+                        <Pencil className="h-3.5 w-3.5" /> Edit
+                      </>
+                    )}
+                  </Button>
+                </div>
+                {!fieldsUnlocked && (
+                  <p className="text-xs text-gray-500 -mt-1.5">
+                    Read-only. Click Edit to change batch, prices, or discounts.
+                  </p>
+                )}
                 <div className="space-y-1.5">
                   <Label htmlFor="po-batch-number" className="text-xs text-gray-600">
                     Batch number
@@ -1007,10 +1017,11 @@ export default function CreatePurchaseOrdersPage() {
                     placeholder="e.g. BN-2026-A"
                     value={orderBatchNumber}
                     onChange={(e) => setOrderBatchNumber(e.target.value)}
-                    className={`${PO_TEXT_FIELD_CLASS} font-mono`}
+                    disabled={!fieldsUnlocked}
+                    className={`${PO_TEXT_FIELD_CLASS} font-mono ${!fieldsUnlocked ? PO_FIELD_LOCKED_CLASS : ""}`}
                   />
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
                   <div className="space-y-1.5">
                     <Label htmlFor="po-purchase-price" className="text-xs text-gray-600">
                       Purchase price (list cost)
@@ -1023,7 +1034,8 @@ export default function CreatePurchaseOrdersPage() {
                       step="0.01"
                       value={orderPurchasePrice}
                       onChange={(e) => setOrderPurchasePrice(e.target.value)}
-                      className={PO_FIELD_INPUT_CLASS}
+                      disabled={!fieldsUnlocked}
+                      className={`${PO_FIELD_INPUT_CLASS} ${!fieldsUnlocked ? PO_FIELD_LOCKED_CLASS : ""}`}
                     />
                   </div>
                   <div className="space-y-1.5">
@@ -1038,7 +1050,8 @@ export default function CreatePurchaseOrdersPage() {
                       step="0.01"
                       value={orderSellingPrice}
                       onChange={(e) => setOrderSellingPrice(e.target.value)}
-                      className={PO_FIELD_INPUT_CLASS}
+                      disabled={!fieldsUnlocked}
+                      className={`${PO_FIELD_INPUT_CLASS} ${!fieldsUnlocked ? PO_FIELD_LOCKED_CLASS : ""}`}
                     />
                   </div>
                   <div className="space-y-1.5">
@@ -1054,7 +1067,8 @@ export default function CreatePurchaseOrdersPage() {
                       step="any"
                       value={orderMfgDiscount}
                       onChange={(e) => setOrderMfgDiscount(e.target.value)}
-                      className={PO_FIELD_INPUT_CLASS}
+                      disabled={!fieldsUnlocked}
+                      className={`${PO_FIELD_INPUT_CLASS} ${!fieldsUnlocked ? PO_FIELD_LOCKED_CLASS : ""}`}
                     />
                   </div>
                   <div className="space-y-1.5">
@@ -1070,12 +1084,13 @@ export default function CreatePurchaseOrdersPage() {
                       step="any"
                       value={orderSpecialDiscount}
                       onChange={(e) => setOrderSpecialDiscount(e.target.value)}
-                      className={PO_FIELD_INPUT_CLASS}
+                      disabled={!fieldsUnlocked}
+                      className={`${PO_FIELD_INPUT_CLASS} ${!fieldsUnlocked ? PO_FIELD_LOCKED_CLASS : ""}`}
                     />
                   </div>
-                  <div className="space-y-1.5 sm:col-span-2">
+                  <div className="space-y-1.5">
                     <Label htmlFor="po-customer-discount" className="text-xs text-gray-600">
-                      Default customer discount (%)
+                      Cust. discount (%)
                     </Label>
                     <Input
                       id="po-customer-discount"
@@ -1086,7 +1101,8 @@ export default function CreatePurchaseOrdersPage() {
                       step="any"
                       value={orderCustomerDiscount}
                       onChange={(e) => setOrderCustomerDiscount(e.target.value)}
-                      className={PO_FIELD_INPUT_CLASS}
+                      disabled={!fieldsUnlocked}
+                      className={`${PO_FIELD_INPUT_CLASS} ${!fieldsUnlocked ? PO_FIELD_LOCKED_CLASS : ""}`}
                     />
                   </div>
                 </div>
@@ -1104,57 +1120,55 @@ export default function CreatePurchaseOrdersPage() {
                 )}
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="po-vendor" className="text-sm font-medium text-gray-700">
-                  Vendor
-                </Label>
-                <select
-                  id="po-vendor"
-                  required
-                  value={selectedVendorId}
-                  onChange={(e) => setSelectedVendorId(e.target.value)}
-                  className="w-full h-10 px-3 text-sm border border-gray-200 rounded-md bg-white focus:outline-none focus:ring-1 focus:ring-red-500/30 focus:border-red-500"
-                >
-                  <option value="">Select vendor…</option>
-                  {vendors
-                    .filter(
-                      (v) =>
-                        !v.manufacturerLinks.length ||
-                        (selectedItem.manufacturerId != null &&
-                          selectedItem.manufacturerId !== "" &&
-                          v.manufacturerLinks.some(
-                            (l) => l.manufacturerId === selectedItem.manufacturerId
-                          ))
-                    )
-                    .map((v) => (
-                      <option key={v.id} value={v.id}>
-                        {v.name}
-                      </option>
-                    ))}
-                </select>
-                <p className="text-xs text-gray-500">
-                  Only vendors linked to this item&apos;s manufacturer are listed (or vendors with no links).
-                </p>
-              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="po-vendor" className="text-sm font-medium text-gray-700">
+                    Vendor
+                  </Label>
+                  <select
+                    id="po-vendor"
+                    required
+                    value={selectedVendorId}
+                    onChange={(e) => setSelectedVendorId(e.target.value)}
+                    className="w-full h-10 px-3 text-sm border border-gray-200 rounded-md bg-white focus:outline-none focus:ring-1 focus:ring-red-500/30 focus:border-red-500"
+                  >
+                    <option value="">Select vendor…</option>
+                    {vendors
+                      .filter(
+                        (v) =>
+                          !v.manufacturerLinks.length ||
+                          (selectedItem.manufacturerId != null &&
+                            selectedItem.manufacturerId !== "" &&
+                            v.manufacturerLinks.some(
+                              (l) => l.manufacturerId === selectedItem.manufacturerId
+                            ))
+                      )
+                      .map((v) => (
+                        <option key={v.id} value={v.id}>
+                          {v.name}
+                        </option>
+                      ))}
+                  </select>
+                </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="order-quantity" className="text-sm font-medium text-gray-700">
-                  Units to order
-                </Label>
-                <Input
-                  id="order-quantity"
-                  inputMode="numeric"
-                  autoComplete="off"
-                  placeholder="e.g. 50"
-                  value={orderQuantityInput}
-                  onChange={(e) => onOrderQuantityChange(e.target.value)}
-                  className={PO_FIELD_INPUT_CLASS}
-                  aria-describedby="order-qty-hint"
-                />
-                <p id="order-qty-hint" className="text-xs text-gray-500">
-                  Suggested:{" "}
-                  {Math.max(selectedItem.minimumStock * 2 - selectedItem.quantity, 10)} units.
-                </p>
+                <div className="space-y-1.5">
+                  <Label htmlFor="order-quantity" className="text-sm font-medium text-gray-700">
+                    Units to order
+                  </Label>
+                  <Input
+                    id="order-quantity"
+                    inputMode="numeric"
+                    autoComplete="off"
+                    placeholder="e.g. 50"
+                    value={orderQuantityInput}
+                    onChange={(e) => onOrderQuantityChange(e.target.value)}
+                    className={PO_FIELD_INPUT_CLASS}
+                    aria-describedby="order-qty-hint"
+                  />
+                  <p id="order-qty-hint" className="text-xs text-gray-500">
+                    Suggested: {Math.max(selectedItem.minimumStock * 2 - selectedItem.quantity, 10)} units.
+                  </p>
+                </div>
               </div>
             </div>
           )}
