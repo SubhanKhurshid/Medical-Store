@@ -38,6 +38,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import ManufacturerModal from "./Modal";
 import { PaginationControls } from "@/components/shared/PaginationControls";
+import { DEFAULT_PAGE_SIZE } from "@/lib/pagination";
 
 interface ManufacturerRow {
   id: string;
@@ -75,7 +76,7 @@ const Manufacturer = () => {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
-  const LIMIT = 20;
+  const LIMIT = DEFAULT_PAGE_SIZE;
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedManufacturer, setSelectedManufacturer] = useState<ManufacturerRow | null>(null);
   const [viewManufacturer, setViewManufacturer] = useState<ManufacturerRaw | null>(null);
@@ -336,6 +337,7 @@ const Manufacturer = () => {
                   columns={columns}
                   data={manufacturers}
                   onRowClick={(m) => setSelectedManufacturer(m)}
+                  disablePagination
                 />
               </motion.div>
             )}

@@ -61,7 +61,8 @@ function listUrlWithPage(baseUrl: string, page: number, limit: number) {
 }
 
 /**
- * Fetch every page from a paginated list endpoint (for dropdowns).
+ * Fetch every page from a paginated list endpoint (for dropdowns and PDF exports).
+ * Pass the same filter query string as the on-screen table; page/limit are added automatically.
  * Does not change main table APIs — call with same URL, loops until meta.totalPages.
  */
 export async function fetchAllPaginatedList<T>(

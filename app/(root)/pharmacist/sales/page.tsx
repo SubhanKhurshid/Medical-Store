@@ -35,6 +35,7 @@ import axios from "axios";
 import { useAuth } from "@/app/providers/AuthProvider";
 import { useInventory } from "@/app/context/InventoryContext";
 import { parseApiList } from "@/lib/api";
+import { DEFAULT_PAGE_SIZE } from "@/lib/pagination";
 import { sortByLocaleKey } from "@/lib/sort-alphabetical";
 import { motion, AnimatePresence } from "framer-motion";
 import { Receipt } from "@/components/Receipt";
@@ -64,7 +65,7 @@ const SalesPageInner = () => {
   const [productPage, setProductPage] = useState(1);
   const [productTotalPages, setProductTotalPages] = useState(1);
   const [productTotal, setProductTotal] = useState(0);
-  const PRODUCT_LIMIT = 20;
+  const PRODUCT_LIMIT = DEFAULT_PAGE_SIZE;
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout>>();
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);

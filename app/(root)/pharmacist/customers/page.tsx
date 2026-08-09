@@ -10,6 +10,7 @@ import Loading from "@/components/shared/Loading";
 import { Button } from "@/components/ui/button";
 import CustomerModal from "./Modal";
 import { PaginationControls } from "@/components/shared/PaginationControls";
+import { DEFAULT_PAGE_SIZE } from "@/lib/pagination";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/providers/AuthProvider";
 import { parseApiList } from "@/lib/api";
@@ -37,7 +38,7 @@ const CustomersPage = () => {
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [total, setTotal] = useState(0);
-    const LIMIT = 20;
+    const LIMIT = DEFAULT_PAGE_SIZE;
 
     const fetchCustomers = async (targetPage = 1, searchOverride?: string) => {
         setLoading(true);
@@ -247,6 +248,7 @@ const CustomersPage = () => {
                                     columns={columns}
                                     data={customers}
                                     disableRowClick={true}
+                                    disablePagination
                                 />
                             </motion.div>
                         )}

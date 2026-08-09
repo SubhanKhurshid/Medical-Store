@@ -34,6 +34,7 @@ import { toast } from "sonner";
 import { Calendar } from "lucide-react";
 import { fetchAllPaginatedList } from "@/lib/api";
 import { isValidExpiryDateString } from "@/lib/expiry-date";
+import { InventoryProfitPreview } from "@/components/inventory/InventoryProfitPreview";
 
 // Coerce empty string to number; used for optional numeric fields
 const optionalNum = (min = 0) =>
@@ -216,6 +217,12 @@ export default function EditInventoryModal({
   }, [initialManufacturerId, open]);
 
   const [isSaving, setIsSaving] = useState(false);
+
+  const watchedPurchasePrice = form.watch("purchasePrice");
+  const watchedSellingPrice = form.watch("price");
+  const watchedManufacturerDiscount = form.watch("manufacturerDiscount");
+  const watchedSpecialCompanyDiscount = form.watch("specialCompanyDiscount");
+  const watchedCustomerDiscount = form.watch("customerDiscount");
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -609,6 +616,15 @@ export default function EditInventoryModal({
                     </p>
                   </div>
                 </div>
+
+                <InventoryProfitPreview
+                  className=""
+                  purchasePrice={watchedPurchasePrice}
+                  sellingPrice={watchedSellingPrice}
+                  manufacturerDiscount={watchedManufacturerDiscount}
+                  specialCompanyDiscount={watchedSpecialCompanyDiscount}
+                  customerDiscount={watchedCustomerDiscount}
+                />
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="flex flex-col gap-2">

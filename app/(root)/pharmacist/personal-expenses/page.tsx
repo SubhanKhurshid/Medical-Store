@@ -31,7 +31,15 @@ import {
   Receipt,
   Loader2,
 } from "lucide-react";
-import { format } from "date-fns";
+import {
+  format,
+  startOfDay,
+  endOfDay,
+  startOfMonth,
+  endOfMonth,
+  startOfYear,
+  endOfYear,
+} from "date-fns";
 import { toast } from "sonner";
 import axios from "axios";
 import { parseApiList } from "@/lib/api";
@@ -89,15 +97,53 @@ function pdfAmount(n: number, opts?: { showZero?: boolean }) {
 
 const PDF_NUMERIC_COLS = [4, 5, 6] as const;
 
+type DateRangeMode = "all" | "day" | "month" | "year" | "custom";
+
 function toDateInput(d: Date) {
   return d.toISOString().slice(0, 10);
 }
 
-function dateRangeLabel(from: string, to: string): string {
-  if (!from && !to) return "All time";
-  if (from && to) return `${from} → ${to}`;
-  if (from) return `From ${from}`;
-  return `Until ${to}`;
+function apiRange(
+  mode: DateRangeMode,
+  customFrom: string,
+  customTo: string,
+): { from?: string; to?: string } | null {
+  const now = new Date();
+  switch (mode) {
+    case "all":
+      return {};
+    case "day":
+      return {
+        from: format(startOfDay(now), "yyyy-MM-dd"),
+        to: format(endOfDay(now), "yyyy-MM-dd"),
+      };
+    case "month":
+      return {
+        from: format(startOfMonth(now), "yyyy-MM-dd"),
+        to: format(endOfMonth(now), "yyyy-MM-dd"),
+      };
+    case "year":
+      return {
+        from: format(startOfYear(now), "yyyy-MM-dd"),
+        to: format(endOfYear(now), "yyyy-MM-dd"),
+      };
+    case "custom":
+      if (!customFrom || !customTo) return null;
+      return { from: customFrom, to: customTo };
+    default:
+      return {};
+  }
+}
+
+function rangeDescription(
+  mode: DateRangeMode,
+  customFrom: string,
+  customTo: string,
+): string {
+  const r = apiRange(mode, customFrom, customTo);
+  if (r === null) return "Select both dates";
+  if (!r.from && !r.to) return "All time";
+  return `${r.from ?? "…"} → ${r.to ?? "…"}`;
 }
 
 export default function PersonalExpensesPage() {
@@ -107,8 +153,9 @@ export default function PersonalExpensesPage() {
 
   const [rows, setRows] = useState<PersonalExpenseRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [from, setFrom] = useState("");
-  const [to, setTo] = useState("");
+  const [dateRangeMode, setDateRangeMode] = useState<DateRangeMode>("all");
+  const [customFrom, setCustomFrom] = useState("");
+  const [customTo, setCustomTo] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
@@ -127,11 +174,17 @@ export default function PersonalExpensesPage() {
 
   const fetchRows = useCallback(async () => {
     if (!token) return;
+    const range = apiRange(dateRangeMode, customFrom, customTo);
+    if (range === null) {
+      setRows([]);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       const params = new URLSearchParams();
-      if (from) params.set("from", from);
-      if (to) params.set("to", to);
+      if (range.from) params.set("from", range.from);
+      if (range.to) params.set("to", range.to);
       const q = params.toString();
       const res = await fetch(
         `${base}/pharmacist/personal-expenses${q ? `?${q}` : ""}`,
@@ -145,7 +198,7 @@ export default function PersonalExpensesPage() {
     } finally {
       setLoading(false);
     }
-  }, [token, base, from, to]);
+  }, [token, base, dateRangeMode, customFrom, customTo]);
 
   useEffect(() => {
     fetchRows();
@@ -284,7 +337,11 @@ export default function PersonalExpensesPage() {
       y += 20;
       doc.setFontSize(10);
       doc.setTextColor(60, 60, 60);
-      doc.text(`Range: ${dateRangeLabel(from, to)}`, margin, y);
+      doc.text(
+        `Range: ${rangeDescription(dateRangeMode, customFrom, customTo)}`,
+        margin,
+        y,
+      );
       y += 14;
       doc.text(`Generated: ${new Date().toLocaleString("en-GB")}`, margin, y);
       y += 14;
@@ -363,7 +420,10 @@ export default function PersonalExpensesPage() {
     } finally {
       setExportingPdf(false);
     }
-  }, [rows, from, to, summary]);
+  }, [rows, dateRangeMode, customFrom, customTo, summary]);
+
+  const customIncomplete =
+    dateRangeMode === "custom" && (!customFrom || !customTo);
 
   return (
     <div className="min-h-screen bg-gray-50/80">
@@ -386,44 +446,69 @@ export default function PersonalExpensesPage() {
           </motion.p>
         </header>
 
-        <Card className="mb-6 border border-gray-200 shadow-sm">
-          <CardContent className="p-5 flex flex-col sm:flex-row gap-4 sm:items-end">
-            <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label htmlFor="from" className={LABEL_CLASS}>
-                  From
-                </Label>
-                <Input
-                  id="from"
-                  type="date"
-                  value={from}
-                  onChange={(e) => setFrom(e.target.value)}
-                  className={FIELD_CLASS}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="to" className={LABEL_CLASS}>
-                  To
-                </Label>
-                <Input
-                  id="to"
-                  type="date"
-                  value={to}
-                  onChange={(e) => setTo(e.target.value)}
-                  className={FIELD_CLASS}
-                />
-              </div>
-            </div>
+        <Card className="overflow-hidden bg-white border border-gray-100 rounded-xl shadow-sm hover:shadow-md transition-shadow mb-6">
+          <div className="border-l-4 border-l-red-500 bg-red-50/30 px-5 py-3">
+            <h2 className="text-base font-semibold text-red-800">Date range</h2>
+            <p className="text-xs text-gray-500 mt-0.5">
+              {rangeDescription(dateRangeMode, customFrom, customTo)}
+            </p>
+          </div>
+          <CardContent className="p-4 sm:p-5 space-y-4">
             <div className="flex flex-wrap gap-2">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setFrom("");
-                  setTo("");
-                }}
-              >
-                Clear dates
-              </Button>
+              {(
+                [
+                  ["all", "All time"],
+                  ["day", "Today"],
+                  ["month", "This month"],
+                  ["year", "This year"],
+                  ["custom", "Custom"],
+                ] as const
+              ).map(([key, label]) => (
+                <Button
+                  key={key}
+                  type="button"
+                  size="sm"
+                  variant={dateRangeMode === key ? "default" : "outline"}
+                  className={
+                    dateRangeMode === key
+                      ? "bg-red-800 hover:bg-red-700 text-white"
+                      : "border-gray-200"
+                  }
+                  onClick={() => setDateRangeMode(key)}
+                >
+                  {label}
+                </Button>
+              ))}
+            </div>
+            {dateRangeMode === "custom" && (
+              <div className="flex flex-wrap items-end gap-4">
+                <div>
+                  <Label className="text-xs text-gray-600">From</Label>
+                  <Input
+                    type="date"
+                    value={customFrom}
+                    onChange={(e) => setCustomFrom(e.target.value)}
+                    className="mt-1 w-[160px] border border-gray-300 bg-white shadow-sm"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs text-gray-600">To</Label>
+                  <Input
+                    type="date"
+                    value={customTo}
+                    onChange={(e) => setCustomTo(e.target.value)}
+                    className="mt-1 w-[160px] border border-gray-300 bg-white shadow-sm"
+                  />
+                </div>
+              </div>
+            )}
+            {customIncomplete && (
+              <p className="text-sm text-amber-800 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
+                Select both <strong>From</strong> and <strong>To</strong> to load
+                expenses.
+              </p>
+            )}
+            <div className="flex flex-wrap gap-2 pt-1 border-t border-gray-100">
               <Button
                 className="bg-red-800 hover:bg-red-700"
                 onClick={openCreate}
@@ -434,7 +519,7 @@ export default function PersonalExpensesPage() {
               <Button
                 variant="outline"
                 className="border-red-200 text-red-800 hover:bg-red-50"
-                disabled={!rows.length || exportingPdf}
+                disabled={!rows.length || exportingPdf || customIncomplete}
                 onClick={() => void exportPdf()}
               >
                 <Download className="h-4 w-4 mr-2" />

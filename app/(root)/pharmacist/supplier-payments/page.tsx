@@ -22,7 +22,8 @@ import {
 import { useAuth } from "@/app/providers/AuthProvider";
 import { toast } from "sonner";
 import axios from "axios";
-import { parseApiList } from "@/lib/api";
+import { fetchAllPaginatedList, parseApiList } from "@/lib/api";
+import { DEFAULT_PAGE_SIZE, PDF_EXPORT_PAGE_SIZE } from "@/lib/pagination";
 import { PaginationControls } from "@/components/shared/PaginationControls";
 
 interface Payment {
@@ -77,7 +78,7 @@ const SupplierPayments = () => {
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [total, setTotal] = useState(0);
-    const LIMIT = 20;
+    const LIMIT = DEFAULT_PAGE_SIZE;
     const [dateRangeMode, setDateRangeMode] = useState<DateRangeMode>("all");
     const [customFrom, setCustomFrom] = useState("");
     const [customTo, setCustomTo] = useState("");
@@ -182,49 +183,35 @@ const SupplierPayments = () => {
             if (accessToken) {
                 (headers as Record<string, string>).Authorization = `Bearer ${accessToken}`;
             }
-            // Fetch every page in the selected range so the PDF is complete.
-            const EXPORT_LIMIT = 100;
-            const rows: Payment[] = [];
-            let targetPage = 1;
-            let pages = 1;
-            do {
-                const params = new URLSearchParams();
-                params.append("page", String(targetPage));
-                params.append("limit", String(EXPORT_LIMIT));
-                if (search.trim()) params.append("search", search.trim());
-                if (range.start) params.append("startDate", range.start);
-                if (range.end) params.append("endDate", range.end);
-                const res = await fetch(
-                    `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/supplier-payments?${params.toString()}`,
-                    { headers },
-                );
-                if (!res.ok) throw new Error("Failed to fetch payments");
-                const result = await res.json();
-                const items = parseApiList<{
-                    id: string;
-                    vendorId?: string;
-                    vendor?: { id: string; name: string };
-                    manufacturer?: { companyName: string };
-                    amount: number;
-                    paymentDate: string;
-                    reference?: string;
-                    paymentMethod?: string;
-                }>(result);
-                items.forEach((item) =>
-                    rows.push({
-                        id: item.id,
-                        vendorId: item.vendorId || item.vendor?.id || "",
-                        payeeLabel:
-                            item.vendor?.name || item.manufacturer?.companyName || "Unknown",
-                        amount: item.amount,
-                        date: new Date(item.paymentDate).toLocaleDateString("en-GB"),
-                        reference: item.reference || "-",
-                        paymentMethod: item.paymentMethod || "CASH",
-                    }),
-                );
-                pages = result.meta?.totalPages ?? 1;
-                targetPage += 1;
-            } while (targetPage <= pages);
+            const params = new URLSearchParams();
+            if (search.trim()) params.append("search", search.trim());
+            if (range.start) params.append("startDate", range.start);
+            if (range.end) params.append("endDate", range.end);
+
+            const items = await fetchAllPaginatedList<{
+                id: string;
+                vendorId?: string;
+                vendor?: { id: string; name: string };
+                manufacturer?: { companyName: string };
+                amount: number;
+                paymentDate: string;
+                reference?: string;
+                paymentMethod?: string;
+            }>(
+                `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/supplier-payments?${params.toString()}`,
+                { headers, pageLimit: PDF_EXPORT_PAGE_SIZE },
+            );
+
+            const rows: Payment[] = items.map((item) => ({
+                id: item.id,
+                vendorId: item.vendorId || item.vendor?.id || "",
+                payeeLabel:
+                    item.vendor?.name || item.manufacturer?.companyName || "Unknown",
+                amount: item.amount,
+                date: new Date(item.paymentDate).toLocaleDateString("en-GB"),
+                reference: item.reference || "-",
+                paymentMethod: item.paymentMethod || "CASH",
+            }));
 
             if (!rows.length) {
                 toast.error("No payments to print in this range.");
@@ -561,6 +548,7 @@ const SupplierPayments = () => {
                                         data={payments}
                                         onRowClick={(p) => setSelectedPayment(p)}
                                         initialSorting={[{ id: "payeeLabel", desc: false }]}
+                                        disablePagination
                                     />
                                 </motion.div>
                             )}

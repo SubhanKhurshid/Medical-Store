@@ -40,6 +40,8 @@ import {
   endOfYear,
 } from "date-fns";
 import { PaginationControls } from "@/components/shared/PaginationControls";
+import { DEFAULT_PAGE_SIZE, PDF_EXPORT_PAGE_SIZE } from "@/lib/pagination";
+import { fetchAllPaginatedList } from "@/lib/api";
 
 const PAYMENT_LABELS: Record<string, string> = {
   CASH: "Cash",
@@ -143,7 +145,7 @@ const SalesTable = () => {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
-  const LIMIT = 50;
+  const LIMIT = DEFAULT_PAGE_SIZE;
   const [viewSale, setViewSale] = useState<Sale | null>(null);
   const [refundSale, setRefundSale] = useState<Sale | null>(null);
   const [refundQuantities, setRefundQuantities] = useState<Record<string, number>>({});
@@ -269,12 +271,36 @@ const SalesTable = () => {
   );
 
   const exportPdf = useCallback(async () => {
-    if (!displaySales.length) {
-      toast.error("No rows to export.");
+    const range = apiRange(dateRangeMode, customFrom, customTo);
+    if (range === null) {
+      toast.error("Select both dates first.");
       return;
     }
+    if (!accessToken) return;
+
     setExportingPdf(true);
     try {
+      const queryParams = new URLSearchParams();
+      if (range.start) queryParams.append("startDate", range.start);
+      if (range.end) queryParams.append("endDate", range.end);
+      if (search.trim()) queryParams.append("search", search.trim());
+      if (paymentFilter !== "ALL") queryParams.append("paymentMethod", paymentFilter);
+
+      const allSales = sortSalesNewestFirst(
+        await fetchAllPaginatedList<Sale>(
+          `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/sales?${queryParams.toString()}`,
+          {
+            headers: { Authorization: `Bearer ${accessToken}` },
+            pageLimit: PDF_EXPORT_PAGE_SIZE,
+          },
+        ),
+      );
+
+      if (!allSales.length) {
+        toast.error("No rows to export.");
+        return;
+      }
+
       const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
         import("jspdf"),
         import("jspdf-autotable"),
@@ -292,10 +318,12 @@ const SalesTable = () => {
       y += 14;
       doc.text(`Payment filter: ${paymentFilter === "ALL" ? "All" : paymentFilter}`, margin, y);
       y += 14;
+      doc.text(`Records: ${allSales.length}`, margin, y);
+      y += 14;
       doc.text(`Generated: ${new Date().toLocaleString("en-GB")}`, margin, y);
       y += 20;
 
-      const totals = displaySales.reduce(
+      const totals = allSales.reduce(
         (acc, sale) => {
           const total = Number(sale.totalPrice) || 0;
           const refunded = Number(sale.refundedAmount) || 0;
@@ -309,7 +337,7 @@ const SalesTable = () => {
       );
 
       const paymentSummary = PAYMENT_METHOD_ORDER.map((method) => {
-        const methodRows = displaySales.filter((sale) => sale.paymentMethod === method);
+        const methodRows = allSales.filter((sale) => sale.paymentMethod === method);
         const methodTotals = methodRows.reduce(
           (acc, sale) => {
             const total = Number(sale.totalPrice) || 0;
@@ -329,7 +357,7 @@ const SalesTable = () => {
         };
       });
 
-      const body = displaySales.map((s) => {
+      const body = allSales.map((s) => {
         const refunded = Number(s.refundedAmount) || 0;
         const net = (Number(s.totalPrice) || 0) - refunded;
         return [
@@ -354,7 +382,7 @@ const SalesTable = () => {
             "—",
             "—",
             "—",
-            `${displaySales.length} payments`,
+            `${allSales.length} sale(s)`,
             formatCurrency(totals.total),
             formatCurrency(totals.refunded),
             formatCurrency(totals.net),
@@ -373,7 +401,7 @@ const SalesTable = () => {
         y;
 
       autoTable(doc, {
-        head: [["Payment method", "Payments", "Total", "Refunded", "Net"]],
+        head: [["Payment method", "Sales", "Total", "Refunded", "Net"]],
         body: [
           ...paymentSummary.map((row) => [
             PAYMENT_LABELS[row.method],
@@ -384,7 +412,7 @@ const SalesTable = () => {
           ]),
           [
             "All",
-            String(displaySales.length),
+            String(allSales.length),
             formatCurrency(totals.total),
             formatCurrency(totals.refunded),
             formatCurrency(totals.net),
@@ -405,7 +433,7 @@ const SalesTable = () => {
     } finally {
       setExportingPdf(false);
     }
-  }, [customFrom, customTo, dateRangeMode, displaySales, formatCurrency, paymentFilter]);
+  }, [accessToken, customFrom, customTo, dateRangeMode, formatCurrency, paymentFilter, search]);
 
   const fetchSaleById = async (id: string) => {
     try {
@@ -708,8 +736,11 @@ const SalesTable = () => {
             <div>
               <h2 className="text-base font-semibold text-red-800">Sales records</h2>
               <p className="text-xs text-gray-500 mt-0.5">
-                Newest invoices first. Search and payment below; dates in bar above. PDF uses same filters ({displaySales.length}{" "}
-                rows).
+                Newest invoices first. PDF exports all {total > 0 ? total : "matching"} records for the
+                current filters (not just this page).{" "}
+                <span className="text-gray-600">
+                  Profit column = gross profit per sale (net revenue − net purchase cost), not margin %.
+                </span>
               </p>
             </div>
             <Button
@@ -717,11 +748,15 @@ const SalesTable = () => {
               variant="outline"
               size="sm"
               className="border-red-200 text-red-800 hover:bg-red-50 shrink-0"
-              disabled={!displaySales.length || exportingPdf}
+              disabled={
+                !total ||
+                exportingPdf ||
+                (dateRangeMode === "custom" && (!customFrom || !customTo))
+              }
               onClick={() => void exportPdf()}
             >
               <Download className="h-4 w-4 mr-2" />
-              {exportingPdf ? "PDF…" : "Export PDF"}
+              {exportingPdf ? "Preparing PDF…" : "Export PDF"}
             </Button>
           </div>
           <CardContent className="p-4 sm:p-5">
@@ -780,6 +815,7 @@ const SalesTable = () => {
                     columns={columns}
                     data={displaySales}
                     disableRowClick={true}
+                    disablePagination
                     initialSorting={[{ id: "soldAt", desc: true }]}
                   />
                   {displaySales.length > 0 && (

@@ -3,6 +3,7 @@ import React, { createContext, useContext, useReducer, useEffect, useCallback } 
 import { toast } from "sonner";
 import { useAuth } from "../providers/AuthProvider";
 import { API_LIST_MAX_LIMIT, parseApiList } from "@/lib/api";
+import { DEFAULT_PAGE_SIZE } from "@/lib/pagination";
 import { sortByLocaleKey } from "@/lib/sort-alphabetical";
 
 export enum ItemType {
@@ -221,7 +222,7 @@ export const InventoryProvider = ({
     return response.data?.total ?? 0;
   }, [accessToken]);
 
-  const getLowStockItems = useCallback(async (page = 1, limit = 20): Promise<PaginatedResult<InventoryItem>> => {
+  const getLowStockItems = useCallback(async (page = 1, limit = DEFAULT_PAGE_SIZE): Promise<PaginatedResult<InventoryItem>> => {
     const response = await axios.get(
       `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/low-stock?page=${page}&limit=${limit}`,
       { headers: { Authorization: `Bearer ${accessToken}` } }
@@ -234,7 +235,7 @@ export const InventoryProvider = ({
     return { data, meta: result.meta ?? { total: data.length, page, limit, totalPages: 1 } };
   }, [accessToken]);
 
-  const getExpiringItems = useCallback(async (page = 1, limit = 20): Promise<PaginatedResult<InventoryItem>> => {
+  const getExpiringItems = useCallback(async (page = 1, limit = DEFAULT_PAGE_SIZE): Promise<PaginatedResult<InventoryItem>> => {
     const response = await axios.get(
       `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/expiring?page=${page}&limit=${limit}`,
       { headers: { Authorization: `Bearer ${accessToken}` } }

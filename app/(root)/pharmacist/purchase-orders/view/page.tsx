@@ -36,7 +36,6 @@ import {
 import {
   flexRender,
   getCoreRowModel,
-  getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
@@ -47,6 +46,7 @@ import { dispatchLowStockInvalidated } from "@/lib/low-stock-events";
 import { TableEmptyState } from "@/components/shared/TableEmptyState";
 import { FileText } from "lucide-react";
 import { PaginationControls } from "@/components/shared/PaginationControls";
+import { DEFAULT_PAGE_SIZE } from "@/lib/pagination";
 
 interface PurchaseOrder {
   id: string;
@@ -68,7 +68,7 @@ export default function ViewPurchaseOrdersPage() {
   const [serverPage, setServerPage] = useState(1);
   const [serverTotalPages, setServerTotalPages] = useState(1);
   const [serverTotal, setServerTotal] = useState(0);
-  const SERVER_LIMIT = 50;
+  const SERVER_LIMIT = DEFAULT_PAGE_SIZE;
   const [selectedRow, setSelectedRow] = useState<PurchaseOrder | null>(null);
   const [search, setSearch] = useState("");
   const [dateFrom, setDateFrom] = useState("");
@@ -217,9 +217,7 @@ export default function ViewPurchaseOrdersPage() {
     columns,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
     initialState: {
-      pagination: { pageSize: 10 },
       sorting: [{ id: "createdAt", desc: true }],
     },
   });
@@ -482,30 +480,6 @@ export default function ViewPurchaseOrdersPage() {
                       )}
                     </TableBody>
                   </Table>
-                <div className="flex flex-col sm:flex-row items-center justify-between space-y-2 sm:space-y-0 py-4">
-                  <div className="text-sm text-muted-foreground">
-                    Page {table.getState().pagination.pageIndex + 1} of{" "}
-                    {table.getPageCount()}
-                  </div>
-                  <div className="space-x-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => table.previousPage()}
-                      disabled={!table.getCanPreviousPage()}
-                    >
-                      Previous
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => table.nextPage()}
-                      disabled={!table.getCanNextPage()}
-                    >
-                      Next
-                    </Button>
-                  </div>
-                </div>
               </div>
             )}
           </div>

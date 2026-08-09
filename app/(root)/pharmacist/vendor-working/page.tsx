@@ -23,6 +23,7 @@ import { useAuth } from "@/app/providers/AuthProvider";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import VendorModal, { type VendorRaw } from "./Modal";
+import { DEFAULT_PAGE_SIZE } from "@/lib/pagination";
 import { PaginationControls } from "@/components/shared/PaginationControls";
 
 interface VendorRow {
@@ -44,7 +45,7 @@ export default function VendorsPage() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
-  const LIMIT = 20;
+  const LIMIT = DEFAULT_PAGE_SIZE;
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editVendor, setEditVendor] = useState<VendorRaw | null>(null);
   const [selected, setSelected] = useState<VendorRow | null>(null);
@@ -277,7 +278,7 @@ export default function VendorsPage() {
                 </motion.div>
               ) : (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="rounded-lg border border-gray-100 overflow-hidden">
-                  <DataTable columns={columns} data={vendorRows} onRowClick={(v) => setSelected(v)} />
+                  <DataTable columns={columns} data={vendorRows} onRowClick={(v) => setSelected(v)} disablePagination />
                 </motion.div>
               )}
             </AnimatePresence>

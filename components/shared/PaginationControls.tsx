@@ -20,10 +20,18 @@ export function PaginationControls({
   onPageChange,
   loading,
 }: PaginationControlsProps) {
-  if (totalPages <= 1) return null;
+  if (total <= 0) return null;
 
   const from = (page - 1) * limit + 1;
   const to = Math.min(page * limit, total);
+
+  if (totalPages <= 1) {
+    return (
+      <p className="text-sm text-gray-500 mt-4 px-1">
+        Showing {from}–{to} of {total}
+      </p>
+    );
+  }
 
   return (
     <div className="flex items-center justify-between mt-4 px-1">
