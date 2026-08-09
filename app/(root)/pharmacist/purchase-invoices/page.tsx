@@ -12,6 +12,7 @@ import Loading from "@/components/shared/Loading";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { PaginationControls } from "@/components/shared/PaginationControls";
+import { DEFAULT_PAGE_SIZE } from "@/lib/pagination";
 import {
     Dialog,
     DialogContent,
@@ -47,7 +48,7 @@ export default function PurchaseInvoicesPage() {
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [total, setTotal] = useState(0);
-    const LIMIT = 20;
+    const LIMIT = DEFAULT_PAGE_SIZE;
 
     const fetchInvoices = async (targetPage = page, searchOverride?: string) => {
         setLoading(true);
@@ -222,6 +223,7 @@ export default function PurchaseInvoicesPage() {
                                     data={invoices}
                                     onRowClick={(inv) => setSelectedInvoice(inv)}
                                     initialSorting={[{ id: "supplierLabel", desc: false }]}
+                                    disablePagination
                                 />
                             </motion.div>
                         )}

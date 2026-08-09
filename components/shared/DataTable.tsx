@@ -28,6 +28,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Calendar, Package2, AlertCircle, X, Pill, Inbox } from "lucide-react";
 import { isLowStock } from "@/lib/low-stock";
+import { DEFAULT_PAGE_SIZE } from "@/lib/pagination";
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
@@ -60,7 +61,7 @@ export function DataTable<TData extends Record<string, any>, TValue>({
     state: { sorting },
     initialState: {
       pagination: {
-        pageSize: 20,
+        pageSize: DEFAULT_PAGE_SIZE,
       },
     },
   });

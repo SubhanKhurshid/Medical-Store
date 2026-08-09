@@ -32,6 +32,7 @@ import { toast } from "sonner";
 import { dispatchExpiringInvalidated } from "@/lib/expiring-events";
 import { EXPIRING_INVALIDATED_EVENT } from "@/lib/expiring-events";
 import { PaginationControls } from "@/components/shared/PaginationControls";
+import { DASHBOARD_PAGE_SIZE } from "@/lib/pagination";
 import type { ColumnDef } from "@tanstack/react-table";
 
 function getMonthRange(monthOffset: number) {
@@ -57,9 +58,12 @@ const PharmacistPage = () => {
   const [lowStockTotalPages, setLowStockTotalPages] = useState(1);
   const [expiringPage, setExpiringPage] = useState(1);
   const [expiringTotalPages, setExpiringTotalPages] = useState(1);
-  const TABLE_LIMIT = 20;
-  const [earnedThisMonth, setEarnedThisMonth] = useState(0);
-  const [earnedLastMonth, setEarnedLastMonth] = useState(0);
+  const DASHBOARD_LIMIT = DASHBOARD_PAGE_SIZE;
+  const [grossProfitThisMonth, setGrossProfitThisMonth] = useState(0);
+  const [grossProfitLastMonth, setGrossProfitLastMonth] = useState(0);
+  const [netProfitThisMonth, setNetProfitThisMonth] = useState(0);
+  const [netProfitLastMonth, setNetProfitLastMonth] = useState(0);
+  const [personalExpensesThisMonth, setPersonalExpensesThisMonth] = useState(0);
   const [itemToDiscard, setItemToDiscard] = useState<InventoryItem | null>(null);
   const [itemToRemoveFromList, setItemToRemoveFromList] = useState<InventoryItem | null>(null);
   const [discarding, setDiscarding] = useState(false);
@@ -75,20 +79,20 @@ const PharmacistPage = () => {
   };
 
   const fetchLowStock = useCallback(async (page = 1) => {
-    const result = await getLowStockItems(page, TABLE_LIMIT);
+    const result = await getLowStockItems(page, DASHBOARD_LIMIT);
     setLowStockItems(result.data);
     setLowStockCount(result.meta.total);
     setLowStockPage(result.meta.page);
     setLowStockTotalPages(result.meta.totalPages);
-  }, [getLowStockItems, TABLE_LIMIT]);
+  }, [getLowStockItems, DASHBOARD_LIMIT]);
 
   const fetchExpiring = useCallback(async (page = 1) => {
-    const result = await getExpiringItems(page, TABLE_LIMIT);
+    const result = await getExpiringItems(page, DASHBOARD_LIMIT);
     setExpiringItems(result.data);
     setExpiringCount(result.meta.total);
     setExpiringPage(result.meta.page);
     setExpiringTotalPages(result.meta.totalPages);
-  }, [getExpiringItems, TABLE_LIMIT]);
+  }, [getExpiringItems, DASHBOARD_LIMIT]);
 
   const fetchData = useCallback(async () => {
     await Promise.all([fetchLowStock(1), fetchExpiring(1)]);
@@ -218,8 +222,19 @@ const PharmacistPage = () => {
         ]);
         const dataThis = await resThis.json();
         const dataLast = await resLast.json();
-        setEarnedThisMonth(typeof dataThis?.profit === "number" ? dataThis.profit : 0);
-        setEarnedLastMonth(typeof dataLast?.profit === "number" ? dataLast.profit : 0);
+        setGrossProfitThisMonth(
+          typeof dataThis?.grossProfit === "number" ? dataThis.grossProfit : 0,
+        );
+        setGrossProfitLastMonth(
+          typeof dataLast?.grossProfit === "number" ? dataLast.grossProfit : 0,
+        );
+        setNetProfitThisMonth(typeof dataThis?.profit === "number" ? dataThis.profit : 0);
+        setNetProfitLastMonth(typeof dataLast?.profit === "number" ? dataLast.profit : 0);
+        setPersonalExpensesThisMonth(
+          typeof dataThis?.personalExpenses?.net === "number"
+            ? dataThis.personalExpenses.net
+            : 0,
+        );
       } catch (e) {
         console.error("Error fetching profit for stats:", e);
       }
@@ -258,8 +273,11 @@ const PharmacistPage = () => {
           totalItems={inventoryTotal || items.length}
           lowStockCount={lowStockCount}
           expiringCount={expiringCount}
-          earnedThisMonth={earnedThisMonth}
-          earnedLastMonth={earnedLastMonth}
+          grossProfitThisMonth={grossProfitThisMonth}
+          grossProfitLastMonth={grossProfitLastMonth}
+          netProfitThisMonth={netProfitThisMonth}
+          netProfitLastMonth={netProfitLastMonth}
+          personalExpensesThisMonth={personalExpensesThisMonth}
         />
 
         <section className="space-y-6">
@@ -278,8 +296,8 @@ const PharmacistPage = () => {
                 </p>
               </div>
               <div className="p-4 sm:p-5">
-                <DataTable columns={expiringTableColumns} data={lowStockItems} />
-                <PaginationControls page={lowStockPage} totalPages={lowStockTotalPages} total={lowStockCount} limit={TABLE_LIMIT} onPageChange={(p) => fetchLowStock(p)} />
+                <DataTable columns={expiringTableColumns} data={lowStockItems} disablePagination />
+                <PaginationControls page={lowStockPage} totalPages={lowStockTotalPages} total={lowStockCount} limit={DASHBOARD_LIMIT} onPageChange={(p) => fetchLowStock(p)} />
               </div>
             </Card>
           </motion.div>
@@ -299,8 +317,8 @@ const PharmacistPage = () => {
                 </p>
               </div>
               <div className="p-4 sm:p-5">
-                <DataTable columns={dashboardExpiringColumns} data={expiringItems} disableRowClick />
-                <PaginationControls page={expiringPage} totalPages={expiringTotalPages} total={expiringCount} limit={TABLE_LIMIT} onPageChange={(p) => fetchExpiring(p)} />
+                <DataTable columns={dashboardExpiringColumns} data={expiringItems} disableRowClick disablePagination />
+                <PaginationControls page={expiringPage} totalPages={expiringTotalPages} total={expiringCount} limit={DASHBOARD_LIMIT} onPageChange={(p) => fetchExpiring(p)} />
               </div>
             </Card>
           </motion.div>

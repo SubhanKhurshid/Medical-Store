@@ -43,6 +43,7 @@ import type { ColumnDef } from "@tanstack/react-table";
 import axios from "axios";
 import { useAuth } from "@/app/providers/AuthProvider";
 import { API_LIST_MAX_LIMIT, fetchAllPaginatedListAxios, parseApiList } from "@/lib/api";
+import { DEFAULT_PAGE_SIZE } from "@/lib/pagination";
 import { dispatchLowStockInvalidated } from "@/lib/low-stock-events";
 import { isLowStock } from "@/lib/low-stock";
 import { dispatchExpiringInvalidated } from "@/lib/expiring-events";
@@ -316,7 +317,7 @@ export default function CreatePurchaseOrdersPage() {
     const headers = getAuthHeaders(user?.access_token);
     try {
       setLoadingInventory(true);
-      const params = new URLSearchParams({ limit: "20", search: search.trim() });
+      const params = new URLSearchParams({ limit: String(DEFAULT_PAGE_SIZE), search: search.trim() });
       const res = await axios.get(
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist?${params}`,
         { headers },

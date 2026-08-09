@@ -21,8 +21,9 @@ import { PaginationControls } from "@/components/shared/PaginationControls";
 import { useAuth } from "@/app/providers/AuthProvider";
 import axios from "axios";
 import { parseApiList } from "@/lib/api";
+import { DEFAULT_PAGE_SIZE } from "@/lib/pagination";
 
-const LIMIT = 20;
+const LIMIT = DEFAULT_PAGE_SIZE;
 
 const Inventory = () => {
   const { user } = useAuth();
