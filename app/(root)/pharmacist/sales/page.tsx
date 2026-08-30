@@ -51,6 +51,19 @@ interface Product {
   imageUrl: string;
   type: string;
   genericName?: string;
+  expiryDate?: string;
+}
+
+/** ISO date -> dd/mm/yyyy; "—" when missing or unparseable. */
+function formatExpiry(date: string | undefined): string {
+  if (!date) return "—";
+  const d = new Date(date);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
 }
 
 interface CartItem extends Product {
@@ -208,6 +221,7 @@ const SalesPageInner = () => {
         imageUrl: data.image ?? "",
         type: data.type ?? "GENERAL",
         genericName: data.genericName,
+        expiryDate: data.expiryDate,
       };
       setProductCache((prev) => new Map(prev).set(product.id, product));
       addToCart(product, 1);
@@ -597,6 +611,7 @@ const SalesPageInner = () => {
                                   <div className="flex-1 min-w-0">
                                     <h3 className="font-medium text-gray-900 truncate">{product.name}</h3>
                                     <p className="text-xs text-gray-500">Rs {product.price} · Stock: {product.quantity}</p>
+                                    <p className="text-xs text-gray-500">Exp: {formatExpiry(product.expiryDate)}</p>
                                   </div>
                                   <Button type="button" onClick={() => addToCart(product)} size="sm" className="bg-red-800 hover:bg-red-700 shrink-0">
                                     <Plus className="h-4 w-4" />

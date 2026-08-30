@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { API_LIST_MAX_LIMIT, fetchAllPaginatedList, parseApiList } from "@/lib/api";
+import { fetchAllPaginatedList } from "@/lib/api";
+import { ItemCombobox } from "@/components/purchase-invoices/ItemCombobox";
 import { sortByLocaleKey } from "@/lib/sort-alphabetical";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -31,7 +32,6 @@ function formatInventoryOptionLabel(inv: {
 interface VendorOption {
     id: string;
     name: string;
-    manufacturerLinks?: { manufacturerId: string }[];
 }
 
 export default function CreatePurchaseInvoicePage() {
@@ -39,6 +39,7 @@ export default function CreatePurchaseInvoicePage() {
     const [vendors, setVendors] = useState<VendorOption[]>([]);
     const [inventoryItems, setInventoryItems] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(false);
+    const [loadingItems, setLoadingItems] = useState(false);
 
     const [invoiceData, setInvoiceData] = useState({
         invoiceNumber: "",
@@ -57,31 +58,47 @@ export default function CreatePurchaseInvoicePage() {
                 setVendors(sortByLocaleKey(data, (v) => v.name)),
             )
             .catch((err) => console.error(err));
-
-        fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist?limit=${API_LIST_MAX_LIMIT}`)
-            .then((res) => res.json())
-            .then((data) => {
-                setInventoryItems(
-                    sortByLocaleKey(parseApiList<{ name: string }>(data), (i) => i.name),
-                );
-            })
-            .catch((err) => console.error(err));
     }, []);
 
-    const allowedManufacturerIds = useMemo(() => {
-        const v = vendors.find((x) => x.id === invoiceData.vendorId);
-        if (!v?.manufacturerLinks?.length) return null as Set<string> | null;
-        return new Set(v.manufacturerLinks.map((l) => l.manufacturerId));
-    }, [vendors, invoiceData.vendorId]);
+    // Items are fetched per vendor: the server filters to that vendor's linked
+    // manufacturers, so the whole catalogue is never downloaded.
+    useEffect(() => {
+        const vendorId = invoiceData.vendorId;
+        if (!vendorId) {
+            setInventoryItems([]);
+            return;
+        }
+        let cancelled = false;
+        setLoadingItems(true);
+        fetchAllPaginatedList<{ id: string; name: string }>(
+            `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist?vendorId=${encodeURIComponent(vendorId)}`,
+        )
+            .then((data) => {
+                if (cancelled) return;
+                setInventoryItems(sortByLocaleKey(data, (i) => i.name));
+            })
+            .catch((err) => {
+                if (cancelled) return;
+                console.error(err);
+                setInventoryItems([]);
+                toast.error("Failed to load items for this vendor");
+            })
+            .finally(() => {
+                if (!cancelled) setLoadingItems(false);
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, [invoiceData.vendorId]);
 
-    const inventoryChoices = useMemo(() => {
-        if (!allowedManufacturerIds) return inventoryItems;
-        return inventoryItems.filter((inv) => {
-            const mid = inv.manufacturerId as string | null | undefined;
-            if (!mid) return false;
-            return allowedManufacturerIds.has(mid);
-        });
-    }, [inventoryItems, allowedManufacturerIds]);
+    const itemOptions = useMemo(
+        () =>
+            inventoryItems.map((inv) => ({
+                id: inv.id as string,
+                label: formatInventoryOptionLabel(inv),
+            })),
+        [inventoryItems],
+    );
 
     const handleAddItem = () => {
         setInvoiceItems([
@@ -241,12 +258,16 @@ export default function CreatePurchaseInvoicePage() {
                                         <select
                                             required
                                             value={invoiceData.vendorId}
-                                            onChange={(e) =>
+                                            onChange={(e) => {
                                                 setInvoiceData({
                                                     ...invoiceData,
                                                     vendorId: e.target.value,
-                                                })
-                                            }
+                                                });
+                                                // Previously picked items may not belong to the new vendor.
+                                                setInvoiceItems((rows) =>
+                                                    rows.map((r) => ({ ...r, inventoryItemId: "" })),
+                                                );
+                                            }}
                                             className="w-full pl-9 pr-3 h-11 text-sm border border-gray-200 rounded-md bg-white focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500/20"
                                         >
                                             <option value="" disabled>
@@ -323,27 +344,25 @@ export default function CreatePurchaseInvoicePage() {
                                                     className="hover:bg-gray-50 transition-colors"
                                                 >
                                                     <td className="p-3 align-top">
-                                                        <select
-                                                            required
+                                                        <ItemCombobox
+                                                            options={itemOptions}
                                                             value={item.inventoryItemId}
-                                                            onChange={(e) =>
+                                                            onChange={(id) =>
                                                                 handleItemChange(
                                                                     index,
                                                                     "inventoryItemId",
-                                                                    e.target.value,
+                                                                    id,
                                                                 )
                                                             }
-                                                            className="w-full p-2 text-sm border border-gray-300 rounded-md focus:ring-1 focus:ring-red-500/30 focus:border-red-500 bg-white"
-                                                        >
-                                                            <option value="" disabled>
-                                                                Select item
-                                                            </option>
-                                                            {inventoryChoices.map((inv) => (
-                                                                <option key={inv.id} value={inv.id}>
-                                                                    {formatInventoryOptionLabel(inv)}
-                                                                </option>
-                                                            ))}
-                                                        </select>
+                                                            disabled={!invoiceData.vendorId || loadingItems}
+                                                            placeholder={
+                                                                !invoiceData.vendorId
+                                                                    ? "Select a vendor first"
+                                                                    : loadingItems
+                                                                        ? "Loading items…"
+                                                                        : "Select item"
+                                                            }
+                                                        />
                                                     </td>
                                                     <td className="p-3 align-top">
                                                         <Input
