@@ -48,6 +48,7 @@ import { dispatchLowStockInvalidated } from "@/lib/low-stock-events";
 import { isLowStock } from "@/lib/low-stock";
 import { dispatchExpiringInvalidated } from "@/lib/expiring-events";
 import { sortByLocaleKey } from "@/lib/sort-alphabetical";
+import { isValidExpiryDateString } from "@/lib/expiry-date";
 import { TableEmptyState } from "@/components/shared/TableEmptyState";
 import { Package } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -68,6 +69,8 @@ export interface ReorderItem {
   specialCompanyDiscount?: number;
   customerDiscount?: number;
   batchNumber?: string;
+  /** Item expiry as YYYY-MM-DD (date-input ready). */
+  expiryDate?: string;
   /** Display: "Low Stock", "Expiring Soon", or "Low Stock, Expiring Soon" */
   issueLabel: string;
   isLowStock: boolean;
@@ -101,6 +104,7 @@ function toReorderItemFromInventory(row: {
   specialCompanyDiscount?: number;
   customerDiscount?: number;
   batchNumber?: string;
+  expiryDate?: string;
 }): ReorderItem {
   return {
     id: row.id,
@@ -115,6 +119,7 @@ function toReorderItemFromInventory(row: {
     specialCompanyDiscount: row.specialCompanyDiscount,
     customerDiscount: row.customerDiscount,
     batchNumber: row.batchNumber,
+    expiryDate: toDateInputValue(row.expiryDate),
     issueLabel: "Reorder",
     isLowStock: false,
     isExpiringSoon: false,
@@ -129,6 +134,7 @@ function pricingFromInventoryRow(item: Record<string, unknown>): Pick<
   | "specialCompanyDiscount"
   | "customerDiscount"
   | "batchNumber"
+  | "expiryDate"
 > {
   return {
     listPurchase: typeof item.purchasePrice === "number" ? item.purchasePrice : undefined,
@@ -150,6 +156,10 @@ function pricingFromInventoryRow(item: Record<string, unknown>): Pick<
         : undefined,
     customerDiscount:
       typeof item.customerDiscount === "number" ? item.customerDiscount : undefined,
+    expiryDate:
+      typeof item.expiryDate === "string"
+        ? toDateInputValue(item.expiryDate)
+        : undefined,
   };
 }
 
@@ -166,6 +176,14 @@ function parseNonNegative(raw: string): number | null {
   const n = parseFloat(raw.trim());
   if (!Number.isFinite(n) || n < 0) return null;
   return n;
+}
+
+/** ISO / Date -> YYYY-MM-DD for <input type="date">; "" when unparseable. */
+function toDateInputValue(v: string | Date | undefined | null): string {
+  if (!v) return "";
+  const d = typeof v === "string" ? new Date(v) : v;
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toISOString().slice(0, 10);
 }
 
 function parseDiscountPct(raw: string): number | null {
@@ -244,6 +262,7 @@ export default function CreatePurchaseOrdersPage() {
   const [orderSpecialDiscount, setOrderSpecialDiscount] = useState("");
   const [orderCustomerDiscount, setOrderCustomerDiscount] = useState("");
   const [orderBatchNumber, setOrderBatchNumber] = useState("");
+  const [orderExpiryDate, setOrderExpiryDate] = useState("");
   /** Batch & pricing fields start locked (read-only) until pharmacist clicks Edit. */
   const [fieldsUnlocked, setFieldsUnlocked] = useState(false);
   const [creatingOrder, setCreatingOrder] = useState(false);
@@ -336,6 +355,7 @@ export default function CreatePurchaseOrdersPage() {
         specialCompanyDiscount?: number;
         customerDiscount?: number;
         batchNumber?: string;
+        expiryDate?: string;
       }>(res.data);
       setAllInventory(
         rows.map((r) =>
@@ -352,6 +372,7 @@ export default function CreatePurchaseOrdersPage() {
             specialCompanyDiscount: r.specialCompanyDiscount,
             customerDiscount: r.customerDiscount,
             batchNumber: r.batchNumber,
+            expiryDate: r.expiryDate,
           })
         )
       );
@@ -391,6 +412,7 @@ export default function CreatePurchaseOrdersPage() {
     setOrderSpecialDiscount(String(item.specialCompanyDiscount ?? 0));
     setOrderCustomerDiscount(String(item.customerDiscount ?? 0));
     setOrderBatchNumber(item.batchNumber ?? "");
+    setOrderExpiryDate(item.expiryDate ?? "");
   };
 
   const openOrderDialog = (item: ReorderItem) => {
@@ -461,6 +483,13 @@ export default function CreatePurchaseOrdersPage() {
       });
       return;
     }
+    const expiryDate = orderExpiryDate.trim();
+    if (expiryDate && !isValidExpiryDateString(expiryDate)) {
+      toast.error("Check expiry date", {
+        description: "Use a valid date between 2000 and 2100.",
+      });
+      return;
+    }
     const headers = getAuthHeaders(user?.access_token);
     setCreatingOrder(true);
     try {
@@ -476,6 +505,7 @@ export default function CreatePurchaseOrdersPage() {
           specialCompanyDiscount,
           customerDiscount,
           batchNumber,
+          ...(expiryDate && { expiryDate }),
         },
         { headers }
       );
@@ -919,6 +949,7 @@ export default function CreatePurchaseOrdersPage() {
             setOrderSpecialDiscount("");
             setOrderCustomerDiscount("");
             setOrderBatchNumber("");
+            setOrderExpiryDate("");
             setSelectedVendorId("");
             setFieldsUnlocked(false);
             setCreatingOrder(false);
@@ -1004,7 +1035,7 @@ export default function CreatePurchaseOrdersPage() {
                 </div>
                 {!fieldsUnlocked && (
                   <p className="text-xs text-gray-500 -mt-1.5">
-                    Read-only. Click Edit to change batch, prices, or discounts.
+                    Read-only. Click Edit to change batch, expiry, prices, or discounts.
                   </p>
                 )}
                 <div className="space-y-1.5">
@@ -1021,6 +1052,24 @@ export default function CreatePurchaseOrdersPage() {
                     disabled={!fieldsUnlocked}
                     className={`${PO_TEXT_FIELD_CLASS} font-mono ${!fieldsUnlocked ? PO_FIELD_LOCKED_CLASS : ""}`}
                   />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="po-expiry-date" className="text-xs text-gray-600">
+                    Expiry date
+                  </Label>
+                  <Input
+                    id="po-expiry-date"
+                    type="date"
+                    min="2000-01-01"
+                    max="2100-12-31"
+                    value={orderExpiryDate}
+                    onChange={(e) => setOrderExpiryDate(e.target.value)}
+                    disabled={!fieldsUnlocked}
+                    className={`${PO_TEXT_FIELD_CLASS} ${!fieldsUnlocked ? PO_FIELD_LOCKED_CLASS : ""}`}
+                  />
+                  <p className="text-xs text-gray-500">
+                    Updates the item&apos;s expiry immediately when the order is created.
+                  </p>
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
                   <div className="space-y-1.5">
