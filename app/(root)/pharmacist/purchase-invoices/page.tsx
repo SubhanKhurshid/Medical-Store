@@ -1,46 +1,29 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useSearchParams } from "next/navigation";
 import { parseApiList } from "@/lib/api";
-import { sortByLocaleKey } from "@/lib/sort-alphabetical";
 import { DataTable } from "@/components/shared/DataTable";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, PlusCircle, FileText, Calendar, Building2 } from "lucide-react";
+import { Search, FileText, Calendar, Building2 } from "lucide-react";
 import Loading from "@/components/shared/Loading";
-import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { PaginationControls } from "@/components/shared/PaginationControls";
 import { DEFAULT_PAGE_SIZE } from "@/lib/pagination";
 import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
-} from "@/components/ui/dialog";
+    PurchaseInvoiceDetailsDialog,
+    type PurchaseInvoiceDetails,
+} from "@/components/purchase-invoices/PurchaseInvoiceDetailsDialog";
 
-interface InvoiceItem {
+interface Invoice extends PurchaseInvoiceDetails {
     id: string;
-    quantity: number;
-    unitCost: number;
-    discount: number;
-    totalCost: number;
-    inventoryItem?: { name: string };
-}
-
-interface Invoice {
-    id: string;
-    invoiceNumber: string;
-    supplierLabel: string;
-    totalAmount: number;
-    date: string;
-    status: string;
-    items?: InvoiceItem[];
 }
 
 export default function PurchaseInvoicesPage() {
-    const [search, setSearch] = useState("");
+    const searchParams = useSearchParams();
+    const [search, setSearch] = useState(searchParams.get("search") ?? "");
     const searchDebounceRef = useRef<ReturnType<typeof setTimeout>>();
     const [invoices, setInvoices] = useState<Invoice[]>([]);
     const [loading, setLoading] = useState(true);
@@ -170,7 +153,7 @@ export default function PurchaseInvoicesPage() {
                         Purchase Invoices
                     </motion.h1>
                     <motion.p className="mt-1 text-sm text-gray-500" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }}>
-                        View invoices and register new incoming stock.
+                        Click an invoice to see products, quantities, and totals. To add one, open a purchase order and choose Create invoice.
                     </motion.p>
                     <div className="mt-4 h-px bg-gradient-to-r from-red-200/80 via-red-100/50 to-transparent rounded-full" />
                 </header>
@@ -193,11 +176,11 @@ export default function PurchaseInvoicesPage() {
                                 className="pl-9 h-10 border-gray-200 focus:border-red-500 focus:ring-red-500/20"
                             />
                         </div>
-                        <Link href="/pharmacist/purchase-invoices/create">
-                            <Button className="bg-red-800 hover:bg-red-700 text-white shrink-0 w-full sm:w-auto">
-                                <PlusCircle className="mr-2 h-4 w-4" />
-                                Add New Invoice
-                            </Button>
+                        <Link
+                            href="/pharmacist/purchase-orders/view"
+                            className="text-sm text-red-800 hover:underline self-center"
+                        >
+                            Create invoice from a purchase order
                         </Link>
                     </div>
 
@@ -242,56 +225,10 @@ export default function PurchaseInvoicesPage() {
                     </CardContent>
                 </Card>
 
-            {/* Invoice Details Modal with Line Items */}
-            <Dialog open={!!selectedInvoice} onOpenChange={() => setSelectedInvoice(null)}>
-                <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
-                    <DialogHeader>
-                        <DialogTitle className="text-red-800">
-                            Invoice #{selectedInvoice?.invoiceNumber} – {selectedInvoice?.supplierLabel}
-                        </DialogTitle>
-                    </DialogHeader>
-                    {selectedInvoice && (
-                        <div className="space-y-4">
-                            <div className="grid grid-cols-2 gap-2 text-sm text-muted-foreground">
-                                <span>Date:</span>
-                                <span className="font-medium text-foreground">{selectedInvoice.date}</span>
-                                <span>Total:</span>
-                                <span className="font-medium text-foreground">{selectedInvoice.totalAmount.toLocaleString()} Rs</span>
-                                <span>Status:</span>
-                                <span className="font-medium text-foreground">{selectedInvoice.status}</span>
-                            </div>
-                            <div className="border border-gray-100 rounded-lg overflow-hidden">
-                                <table className="w-full text-base">
-                                    <thead className="bg-muted/60">
-                                        <tr>
-                                            <th className="p-3 text-left font-semibold">Product</th>
-                                            <th className="p-3 text-right font-semibold">Qty</th>
-                                            <th className="p-3 text-right font-semibold">Unit Cost</th>
-                                            <th className="p-3 text-right font-semibold">Discount (%)</th>
-                                            <th className="p-3 text-right font-semibold">Line Total</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y">
-                                        {sortByLocaleKey(selectedInvoice.items || [], (line) => line.inventoryItem?.name).map((item) => {
-                                            const lineSubtotal = item.quantity * item.unitCost;
-                                            const discountPct = lineSubtotal > 0 ? ((item.discount / lineSubtotal) * 100).toFixed(1) : "0";
-                                            return (
-                                                <tr key={item.id}>
-                                                    <td className="p-3">{item.inventoryItem?.name || "—"}</td>
-                                                    <td className="p-3 text-right">{item.quantity}</td>
-                                                    <td className="p-3 text-right">{item.unitCost.toLocaleString()} Rs</td>
-                                                    <td className="p-3 text-right">{discountPct}%</td>
-                                                    <td className="p-3 text-right font-medium">{item.totalCost.toLocaleString()} Rs</td>
-                                                </tr>
-                                            );
-                                        })}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    )}
-                </DialogContent>
-            </Dialog>
+            <PurchaseInvoiceDetailsDialog
+                invoice={selectedInvoice}
+                onClose={() => setSelectedInvoice(null)}
+            />
             </div>
         </div>
     );

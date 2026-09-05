@@ -9,6 +9,7 @@ import { DialogContent } from "@/components/ui/dialog";
 import { Dialog } from "@/components/ui/dialog";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertCircle, CheckCircle, Search, XCircle } from "lucide-react";
 import Loading from "@/components/shared/Loading";
@@ -47,6 +48,11 @@ import { TableEmptyState } from "@/components/shared/TableEmptyState";
 import { FileText } from "lucide-react";
 import { PaginationControls } from "@/components/shared/PaginationControls";
 import { DEFAULT_PAGE_SIZE } from "@/lib/pagination";
+import {
+  PurchaseInvoiceDetailsDialog,
+  mapPurchaseInvoiceApi,
+  type PurchaseInvoiceDetails,
+} from "@/components/purchase-invoices/PurchaseInvoiceDetailsDialog";
 
 interface PurchaseOrder {
   id: string;
@@ -55,13 +61,19 @@ interface PurchaseOrder {
   quantityOrdered: number;
   manufacturer: string;
   vendorName: string;
+  vendorId?: string | null;
   status: "PENDING" | "DELIVERED" | "CANCELLED";
   createdAt: string;
   orderDate: string;
+  invoiceItem?: {
+    invoiceId: string;
+    invoice?: { id: string; invoiceNumber: string; status: string };
+  } | null;
 }
 
 
 export default function ViewPurchaseOrdersPage() {
+  const router = useRouter();
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -70,6 +82,8 @@ export default function ViewPurchaseOrdersPage() {
   const [serverTotal, setServerTotal] = useState(0);
   const SERVER_LIMIT = DEFAULT_PAGE_SIZE;
   const [selectedRow, setSelectedRow] = useState<PurchaseOrder | null>(null);
+  const [invoiceDetails, setInvoiceDetails] =
+    useState<PurchaseInvoiceDetails | null>(null);
   const [search, setSearch] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
@@ -94,6 +108,19 @@ export default function ViewPurchaseOrdersPage() {
   // Close modal
   const closeModal = () => {
     setSelectedRow(null);
+  };
+
+  const openInvoiceDetails = async (invoiceId?: string) => {
+    if (!invoiceId) return;
+    try {
+      const { data } = await axios.get(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/purchase-invoices/${invoiceId}`,
+      );
+      setInvoiceDetails(mapPurchaseInvoiceApi(data));
+    } catch (error) {
+      console.error("Error loading invoice:", error);
+      toast.error("Could not load invoice details");
+    }
   };
 
   const StatusBadge = ({ status }: { status: string }) => {
@@ -179,7 +206,8 @@ export default function ViewPurchaseOrdersPage() {
       enableSorting: false,
       cell: ({ row }) => {
         const order = row.original;
-        if (order.status !== "PENDING") return null;
+        const invoiceNumber = order.invoiceItem?.invoice?.invoiceNumber;
+        if (order.status === "CANCELLED") return null;
 
         return (
           <div onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
@@ -190,6 +218,7 @@ export default function ViewPurchaseOrdersPage() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                {order.status === "PENDING" && (
                 <DropdownMenuItem
                   onSelect={() => handleStatusChange(order.id, "DELIVERED")}
                   className="text-green-600 focus:bg-green-50"
@@ -197,6 +226,32 @@ export default function ViewPurchaseOrdersPage() {
                   <CheckCircle className="mr-2 h-4 w-4" />
                   Mark as Delivered
                 </DropdownMenuItem>
+                )}
+                {(order.status === "PENDING" || order.status === "DELIVERED") &&
+                  !invoiceNumber && (
+                    <DropdownMenuItem
+                      onSelect={() =>
+                        router.push(
+                          `/pharmacist/purchase-invoices/create?purchaseOrderId=${order.id}`,
+                        )
+                      }
+                      className="text-red-700 focus:bg-red-50"
+                    >
+                      <FileText className="mr-2 h-4 w-4" />
+                      Create invoice
+                    </DropdownMenuItem>
+                  )}
+                {invoiceNumber && (
+                  <DropdownMenuItem
+                    onSelect={() =>
+                      void openInvoiceDetails(order.invoiceItem?.invoice?.id)
+                    }
+                  >
+                    <FileText className="mr-2 h-4 w-4" />
+                    Invoice #{invoiceNumber}
+                  </DropdownMenuItem>
+                )}
+                {order.status === "PENDING" && (
                 <DropdownMenuItem
                   onSelect={() => handleStatusChange(order.id, "CANCELLED")}
                   className="text-red-600 focus:bg-red-50"
@@ -204,6 +259,7 @@ export default function ViewPurchaseOrdersPage() {
                   <XCircle className="mr-2 h-4 w-4" />
                   Cancel Order
                 </DropdownMenuItem>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -246,6 +302,7 @@ export default function ViewPurchaseOrdersPage() {
         vendorName: order.vendor?.name || "—",
         orderDate: order.orderDate ?? order.createdAt,
         orderNumber: `PO-${new Date(order.createdAt).getFullYear()}-${order.id.slice(-4)}`,
+        invoiceItem: order.invoiceItem ?? order.invoiceItems?.[0] ?? null,
       }));
 
       setPurchaseOrders(transformedData);
@@ -306,7 +363,7 @@ export default function ViewPurchaseOrdersPage() {
               Purchase Orders
             </motion.h1>
             <motion.p className="mt-1 text-sm text-gray-500" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }}>
-              Search by order or product name. Filter by date to see purchases in a period.
+              Mark delivered to add stock. Create the supplier invoice from here so quantity is not added twice.
             </motion.p>
             <div className="mt-4 h-px bg-gradient-to-r from-red-200/80 via-red-100/50 to-transparent rounded-full" />
           </div>
@@ -399,7 +456,7 @@ export default function ViewPurchaseOrdersPage() {
           <div className="border-l-4 border-l-red-500 bg-red-50/30 px-5 py-3">
             <h2 className="text-base font-semibold text-red-800">Purchase orders</h2>
             <p className="text-xs text-gray-500 mt-0.5">
-              Click a row to view details and update status.
+              Click a row to view details. Delivered orders receive stock; the invoice only records the bill.
             </p>
           </div>
           <CardContent className="p-4 sm:p-5">
@@ -559,37 +616,79 @@ export default function ViewPurchaseOrdersPage() {
                 <p className="text-lg">{formatDate(selectedRow.createdAt)}</p>
               </div>
 
-              {selectedRow.status === "PENDING" && (
-                <div className="flex justify-end space-x-4 pt-6">
+              {selectedRow.invoiceItem?.invoice?.invoiceNumber && (
+                <div>
+                  <h4 className="text-base font-medium text-muted-foreground mb-2">
+                    Purchase invoice
+                  </h4>
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => {
-                      handleStatusChange(selectedRow.id, "CANCELLED");
-                      closeModal();
-                    }}
-                    className="text-red-600 border-red-200 hover:bg-red-50 px-6 py-2 text-base"
+                    className="text-red-800 border-red-200 hover:bg-red-50"
+                    onClick={() =>
+                      void openInvoiceDetails(
+                        selectedRow.invoiceItem?.invoice?.id,
+                      )
+                    }
                   >
-                    <XCircle className="mr-2 h-5 w-5" />
-                    Cancel Order
-                  </Button>
-                  <Button
-                    type="button"
-                    onClick={() => {
-                      handleStatusChange(selectedRow.id, "DELIVERED");
-                      closeModal();
-                    }}
-                    className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 text-base"
-                  >
-                    <CheckCircle className="mr-2 h-5 w-5" />
-                    Mark as Completed
+                    <FileText className="mr-2 h-4 w-4" />
+                    Invoice #{selectedRow.invoiceItem.invoice.invoiceNumber}
                   </Button>
                 </div>
               )}
+
+              <div className="flex flex-wrap justify-end gap-3 pt-6">
+                {selectedRow.status === "PENDING" && (
+                  <>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        handleStatusChange(selectedRow.id, "CANCELLED");
+                        closeModal();
+                      }}
+                      className="text-red-600 border-red-200 hover:bg-red-50 px-6 py-2 text-base"
+                    >
+                      <XCircle className="mr-2 h-5 w-5" />
+                      Cancel Order
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={() => {
+                        handleStatusChange(selectedRow.id, "DELIVERED");
+                        closeModal();
+                      }}
+                      className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 text-base"
+                    >
+                      <CheckCircle className="mr-2 h-5 w-5" />
+                      Mark as Completed
+                    </Button>
+                  </>
+                )}
+                {selectedRow.status !== "CANCELLED" &&
+                  !selectedRow.invoiceItem?.invoice?.invoiceNumber && (
+                    <Button
+                      type="button"
+                      className="bg-red-800 hover:bg-red-700 text-white px-6 py-2 text-base"
+                      onClick={() => {
+                        router.push(
+                          `/pharmacist/purchase-invoices/create?purchaseOrderId=${selectedRow.id}`,
+                        );
+                      }}
+                    >
+                      <FileText className="mr-2 h-5 w-5" />
+                      Create invoice
+                    </Button>
+                  )}
+              </div>
             </div>
           )}
         </DialogContent>
       </Dialog>
+      <PurchaseInvoiceDetailsDialog
+        invoice={invoiceDetails}
+        onClose={() => setInvoiceDetails(null)}
+      />
       </div>
     </div>
   );

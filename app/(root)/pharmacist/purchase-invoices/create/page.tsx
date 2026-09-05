@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import { fetchAllPaginatedList } from "@/lib/api";
 import { ItemCombobox } from "@/components/purchase-invoices/ItemCombobox";
 import { sortByLocaleKey } from "@/lib/sort-alphabetical";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -36,10 +36,18 @@ interface VendorOption {
 
 export default function CreatePurchaseInvoicePage() {
     const router = useRouter();
+    const searchParams = useSearchParams();
+    const purchaseOrderId = searchParams.get("purchaseOrderId");
     const [vendors, setVendors] = useState<VendorOption[]>([]);
     const [inventoryItems, setInventoryItems] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [loadingItems, setLoadingItems] = useState(false);
+    const [loadingOrder, setLoadingOrder] = useState(Boolean(purchaseOrderId));
+    const [linkedPurchaseOrder, setLinkedPurchaseOrder] = useState<{
+        id: string;
+        status: string;
+        itemName: string;
+    } | null>(null);
 
     const [invoiceData, setInvoiceData] = useState({
         invoiceNumber: "",
@@ -47,7 +55,7 @@ export default function CreatePurchaseInvoicePage() {
     });
 
     const [invoiceItems, setInvoiceItems] = useState<any[]>([
-        { inventoryItemId: "", quantity: "", unitCost: "", discount: "" }
+        { inventoryItemId: "", quantity: "", unitCost: "", discount: "", purchaseOrderId: "" }
     ]);
 
     useEffect(() => {
@@ -59,6 +67,75 @@ export default function CreatePurchaseInvoicePage() {
             )
             .catch((err) => console.error(err));
     }, []);
+
+    useEffect(() => {
+        if (!purchaseOrderId) {
+            toast.error("Create invoices from a purchase order, not this page.");
+            router.replace("/pharmacist/purchase-orders/view");
+            return;
+        }
+        let cancelled = false;
+        setLoadingOrder(true);
+        fetch(
+            `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/purchase-orders/${purchaseOrderId}`,
+        )
+            .then(async (res) => {
+                if (!res.ok) throw new Error("Failed to load purchase order");
+                return res.json();
+            })
+            .then((order) => {
+                if (cancelled) return;
+                if (order.status === "CANCELLED") {
+                    toast.error("This purchase order is cancelled");
+                    router.replace("/pharmacist/purchase-orders/view");
+                    return;
+                }
+                const existingInvoice =
+                    order.invoiceItem?.invoice ?? order.invoiceItems?.[0]?.invoice;
+                if (existingInvoice?.invoiceNumber) {
+                    toast.error(
+                        `This order already has invoice #${existingInvoice.invoiceNumber}`,
+                    );
+                    router.replace("/pharmacist/purchase-invoices");
+                    return;
+                }
+                if (!order.vendor?.id) {
+                    toast.error("This purchase order has no vendor");
+                    router.replace("/pharmacist/purchase-orders/view");
+                    return;
+                }
+                const mfg = Number(order.manufacturerDiscount ?? order.inventoryItem?.manufacturerDiscount ?? 0);
+                setLinkedPurchaseOrder({
+                    id: order.id,
+                    status: order.status,
+                    itemName: order.inventoryItem?.name || "Item",
+                });
+                setInvoiceData((prev) => ({
+                    ...prev,
+                    vendorId: order.vendor.id,
+                }));
+                setInvoiceItems([
+                    {
+                        inventoryItemId: order.inventoryItemId,
+                        quantity: String(order.quantityOrdered ?? ""),
+                        unitCost: String(order.purchasePrice ?? order.inventoryItem?.purchasePrice ?? ""),
+                        discount: mfg > 0 ? String(mfg) : "",
+                        purchaseOrderId: order.id,
+                    },
+                ]);
+            })
+            .catch((err) => {
+                console.error(err);
+                toast.error("Could not load purchase order");
+                router.replace("/pharmacist/purchase-orders/view");
+            })
+            .finally(() => {
+                if (!cancelled) setLoadingOrder(false);
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, [purchaseOrderId, router]);
 
     // Items are fetched per vendor: the server filters to that vendor's linked
     // manufacturers, so the whole catalogue is never downloaded.
@@ -135,8 +212,8 @@ export default function CreatePurchaseInvoicePage() {
             return;
         }
 
-        if (invoiceItems.length === 0 || invoiceItems.some((item) => !item.inventoryItemId)) {
-            toast.error("Please add at least one valid item");
+        if (invoiceItems.length === 0 || invoiceItems.some((item) => !item.inventoryItemId || !item.purchaseOrderId)) {
+            toast.error("This invoice must come from a purchase order");
             return;
         }
 
@@ -158,6 +235,9 @@ export default function CreatePurchaseInvoicePage() {
                     quantity: Number(item.quantity || 0),
                     unitCost: Number(item.unitCost || 0),
                     discount: Number(item.discount || 0),
+                    ...(item.purchaseOrderId
+                        ? { purchaseOrderId: item.purchaseOrderId }
+                        : {}),
                 })),
             };
             if (invoiceData.invoiceNumber.trim()) {
@@ -170,13 +250,28 @@ export default function CreatePurchaseInvoicePage() {
                 body: JSON.stringify(payload),
             });
 
-            if (!res.ok) throw new Error("Failed to create purchase invoice");
+            const result = await res.json().catch(() => null);
+            if (!res.ok) {
+                const msg =
+                    typeof result?.message === "string"
+                        ? result.message
+                        : Array.isArray(result?.message)
+                            ? result.message.join(", ")
+                            : "Failed to create purchase invoice";
+                throw new Error(msg);
+            }
 
-            toast.success("Purchase Invoice Created successfully");
+            toast.success(
+                "Invoice saved. Stock was not added — it is received only when the purchase order is marked delivered.",
+            );
             router.push("/pharmacist/purchase-invoices");
         } catch (error) {
             console.error(error);
-            toast.error("Failed to create purchase invoice");
+            toast.error(
+                error instanceof Error
+                    ? error.message
+                    : "Failed to create purchase invoice",
+            );
         } finally {
             setIsLoading(false);
         }
@@ -211,10 +306,27 @@ export default function CreatePurchaseInvoicePage() {
                         animate={{ opacity: 1 }}
                         transition={{ delay: 0.1 }}
                     >
-                        Record received stock from a supplier.
+                        Record the supplier bill for this purchase order. Stock is added only when the order is marked delivered.
                     </motion.p>
                     <div className="mt-4 h-px bg-gradient-to-r from-red-200/80 via-red-100/50 to-transparent rounded-full" />
                 </header>
+
+                {loadingOrder ? (
+                    <p className="text-sm text-gray-500">Loading purchase order…</p>
+                ) : null}
+
+                {linkedPurchaseOrder && (
+                    <div className="mb-5 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+                        Billing <strong>{linkedPurchaseOrder.itemName}</strong> from a
+                        {linkedPurchaseOrder.status === "DELIVERED"
+                            ? " delivered"
+                            : " pending"}{" "}
+                        purchase order. Saving this invoice updates the vendor balance only
+                        {linkedPurchaseOrder.status === "DELIVERED"
+                            ? " — quantity is already in inventory."
+                            : ". Quantity is added when you mark the order delivered, not here."}
+                    </div>
+                )}
 
                 <form onSubmit={handleSubmit} className="space-y-5">
                     <Card className="overflow-hidden bg-white border border-gray-100 rounded-xl shadow-sm">
@@ -257,6 +369,7 @@ export default function CreatePurchaseInvoicePage() {
                                         <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                                         <select
                                             required
+                                            disabled={Boolean(linkedPurchaseOrder)}
                                             value={invoiceData.vendorId}
                                             onChange={(e) => {
                                                 setInvoiceData({
@@ -268,7 +381,7 @@ export default function CreatePurchaseInvoicePage() {
                                                     rows.map((r) => ({ ...r, inventoryItemId: "" })),
                                                 );
                                             }}
-                                            className="w-full pl-9 pr-3 h-11 text-sm border border-gray-200 rounded-md bg-white focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500/20"
+                                            className="w-full pl-9 pr-3 h-11 text-sm border border-gray-200 rounded-md bg-white focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500/20 disabled:bg-gray-50 disabled:text-gray-600"
                                         >
                                             <option value="" disabled>
                                                 Select vendor
@@ -293,9 +406,12 @@ export default function CreatePurchaseInvoicePage() {
                                     Line items
                                 </h2>
                                 <p className="text-xs text-gray-500 mt-0.5">
-                                    Add each product on the vendor invoice. When the vendor has manufacturer links, only those products appear in the dropdown.
+                                    {linkedPurchaseOrder
+                                        ? "Product and quantity come from the purchase order. You can adjust unit cost and discount to match the supplier bill."
+                                        : "Add each product on the vendor invoice. If the item was already received on a delivered purchase order, stock will not be added again."}
                                 </p>
                             </div>
+                            {!linkedPurchaseOrder && (
                             <Button
                                 type="button"
                                 onClick={handleAddItem}
@@ -305,6 +421,7 @@ export default function CreatePurchaseInvoicePage() {
                                 <PlusCircle className="mr-2 h-4 w-4" />
                                 Add item
                             </Button>
+                            )}
                         </div>
                         <CardContent className="p-0">
                             <div className="overflow-x-auto">
@@ -345,7 +462,19 @@ export default function CreatePurchaseInvoicePage() {
                                                 >
                                                     <td className="p-3 align-top">
                                                         <ItemCombobox
-                                                            options={itemOptions}
+                                                            options={
+                                                                linkedPurchaseOrder && item.inventoryItemId
+                                                                    ? [
+                                                                          {
+                                                                              id: item.inventoryItemId,
+                                                                              label: linkedPurchaseOrder.itemName,
+                                                                          },
+                                                                          ...itemOptions.filter(
+                                                                              (o) => o.id !== item.inventoryItemId,
+                                                                          ),
+                                                                      ]
+                                                                    : itemOptions
+                                                            }
                                                             value={item.inventoryItemId}
                                                             onChange={(id) =>
                                                                 handleItemChange(
@@ -354,7 +483,11 @@ export default function CreatePurchaseInvoicePage() {
                                                                     id,
                                                                 )
                                                             }
-                                                            disabled={!invoiceData.vendorId || loadingItems}
+                                                            disabled={
+                                                                Boolean(item.purchaseOrderId) ||
+                                                                !invoiceData.vendorId ||
+                                                                loadingItems
+                                                            }
                                                             placeholder={
                                                                 !invoiceData.vendorId
                                                                     ? "Select a vendor first"
@@ -370,6 +503,7 @@ export default function CreatePurchaseInvoicePage() {
                                                             min="1"
                                                             required
                                                             value={item.quantity}
+                                                            disabled={Boolean(item.purchaseOrderId)}
                                                             onChange={(e) =>
                                                                 handleItemChange(
                                                                     index,
@@ -377,7 +511,7 @@ export default function CreatePurchaseInvoicePage() {
                                                                     e.target.value,
                                                                 )
                                                             }
-                                                            className="w-full h-9 text-center text-sm border-gray-300"
+                                                            className="w-full h-9 text-center text-sm border-gray-300 disabled:bg-gray-50"
                                                             placeholder="Qty"
                                                         />
                                                     </td>
@@ -429,6 +563,7 @@ export default function CreatePurchaseInvoicePage() {
                                                         Rs
                                                     </td>
                                                     <td className="p-3 align-top text-center">
+                                                        {!item.purchaseOrderId && (
                                                         <Button
                                                             type="button"
                                                             variant="ghost"
@@ -438,6 +573,7 @@ export default function CreatePurchaseInvoicePage() {
                                                         >
                                                             <Trash2 className="h-4 w-4" />
                                                         </Button>
+                                                        )}
                                                     </td>
                                                 </tr>
                                             );
