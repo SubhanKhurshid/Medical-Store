@@ -37,17 +37,23 @@ interface VendorOption {
 export default function CreatePurchaseInvoicePage() {
     const router = useRouter();
     const searchParams = useSearchParams();
-    const purchaseOrderId = searchParams.get("purchaseOrderId");
+    const purchaseOrderIds = useMemo(() => {
+        const many = searchParams.get("purchaseOrderIds");
+        const single = searchParams.get("purchaseOrderId");
+        if (many) {
+            return [...new Set(many.split(",").map((id) => id.trim()).filter(Boolean))];
+        }
+        return single ? [single] : [];
+    }, [searchParams]);
     const [vendors, setVendors] = useState<VendorOption[]>([]);
     const [inventoryItems, setInventoryItems] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [loadingItems, setLoadingItems] = useState(false);
-    const [loadingOrder, setLoadingOrder] = useState(Boolean(purchaseOrderId));
-    const [linkedPurchaseOrder, setLinkedPurchaseOrder] = useState<{
-        id: string;
-        status: string;
-        itemName: string;
-    } | null>(null);
+    const [loadingOrder, setLoadingOrder] = useState(purchaseOrderIds.length > 0);
+    const [linkedOrders, setLinkedOrders] = useState<
+        { id: string; status: string; itemName: string }[]
+    >([]);
+    const linkedPurchaseOrder = linkedOrders[0] ?? null;
 
     const [invoiceData, setInvoiceData] = useState({
         invoiceNumber: "",
@@ -69,64 +75,97 @@ export default function CreatePurchaseInvoicePage() {
     }, []);
 
     useEffect(() => {
-        if (!purchaseOrderId) {
+        if (purchaseOrderIds.length === 0) {
             toast.error("Create invoices from a purchase order, not this page.");
             router.replace("/pharmacist/purchase-orders/view");
             return;
         }
         let cancelled = false;
         setLoadingOrder(true);
+        const idsQuery = encodeURIComponent(purchaseOrderIds.join(","));
         fetch(
-            `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/purchase-orders/${purchaseOrderId}`,
+            `${process.env.NEXT_PUBLIC_API_BASE_URL}/pharmacist/purchase-orders/by-ids?ids=${idsQuery}`,
         )
             .then(async (res) => {
-                if (!res.ok) throw new Error("Failed to load purchase order");
-                return res.json();
+                const body = await res.json().catch(() => null);
+                if (!res.ok) {
+                    const msg =
+                        typeof body?.message === "string"
+                            ? body.message
+                            : "Failed to load purchase orders";
+                    throw new Error(msg);
+                }
+                return Array.isArray(body) ? body : [];
             })
-            .then((order) => {
+            .then((orders) => {
                 if (cancelled) return;
-                if (order.status === "CANCELLED") {
-                    toast.error("This purchase order is cancelled");
+                if (orders.some((order) => order.status === "CANCELLED")) {
+                    toast.error("A selected purchase order is cancelled");
                     router.replace("/pharmacist/purchase-orders/view");
                     return;
                 }
-                const existingInvoice =
-                    order.invoiceItem?.invoice ?? order.invoiceItems?.[0]?.invoice;
-                if (existingInvoice?.invoiceNumber) {
+                const alreadyBilled = orders.find((order) => {
+                    const existing =
+                        order.invoiceItem?.invoice ?? order.invoiceItems?.[0]?.invoice;
+                    return existing?.invoiceNumber;
+                });
+                if (alreadyBilled) {
+                    const existing =
+                        alreadyBilled.invoiceItem?.invoice ??
+                        alreadyBilled.invoiceItems?.[0]?.invoice;
                     toast.error(
-                        `This order already has invoice #${existingInvoice.invoiceNumber}`,
+                        `An order already has invoice #${existing.invoiceNumber}`,
                     );
                     router.replace("/pharmacist/purchase-invoices");
                     return;
                 }
-                if (!order.vendor?.id) {
-                    toast.error("This purchase order has no vendor");
+                const vendorIds = new Set(
+                    orders.map((order) => order.vendor?.id || order.vendorId).filter(Boolean),
+                );
+                if (vendorIds.size !== 1) {
+                    toast.error("All selected purchase orders must be from the same vendor");
                     router.replace("/pharmacist/purchase-orders/view");
                     return;
                 }
-                const mfg = Number(order.manufacturerDiscount ?? order.inventoryItem?.manufacturerDiscount ?? 0);
-                setLinkedPurchaseOrder({
-                    id: order.id,
-                    status: order.status,
-                    itemName: order.inventoryItem?.name || "Item",
-                });
+                const vendorId = [...vendorIds][0] as string;
+                setLinkedOrders(
+                    orders.map((order) => ({
+                        id: order.id,
+                        status: order.status,
+                        itemName: order.inventoryItem?.name || "Item",
+                    })),
+                );
                 setInvoiceData((prev) => ({
                     ...prev,
-                    vendorId: order.vendor.id,
+                    vendorId,
                 }));
-                setInvoiceItems([
-                    {
-                        inventoryItemId: order.inventoryItemId,
-                        quantity: String(order.quantityOrdered ?? ""),
-                        unitCost: String(order.purchasePrice ?? order.inventoryItem?.purchasePrice ?? ""),
-                        discount: mfg > 0 ? String(mfg) : "",
-                        purchaseOrderId: order.id,
-                    },
-                ]);
+                setInvoiceItems(
+                    orders.map((order) => {
+                        const mfg = Number(
+                            order.manufacturerDiscount ??
+                                order.inventoryItem?.manufacturerDiscount ??
+                                0,
+                        );
+                        return {
+                            inventoryItemId: order.inventoryItemId,
+                            itemName: order.inventoryItem?.name || "Item",
+                            quantity: String(order.quantityOrdered ?? ""),
+                            unitCost: String(
+                                order.purchasePrice ??
+                                    order.inventoryItem?.purchasePrice ??
+                                    "",
+                            ),
+                            discount: mfg > 0 ? String(mfg) : "",
+                            purchaseOrderId: order.id,
+                        };
+                    }),
+                );
             })
             .catch((err) => {
                 console.error(err);
-                toast.error("Could not load purchase order");
+                toast.error(
+                    err instanceof Error ? err.message : "Could not load purchase orders",
+                );
                 router.replace("/pharmacist/purchase-orders/view");
             })
             .finally(() => {
@@ -135,7 +174,7 @@ export default function CreatePurchaseInvoicePage() {
         return () => {
             cancelled = true;
         };
-    }, [purchaseOrderId, router]);
+    }, [purchaseOrderIds, router]);
 
     // Items are fetched per vendor: the server filters to that vendor's linked
     // manufacturers, so the whole catalogue is never downloaded.
@@ -306,7 +345,7 @@ export default function CreatePurchaseInvoicePage() {
                         animate={{ opacity: 1 }}
                         transition={{ delay: 0.1 }}
                     >
-                        Record the supplier bill for this purchase order. Stock is added only when the order is marked delivered.
+                        Record the supplier bill for the selected purchase order{linkedOrders.length > 1 ? "s" : ""}. Stock is added only when an order is marked delivered.
                     </motion.p>
                     <div className="mt-4 h-px bg-gradient-to-r from-red-200/80 via-red-100/50 to-transparent rounded-full" />
                 </header>
@@ -315,16 +354,13 @@ export default function CreatePurchaseInvoicePage() {
                     <p className="text-sm text-gray-500">Loading purchase order…</p>
                 ) : null}
 
-                {linkedPurchaseOrder && (
+                {linkedOrders.length > 0 && (
                     <div className="mb-5 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
-                        Billing <strong>{linkedPurchaseOrder.itemName}</strong> from a
-                        {linkedPurchaseOrder.status === "DELIVERED"
-                            ? " delivered"
-                            : " pending"}{" "}
-                        purchase order. Saving this invoice updates the vendor balance only
-                        {linkedPurchaseOrder.status === "DELIVERED"
-                            ? " — quantity is already in inventory."
-                            : ". Quantity is added when you mark the order delivered, not here."}
+                        Billing <strong>{linkedOrders.length}</strong> purchase order
+                        {linkedOrders.length === 1 ? "" : "s"}
+                        {linkedOrders.length === 1
+                            ? ` (${linkedOrders[0].itemName})`
+                            : ""}. Saving this invoice updates the vendor balance only — stock is not added again.
                     </div>
                 )}
 
@@ -406,9 +442,9 @@ export default function CreatePurchaseInvoicePage() {
                                     Line items
                                 </h2>
                                 <p className="text-xs text-gray-500 mt-0.5">
-                                    {linkedPurchaseOrder
-                                        ? "Product and quantity come from the purchase order. You can adjust unit cost and discount to match the supplier bill."
-                                        : "Add each product on the vendor invoice. If the item was already received on a delivered purchase order, stock will not be added again."}
+                                    {linkedOrders.length > 0
+                                        ? "Products and quantities come from the selected purchase orders. You can adjust unit cost and discount to match the supplier bill."
+                                        : "Add each product on the vendor invoice."}
                                 </p>
                             </div>
                             {!linkedPurchaseOrder && (
@@ -463,11 +499,11 @@ export default function CreatePurchaseInvoicePage() {
                                                     <td className="p-3 align-top">
                                                         <ItemCombobox
                                                             options={
-                                                                linkedPurchaseOrder && item.inventoryItemId
+                                                                item.purchaseOrderId && item.inventoryItemId
                                                                     ? [
                                                                           {
                                                                               id: item.inventoryItemId,
-                                                                              label: linkedPurchaseOrder.itemName,
+                                                                              label: item.itemName || "Item",
                                                                           },
                                                                           ...itemOptions.filter(
                                                                               (o) => o.id !== item.inventoryItemId,
