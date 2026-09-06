@@ -8,7 +8,7 @@ import { DialogContent } from "@/components/ui/dialog";
 
 import { Dialog } from "@/components/ui/dialog";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertCircle, CheckCircle, Search, XCircle } from "lucide-react";
@@ -17,6 +17,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -84,6 +85,9 @@ export default function ViewPurchaseOrdersPage() {
   const [selectedRow, setSelectedRow] = useState<PurchaseOrder | null>(null);
   const [invoiceDetails, setInvoiceDetails] =
     useState<PurchaseInvoiceDetails | null>(null);
+  const [selectedForInvoice, setSelectedForInvoice] = useState<
+    Record<string, { vendorId: string; vendorName: string }>
+  >({});
   const [search, setSearch] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
@@ -99,6 +103,94 @@ export default function ViewPurchaseOrdersPage() {
   };
 
   const hasActiveFilters = Boolean(search.trim() || dateFrom || dateTo);
+
+  const isInvoiceable = (order: PurchaseOrder) =>
+    order.status !== "CANCELLED" &&
+    Boolean(order.vendorId) &&
+    !order.invoiceItem?.invoice?.invoiceNumber;
+
+  const selectedInvoiceIds = Object.keys(selectedForInvoice);
+  const selectedVendorNames = useMemo(
+    () =>
+      Array.from(
+        new Set(Object.values(selectedForInvoice).map((s) => s.vendorName)),
+      ),
+    [selectedForInvoice],
+  );
+
+  const toggleInvoiceSelect = (order: PurchaseOrder, checked: boolean) => {
+    if (!isInvoiceable(order) || !order.vendorId) return;
+    setSelectedForInvoice((prev) => {
+      if (!checked) {
+        const next = { ...prev };
+        delete next[order.id];
+        return next;
+      }
+      const existingVendor = Object.values(prev)[0]?.vendorId;
+      if (existingVendor && existingVendor !== order.vendorId) {
+        toast.error("Select purchase orders from the same vendor only.");
+        return prev;
+      }
+      return {
+        ...prev,
+        [order.id]: {
+          vendorId: order.vendorId!,
+          vendorName: order.vendorName,
+        },
+      };
+    });
+  };
+
+  const invoiceableOnPage = purchaseOrders.filter(isInvoiceable);
+  const allPageSelected =
+    invoiceableOnPage.length > 0 &&
+    invoiceableOnPage.every((o) => selectedForInvoice[o.id]);
+
+  const toggleSelectAllOnPage = (checked: boolean) => {
+    if (!checked) {
+      setSelectedForInvoice((prev) => {
+        const next = { ...prev };
+        for (const order of invoiceableOnPage) delete next[order.id];
+        return next;
+      });
+      return;
+    }
+    const firstVendor =
+      Object.values(selectedForInvoice)[0]?.vendorId ??
+      invoiceableOnPage[0]?.vendorId;
+    const sameVendor = invoiceableOnPage.filter((o) => o.vendorId === firstVendor);
+    if (sameVendor.length < invoiceableOnPage.length) {
+      toast.error("Select purchase orders from the same vendor only.");
+    }
+    setSelectedForInvoice((prev) => {
+      const next = { ...prev };
+      for (const order of sameVendor) {
+        if (!order.vendorId) continue;
+        next[order.id] = {
+          vendorId: order.vendorId,
+          vendorName: order.vendorName,
+        };
+      }
+      return next;
+    });
+  };
+
+  const startCollectiveInvoice = () => {
+    if (selectedInvoiceIds.length === 0) {
+      toast.error("Select at least one purchase order");
+      return;
+    }
+    const vendors = new Set(
+      Object.values(selectedForInvoice).map((s) => s.vendorId),
+    );
+    if (vendors.size > 1) {
+      toast.error("Select purchase orders from the same vendor only.");
+      return;
+    }
+    router.push(
+      `/pharmacist/purchase-invoices/create?purchaseOrderIds=${selectedInvoiceIds.join(",")}`,
+    );
+  };
 
   // Handle row click
   const handleRowClick = (order: PurchaseOrder) => {
@@ -167,6 +259,37 @@ export default function ViewPurchaseOrdersPage() {
   };
 
   const columns: ColumnDef<PurchaseOrder>[] = [
+    {
+      id: "select",
+      enableSorting: false,
+      header: () => (
+        <Checkbox
+          checked={allPageSelected}
+          onCheckedChange={(value) => toggleSelectAllOnPage(value === true)}
+          aria-label="Select all invoiceable orders on this page"
+          disabled={invoiceableOnPage.length === 0}
+        />
+      ),
+      cell: ({ row }) => {
+        const order = row.original;
+        const canSelect = isInvoiceable(order);
+        return (
+          <div
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => e.stopPropagation()}
+          >
+            <Checkbox
+              checked={Boolean(selectedForInvoice[order.id])}
+              disabled={!canSelect}
+              onCheckedChange={(value) =>
+                toggleInvoiceSelect(order, value === true)
+              }
+              aria-label={`Select ${order.orderNumber} for invoice`}
+            />
+          </div>
+        );
+      },
+    },
     {
       accessorKey: "orderNumber",
       header: "Order Number",
@@ -300,6 +423,7 @@ export default function ViewPurchaseOrdersPage() {
         itemName: order.inventoryItem?.name || "N/A",
         manufacturer: order.manufacturer?.companyName || "N/A",
         vendorName: order.vendor?.name || "—",
+        vendorId: order.vendorId ?? order.vendor?.id ?? null,
         orderDate: order.orderDate ?? order.createdAt,
         orderNumber: `PO-${new Date(order.createdAt).getFullYear()}-${order.id.slice(-4)}`,
         invoiceItem: order.invoiceItem ?? order.invoiceItems?.[0] ?? null,
@@ -363,17 +487,31 @@ export default function ViewPurchaseOrdersPage() {
               Purchase Orders
             </motion.h1>
             <motion.p className="mt-1 text-sm text-gray-500" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }}>
-              Mark delivered to add stock. Create the supplier invoice from here so quantity is not added twice.
+              Mark delivered to add stock. Tick orders from the same vendor to create one collective invoice.
             </motion.p>
             <div className="mt-4 h-px bg-gradient-to-r from-red-200/80 via-red-100/50 to-transparent rounded-full" />
           </div>
-          <Button
-            type="button"
-            className="bg-red-800 hover:bg-red-700 text-white shadow-sm"
-            onClick={() => window.location.assign("/pharmacist/purchase-orders/company-print")}
-          >
-            Print purchase orders
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              className="bg-red-800 hover:bg-red-700 text-white shadow-sm"
+              disabled={selectedInvoiceIds.length === 0}
+              onClick={startCollectiveInvoice}
+            >
+              <FileText className="mr-2 h-4 w-4" />
+              {selectedInvoiceIds.length > 0
+                ? `Create invoice (${selectedInvoiceIds.length})`
+                : "Create collective invoice"}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="shadow-sm"
+              onClick={() => window.location.assign("/pharmacist/purchase-orders/company-print")}
+            >
+              Print purchase orders
+            </Button>
+          </div>
         </header>
 
         <Card className="overflow-hidden bg-white border border-gray-100 rounded-xl shadow-sm hover:shadow-md transition-shadow mb-6">
@@ -439,6 +577,14 @@ export default function ViewPurchaseOrdersPage() {
             {dateFrom && dateTo && dateFrom > dateTo && (
               <p className="text-sm text-amber-800 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
                 <strong>From</strong> must be on or before <strong>To</strong>.
+              </p>
+            )}
+            {selectedInvoiceIds.length > 0 && (
+              <p className="text-sm text-emerald-900 bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-2">
+                {selectedInvoiceIds.length} order
+                {selectedInvoiceIds.length === 1 ? "" : "s"} selected
+                {selectedVendorNames[0] ? ` from ${selectedVendorNames[0]}` : ""}.
+                Tick more from the same vendor, including on other pages.
               </p>
             )}
             {purchaseOrders.length > 0 && (
