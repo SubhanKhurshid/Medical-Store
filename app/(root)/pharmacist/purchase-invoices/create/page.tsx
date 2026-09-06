@@ -41,7 +41,9 @@ export default function CreatePurchaseInvoicePage() {
         const many = searchParams.get("purchaseOrderIds");
         const single = searchParams.get("purchaseOrderId");
         if (many) {
-            return [...new Set(many.split(",").map((id) => id.trim()).filter(Boolean))];
+            return Array.from(
+                new Set(many.split(",").map((id) => id.trim()).filter(Boolean)),
+            );
         }
         return single ? [single] : [];
     }, [searchParams]);
@@ -127,7 +129,7 @@ export default function CreatePurchaseInvoicePage() {
                     router.replace("/pharmacist/purchase-orders/view");
                     return;
                 }
-                const vendorId = [...vendorIds][0] as string;
+                const vendorId = Array.from(vendorIds)[0] as string;
                 setLinkedOrders(
                     orders.map((order) => ({
                         id: order.id,
